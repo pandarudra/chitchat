@@ -2,7 +2,9 @@ import express from "express";
 import dotenv from "dotenv";
 import http from "http";
 import cors from "cors";
-import { SocketService } from "./sockets/chatSockets";
+import { SocketService } from "./services/socket.service";
+import authRouter from "./routes/auth.routes";
+import { connectMongo } from "./utils/mongoDB";
 
 dotenv.config();
 const app = express();
@@ -12,6 +14,9 @@ async function init() {
   app.use(cors());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+
+  // Initialize routes
+  app.use("/api/auth/", authRouter);
   const httpServer = http.createServer(app);
 
   // socket.io setup
@@ -20,7 +25,7 @@ async function init() {
   httpServer.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
   });
-
+  connectMongo();
   socketIOservice.initListeners();
 }
 
