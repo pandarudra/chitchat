@@ -1,35 +1,42 @@
 "use client";
 
-import { useState } from "react";
-import { SendHorizonal } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useSocket } from "../../hooks/useSocket";
-import React from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useRouter } from "next/navigation";
+import { SendHorizonal } from "lucide-react";
 
 export default function ChatPage() {
   const [message, setMessage] = useState("");
-
+  const [messages, setMessages] = useState<{ from: string; content: string }[]>(
+    []
+  );
   const [recipientId, setRecipientId] = useState<string>("");
-  const { sendMessage } = useSocket();
+
+  const { sendMessage, socket } = useSocket();
   const { isAuthenticated, loading, Logout } = useAuth();
   const router = useRouter();
 
-  // if not authenticated, redirect to login
-  React.useEffect(() => {
-    if (!isAuthenticated) {
+  useEffect(() => {
+    if (!isAuthenticated && !loading) {
       router.push("/auth/signup");
-      return;
     }
-  }, [isAuthenticated, loading, router]);
+  }, [isAuthenticated, loading]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-gray-700">Loading...</div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("one_to_one_message", (data: any) => {
+      setMessages((prev) => [
+        ...prev,
+        { from: data.from, content: data.message },
+      ]);
+    });
+
+    return () => {
+      socket.off("one_to_one_message");
+    };
+  }, [socket]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +46,7 @@ export default function ChatPage() {
     }
 
     sendMessage(message, recipientId);
-    console.log("Message sent:", { recipientId, message });
+    setMessages((prev) => [...prev, { from: "You", content: message }]);
     setMessage("");
   };
 
@@ -48,55 +55,75 @@ export default function ChatPage() {
       await Logout();
     } catch (error) {
       console.error("Logout failed:", error);
-      alert("Logout failed. Please try again.");
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-6 space-y-5">
-        <h1 className="text-xl font-semibold text-gray-800 mb-6">
-          Send Message
-        </h1>
+    <div className="h-screen flex bg-gray-100">
+      {/* Sidebar */}
+      <aside className="w-1/4 bg-white border-r border-gray-200 p-4 hidden md:block">
+        <h2 className="text-xl font-semibold mb-4">Contacts</h2>
+        <input
+          type="text"
+          value={recipientId}
+          onChange={(e) => setRecipientId(e.target.value)}
+          placeholder="Enter phone number"
+          className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4"
+        />
+        <button
+          onClick={onLogout}
+          className="w-full bg-red-500 text-white rounded-lg py-2 hover:bg-red-600"
+        >
+          Logout
+        </button>
+      </aside>
 
-        <form onSubmit={handleSendMessage} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Recipient phone No.
-            </label>
-            <input
-              value={recipientId}
-              onChange={(e) => setRecipientId(e.target.value)}
-              placeholder="Phone No. of recipient"
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
+      {/* Chat Section */}
+      <main className="flex flex-col flex-1 h-full">
+        {/* Chat Header */}
+        <div className="bg-white shadow px-6 py-4 border-b border-gray-200">
+          <h1 className="text-lg font-semibold text-gray-700">Chat</h1>
+          {recipientId && (
+            <p className="text-sm text-gray-500">Talking to: {recipientId}</p>
+          )}
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Message
-            </label>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type your message..."
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 h-24 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
+          {messages.map((msg, idx) => (
+            <div
+              key={idx}
+              className={`max-w-sm px-4 py-2 rounded-lg ${
+                msg.from === "You"
+                  ? "bg-blue-500 text-white self-end ml-auto"
+                  : "bg-gray-200 text-black self-start mr-auto"
+              }`}
+            >
+              {msg.content}
+            </div>
+          ))}
+        </div>
 
+        {/* Message Input */}
+        <form
+          onSubmit={handleSendMessage}
+          className="bg-white border-t border-gray-200 p-4 flex items-center gap-4"
+        >
+          <input
+            type="text"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Type your message..."
+            className="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
           <button
             type="submit"
-            className="flex items-center justify-center gap-2 w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-all duration-200"
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2"
           >
-            <SendHorizonal className="w-5 h-5" />
-            Send Message
+            <SendHorizonal />
           </button>
         </form>
-
-        <button onClick={onLogout}>Logout</button>
-      </div>
+      </main>
     </div>
   );
 }
