@@ -1,83 +1,63 @@
 "use client";
-import React, { useCallback, useContext, useEffect } from "react";
+import React, { createContext, useEffect, useState, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
+import { useAuth } from "../hooks/useAuth";
 
-interface SocketProviderProps {
-  children?: React.ReactNode;
-}
-
-interface ISocketContext {
+export interface SocketContextType {
+  socket: Socket | null;
   sendMessage: (message: string, recipientId: string, name: string) => void;
-  username?: string;
 }
-const socketContext = React.createContext<ISocketContext | null>(null);
 
-export const useSocket = () => {
-  const state = useContext(socketContext);
-  if (!state) {
-    throw new Error("state is not defined");
-  }
-  return state;
-};
+export const SocketContext = createContext<SocketContextType | undefined>(
+  undefined
+);
 
-export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
-  const [socket, setSocket] = React.useState<Socket | null>(null);
-  const [username, setUsername] = React.useState<string | null>(null);
+export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const { isAuthenticated, loading } = useAuth();
+  const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
-    const _socket = io("http://localhost:8000");
-    setSocket(_socket);
-
-    _socket.on("connected", (data) => {
-      console.log("Connected to socket server:", data.socketId);
-      const username =
-        localStorage.getItem("username") || "guest_" + Date.now();
-      setUsername(username);
-      localStorage.setItem("username", username);
-      _socket.emit("register_user", username);
-      console.log("Registered user:", username);
-    });
-
-    _socket.on("one_to_one_message", (data) => {
-      console.log("Received one-to-one message:", data);
-    });
-
-    _socket.on("disconnect", () => {
-      console.log("Disconnected from socket server");
-    });
-  }, []);
-
-  useEffect(() => {
-    const user = localStorage.getItem("username");
-    if (user) {
-      setUsername(user);
-    } else {
-      const newUser = "guest_" + Date.now();
-      setUsername(newUser);
-      localStorage.setItem("username", newUser);
+    console.log(isAuthenticated, loading);
+    if (loading && !isAuthenticated) {
+      console.log(
+        "Socket not initialized: User not authenticated",
+        isAuthenticated,
+        loading
+      );
+      return;
     }
+    const _socket = io("http://localhost:8000", {
+      withCredentials: true,
+    });
+    _socket.on("connected", (data) =>
+      console.log("✅ Connected:", data.socketId)
+    );
+    _socket.on("one_to_one_message", (data) =>
+      console.log("📩 Received:", data)
+    );
+    _socket.on("disconnect", () => console.log("❌ Disconnected"));
+
+    setSocket(_socket);
+    return () => {
+      _socket.disconnect();
+    };
   }, []);
 
   const sendMessage = useCallback(
-    (message: string, recipientUserName: string, name: string) => {
-      if (socket) {
-        socket.emit("one_to_one_message", {
-          to: recipientUserName,
-          message,
-          name,
-        });
-      } else {
-        console.error("Socket is not connected");
-      }
+    (message: string, recipientId: string, name: string) => {
+      if (!socket) return console.error("Socket not ready");
+      socket.emit("one_to_one_message", { to: recipientId, message, name });
     },
     [socket]
   );
-
+  // memorize
+  const value = React.useMemo(
+    () => ({ socket, sendMessage }),
+    [socket, sendMessage]
+  );
   return (
-    <socketContext.Provider
-      value={{ sendMessage, username: username ?? undefined }}
-    >
-      {children}
-    </socketContext.Provider>
+    <SocketContext.Provider value={value}>{children}</SocketContext.Provider>
   );
 };

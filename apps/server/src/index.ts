@@ -5,15 +5,23 @@ import cors from "cors";
 import { SocketService } from "./services/socket.service";
 import authRouter from "./routes/auth.routes";
 import { connectMongo } from "./utils/mongoDB";
+import cookieparser from "cookie-parser";
 
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 8000;
 
 async function init() {
-  app.use(cors());
+  app.use(
+    cors({
+      origin: "http://localhost:3000",
+      credentials: true, // Allow cookies to be sent
+      // Adjust this to your frontend URL
+    })
+  );
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+  app.use(cookieparser());
 
   // Initialize routes
   app.use("/api/auth/", authRouter);
