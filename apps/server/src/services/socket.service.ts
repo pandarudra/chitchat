@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 import * as cookie from "cookie";
 
 import { MessageModel } from "../models/Message";
+import { UserModel } from "../models/User";
 dotenv.config();
 
 // pub/sub Redis clients
@@ -73,6 +74,7 @@ export class SocketService {
 
     io.on("connection", async (socket) => {
       const userId = socket.data.userId;
+      console.log(`New connection: ${userId} with socket ID: ${socket.id}`);
       if (!userId) {
         console.error("User ID not found in socket data.");
         return;
@@ -145,40 +147,97 @@ export class SocketService {
         pub.del(socketKey(userId)); // Remove socket ID from Redis
       });
     });
-
-    sub.on("message", async (channel, message) => {
+    sub.on("message", async (channel, messages) => {
       if (channel === "CHITCHAT") {
-        const data = JSON.parse(message);
+        const data = JSON.parse(messages);
+        const { from, to, message, timestamp } = data;
 
-        const { from, to, msg, timestamp } = data;
-        if (!from || !to || !msg) {
+        if (!from || !to || !message) {
           console.error("Invalid message data:", data);
           return;
         }
 
+        const recipient = await UserModel.findOne({ phoneNumber: to });
+
+        if (!recipient) {
+          console.error(`No user found for recipient: ${to}`);
+          return;
+        }
+
+        const rID = recipient._id;
         const newMsg = await MessageModel.create({
           from,
-          to,
-          content: msg,
+          to: rID,
+          content: message,
           delivered: false,
           seen: false,
           timestamp: new Date(timestamp),
         });
 
-        const toSocketId = await pub.get(socketKey(to)); // Get socket ID from Redis
+        if (!rID) {
+          console.error(`Recipient ID not found for phone number: ${to}`);
+          return;
+        }
+        const toSocketId = await pub.get(socketKey(rID.toString()));
+
         if (toSocketId) {
           this._io.to(toSocketId).emit("one_to_one_message", data);
           newMsg.delivered = true;
           await newMsg.save();
-          console.log(
-            `Message sent from ${data.from} to ${data.to}: ${data.message}`
-          );
+          console.log(`Message sent from ${from} to ${toSocketId}: ${message}`);
         } else {
-          console.warn(`User ${data.to} is not online.`);
-          // optional: store offline message
+          console.warn(`User ${to} is not online.`);
         }
       }
     });
+
+    // sub.on("message", async (channel, messages) => {
+    //   if (channel === "CHITCHAT") {
+    //     const data = JSON.parse(messages);
+
+    //     const { from, to, message, timestamp } = data;
+    //     if (!from || !to || !message) {
+    //       console.error("Invalid message data:", data);
+    //       return;
+    //     }
+
+    //     const newMsg = await MessageModel.create({
+    //       from,
+    //       to,
+    //       content: message,
+    //       delivered: false,
+    //       seen: false,
+    //       timestamp: new Date(timestamp),
+    //     });
+
+    //     const recipent = await UserModel.findOne({ phoneNumber: to });
+    //     console.log(
+    //       `Recipient found: ${recipent ? recipent.phoneNumber : "not found"}`
+    //     );
+    //     if (!recipent) {
+    //       console.error(`No messages found for recipient: ${to}`);
+    //       return;
+    //     }
+    //     const rID = recipent._id;
+    //     console.log("Messages for recipient:", rID);
+    //     if (!rID) {
+    //       console.error(`Recipient ID not found for phone number: ${to}`);
+    //       return;
+    //     }
+    //     const toSocketId = await pub.get(socketKey(rID.toString())); // Get socket ID from Redis
+    //     if (toSocketId) {
+    //       this._io.to(toSocketId).emit("one_to_one_message", data);
+    //       newMsg.delivered = true;
+    //       await newMsg.save();
+    //       console.log(
+    //         `Message sent from ${data.from} to ${toSocketId}: ${data.message}`
+    //       );
+    //     } else {
+    //       console.warn(`User ${data.to} is not online.`);
+    //       // optional: store offline message
+    //     }
+    //   }
+    // });
   }
 
   public get io(): SocketIOServer {

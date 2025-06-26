@@ -12,7 +12,7 @@ export const generateToken = (userId: string, type: string): string => {
     throw new Error("JWT_SECRET is not defined");
   }
   return jwt.sign({ userId }, secret, {
-    expiresIn: type === "access" ? "15m" : "7d",
+    expiresIn: type === "access" ? "1d" : "7d",
   });
 };
 

@@ -9,8 +9,8 @@ import { useRouter } from "next/navigation";
 
 export default function ChatPage() {
   const [message, setMessage] = useState("");
-  const [name, setName] = useState("");
-  const [recipientId, setRecipientId] = useState("");
+
+  const [recipientId, setRecipientId] = useState<string>("");
   const { sendMessage } = useSocket();
   const { isAuthenticated, loading, Logout } = useAuth();
   const router = useRouter();
@@ -33,12 +33,13 @@ export default function ChatPage() {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message || !name || !recipientId) {
+    if (!message || !recipientId) {
       alert("Please fill in all fields");
       return;
     }
 
-    sendMessage(message, recipientId, name);
+    sendMessage(message, recipientId);
+    console.log("Message sent:", { recipientId, message });
     setMessage("");
   };
 
@@ -61,25 +62,12 @@ export default function ChatPage() {
         <form onSubmit={handleSendMessage} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Your Name
-            </label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="John Doe"
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Recipient Username
+              Recipient phone No.
             </label>
             <input
               value={recipientId}
               onChange={(e) => setRecipientId(e.target.value)}
-              placeholder="Username of recipient"
+              placeholder="Phone No. of recipient"
               className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />

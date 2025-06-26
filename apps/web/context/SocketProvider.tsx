@@ -5,7 +5,7 @@ import { useAuth } from "../hooks/useAuth";
 
 export interface SocketContextType {
   socket: Socket | null;
-  sendMessage: (message: string, recipientId: string, name: string) => void;
+  sendMessage: (message: string, recipientId: string) => void;
 }
 
 export const SocketContext = createContext<SocketContextType | undefined>(
@@ -43,12 +43,12 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       _socket.disconnect();
     };
-  }, []);
+  }, [isAuthenticated, loading]);
 
   const sendMessage = useCallback(
-    (message: string, recipientId: string, name: string) => {
+    (message: string, recipientId: string) => {
       if (!socket) return console.error("Socket not ready");
-      socket.emit("one_to_one_message", { to: recipientId, message, name });
+      socket.emit("one_to_one_message", { to: recipientId, message });
     },
     [socket]
   );
