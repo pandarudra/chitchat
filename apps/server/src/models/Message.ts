@@ -17,7 +17,7 @@ const messageSchema = new Schema<IMessage>(
     content: { type: String, required: true },
     delivered: { type: Boolean, default: false },
     seen: { type: Boolean, default: false },
-    seenAt: { type: Date }, // ⬅️ Add this
+    seenAt: { type: Date },
     timestamp: { type: Date, default: Date.now },
   },
   { timestamps: true }
