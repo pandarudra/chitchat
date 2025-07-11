@@ -38,7 +38,7 @@ export class SocketService {
   constructor(server: httpServer) {
     this._io = new SocketIOServer(server, {
       cors: {
-        origin: "http://localhost:3000", // must match your frontend
+        origin: "http://localhost:5173", // must match your frontend
         credentials: true, // <--- add this line
       },
     });

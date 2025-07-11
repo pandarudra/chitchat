@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 8000;
 async function init() {
   app.use(
     cors({
-      origin: "http://localhost:3000",
+      origin: "http://localhost:5173",
       credentials: true, // Allow cookies to be sent
       // Adjust this to your frontend URL
     })
