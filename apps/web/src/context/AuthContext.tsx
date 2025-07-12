@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useReducer } from "react";
 import type { AuthState, User } from "../types";
 import axios from "axios";
+import api from "../lib/api";
 
 interface AuthContextType extends AuthState {
   login: (phone: string) => Promise<void>;
@@ -92,9 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkAuthStatus = async () => {
     dispatch({ type: "SET_LOADING", payload: true });
     try {
-      const res = await axios.get(`${be_url}/api/auth/me`, {
-        withCredentials: true,
-      });
+      const res = await api.get(`/api/auth/me`);
 
       // Transform backend user data to frontend format
       const user: User = {
@@ -123,7 +122,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         payload: user,
       });
     } catch (error) {
-      console.error("Error checking auth status:", error);
       dispatch({
         type: "SET_LOADING",
         payload: false,
@@ -134,11 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (phoneNumber: string) => {
     dispatch({ type: "AUTH_START" });
     try {
-      const res = await axios.post(
-        `${be_url}/api/auth/login`,
-        { phoneNumber },
-        { withCredentials: true }
-      );
+      const res = await api.post(`/api/auth/login`, { phoneNumber });
 
       // Transform and dispatch user data
       checkAuthStatus();
@@ -153,11 +147,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signup = async (displayName: string, phoneNumber: string) => {
     dispatch({ type: "AUTH_START" });
     try {
-      const res = await axios.post(
-        `${be_url}/api/auth/signup`,
-        { displayName, phoneNumber },
-        { withCredentials: true }
-      );
+      const res = await api.post(`/api/auth/signup`, {
+        displayName,
+        phoneNumber,
+      });
 
       console.log("Signup response:", res.data);
       // Transform and dispatch user data
@@ -172,11 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await axios.post(
-        `${be_url}/api/auth/logout`,
-        {},
-        { withCredentials: true }
-      );
+      await api.post(`/api/auth/logout`, {});
     } catch (error) {
       console.error("Logout error:", error);
     } finally {

@@ -6,47 +6,50 @@ import { Landing } from "./pages/Home/Landing";
 import { PublicRoute } from "./components/auth/Public";
 import { ChatBoard } from "./pages/chat/ChatBoard";
 import { PrivateRoute } from "./components/auth/Private";
+import { ChatProvider } from "./context/ChatContext";
 
 export const App = () => {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <PublicRoute>
-                <Landing />
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/signup"
-            element={
-              <PublicRoute restricted>
-                <Signup />
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/login"
-            element={
-              <PublicRoute restricted>
-                <Login />
-              </PublicRoute>
-            }
-          />
+      <ChatProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <PublicRoute>
+                  <Landing />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/signup"
+              element={
+                <PublicRoute restricted>
+                  <Signup />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/login"
+              element={
+                <PublicRoute restricted>
+                  <Login />
+                </PublicRoute>
+              }
+            />
 
-          <Route
-            path="/chat"
-            element={
-              <PrivateRoute>
-                <ChatBoard />
-              </PrivateRoute>
-            }
-          />
-        </Routes>
-      </BrowserRouter>
+            <Route
+              path="/chat"
+              element={
+                <PrivateRoute>
+                  <ChatBoard />
+                </PrivateRoute>
+              }
+            />
+          </Routes>
+        </BrowserRouter>
+      </ChatProvider>
     </AuthProvider>
   );
 };
