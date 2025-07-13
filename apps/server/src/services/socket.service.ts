@@ -41,6 +41,7 @@ export class SocketService {
         origin: "http://localhost:5173", // must match your frontend
         credentials: true, // <--- add this line
       },
+      transports: ["websocket", "polling"],
     });
 
     // ✅ JWT Authentication Middleware

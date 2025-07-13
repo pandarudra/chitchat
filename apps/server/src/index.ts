@@ -24,7 +24,7 @@ async function init() {
   app.use(cookieparser());
 
   // Initialize routes
-  app.use("/api/auth/", authRouter);
+  app.use("/api/auth", authRouter);
   const httpServer = http.createServer(app);
 
   // socket.io setup

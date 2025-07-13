@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useRef,
   useState,
+  useCallback,
 } from "react";
 import { io, Socket } from "socket.io-client";
 import type { ChatState, Chat, Message, User, ContactRequest } from "../types";
@@ -210,7 +211,7 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
   }
 };
 
-const init: ChatState = {
+const initialState: ChatState = {
   chats: [],
   activeChat: null,
   contacts: [],
@@ -220,97 +221,195 @@ const init: ChatState = {
 };
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(chatReducer, init);
+  const [state, dispatch] = useReducer(chatReducer, initialState);
   const { user, isAuthenticated } = useAuth();
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Socket.IO connection
+  // Use refs to store latest state values for socket handlers
+  const stateRef = useRef(state);
+  const userRef = useRef(user);
+
+  // Update refs when state or user changes
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  // Memoized socket event handlers to prevent recreation
+  const handleSeenMessage = useCallback((data: any) => {
+    console.log("👁️ Message seen event:", data);
+    const currentState = stateRef.current;
+    const currentUser = userRef.current;
+
+    if (!currentUser) return;
+
+    // Update message statuses to 'read'
+    currentState.chats.forEach((chat) => {
+      chat.messages.forEach((msg) => {
+        if (
+          msg.senderId === currentUser.id &&
+          msg.receiverId === data.from &&
+          msg.status !== "read"
+        ) {
+          dispatch({
+            type: "UPDATE_MESSAGE_STATUS",
+            payload: { messageId: msg.id, status: "read" },
+          });
+        }
+      });
+    });
+  }, []);
+
+  const handleReceiveMessage = useCallback((data: any) => {
+    console.log("📨 Received message:", data);
+    const currentUser = userRef.current;
+
+    if (!currentUser) return;
+
+    const message: Message = {
+      id: Date.now().toString(),
+      senderId: data.from,
+      receiverId: currentUser.id,
+      content: data.message,
+      timestamp: new Date(data.timestamp),
+      type: "text",
+      status: "delivered",
+    };
+    dispatch({ type: "RECEIVE_MESSAGE", payload: message });
+  }, []);
+
+  const handleUserTyping = useCallback((data: any) => {
+    dispatch({
+      type: "SET_TYPING",
+      payload: { chatId: data.chatId, users: [data.user] },
+    });
+  }, []);
+
+  const handleUserStoppedTyping = useCallback((data: any) => {
+    dispatch({
+      type: "SET_TYPING",
+      payload: { chatId: data.chatId, users: [] },
+    });
+  }, []);
+
+  // Socket.IO connection effect - only depends on authentication
   useEffect(() => {
     if (isAuthenticated && user) {
+      console.log("Connecting to socket.io...", user.id);
       const be_url = import.meta.env.VITE_BE_URL;
+
+      // Clean up existing connection
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+
       socketRef.current = io(be_url, {
         withCredentials: true,
-        transports: ["websocket"],
+        transports: ["websocket", "polling"],
+        timeout: 20000,
+        forceNew: true,
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
       });
 
       const socket = socketRef.current;
 
       // Connection events
       socket.on("connect", () => {
-        console.log("Connected to server");
+        console.log("✅ Socket connected successfully with ID:", socket.id);
         setIsConnected(true);
+        setConnectionError(null);
       });
 
-      socket.on("disconnect", () => {
-        console.log("Disconnected from server");
+      socket.on("connect_error", (error) => {
+        console.error("❌ Socket connection error:", error.message);
         setIsConnected(false);
+        setConnectionError(`Connection failed: ${error.message}`);
+
+        // Retry connection after delay
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+        }
+        reconnectTimeoutRef.current = setTimeout(() => {
+          console.log("Retrying socket connection...");
+          socket.connect();
+        }, 3000);
       });
 
-      // Message events
-      socket.on("one_to_one_message", (data) => {
-        const message: Message = {
-          id: Date.now().toString(),
-          senderId: data.from,
-          receiverId: user.id,
-          content: data.message,
-          timestamp: new Date(data.timestamp),
-          type: "text",
-          status: "delivered",
-        };
-        dispatch({ type: "RECEIVE_MESSAGE", payload: message });
+      socket.on("disconnect", (reason) => {
+        console.log("🔌 Socket disconnected:", reason);
+        setIsConnected(false);
+        if (reason === "io server disconnect") {
+          socket.connect();
+        }
       });
 
-      // Seen message event
-      socket.on("seen_message", (data) => {
-        // Update message statuses to 'read'
-        state.chats.forEach((chat) => {
-          chat.messages.forEach((msg) => {
-            if (
-              msg.senderId === user.id &&
-              msg.receiverId === data.from &&
-              msg.status !== "read"
-            ) {
-              dispatch({
-                type: "UPDATE_MESSAGE_STATUS",
-                payload: { messageId: msg.id, status: "read" },
-              });
-            }
-          });
-        });
+      socket.on("reconnect", (attemptNumber) => {
+        console.log("🔄 Socket reconnected after", attemptNumber, "attempts");
+        setIsConnected(true);
+        setConnectionError(null);
       });
 
-      // Typing events
-      socket.on("user_typing", (data) => {
-        dispatch({
-          type: "SET_TYPING",
-          payload: { chatId: data.chatId, users: [data.user] },
-        });
+      socket.on("reconnect_error", (error) => {
+        console.error("❌ Socket reconnection error:", error);
+        setConnectionError(`Reconnection failed: ${error.message}`);
       });
 
-      socket.on("user_stopped_typing", (data) => {
-        dispatch({
-          type: "SET_TYPING",
-          payload: { chatId: data.chatId, users: [] },
-        });
+      // Authentication confirmation
+      socket.on("connected", (data) => {
+        console.log("🔐 Socket authenticated with data:", data);
       });
 
+      // Attach memoized event handlers
+      socket.on("one_to_one_message", handleReceiveMessage);
+      socket.on("seen_message", handleSeenMessage);
+      socket.on("user_typing", handleUserTyping);
+      socket.on("user_stopped_typing", handleUserStoppedTyping);
+
+      // Cleanup function
       return () => {
-        socket.disconnect();
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+        }
+        if (socket) {
+          console.log("🧹 Cleaning up socket connection");
+          socket.disconnect();
+        }
         setIsConnected(false);
       };
+    } else {
+      // User not authenticated, disconnect socket
+      if (socketRef.current) {
+        console.log("🔒 User not authenticated, disconnecting socket");
+        socketRef.current.disconnect();
+        socketRef.current = null;
+        setIsConnected(false);
+      }
     }
-  }, [isAuthenticated, user, state.chats]);
+  }, [
+    isAuthenticated,
+    user?.id,
+    handleReceiveMessage,
+    handleSeenMessage,
+    handleUserTyping,
+    handleUserStoppedTyping,
+  ]); // Only include stable dependencies
 
-  // Fetch chats from backend
+  // Separate effect for fetching chats
   useEffect(() => {
     if (isAuthenticated && user) {
       fetchChats();
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user?.id]); // Only depend on user ID, not the whole user object
 
-  const fetchChats = async () => {
+  const fetchChats = useCallback(async () => {
     try {
       // TODO: Implement actual API call to fetch chats
       // const response = await api.get('/api/chats');
@@ -321,137 +420,166 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Failed to fetch chats:", error);
     }
-  };
+  }, []);
 
-  const setActiveChat = (chat: Chat | null) => {
+  const setActiveChat = useCallback((chat: Chat | null) => {
     dispatch({ type: "SET_ACTIVE_CHAT", payload: chat });
     if (chat) {
       dispatch({ type: "MARK_AS_READ", payload: chat.id });
     }
-  };
+  }, []);
 
-  const sendMessage = (content: string, type: Message["type"] = "text") => {
-    if (!state.activeChat || !user || !socketRef.current) return;
+  const sendMessage = useCallback(
+    (content: string, type: Message["type"] = "text") => {
+      const currentState = stateRef.current;
+      const currentUser = userRef.current;
 
-    const message: Message = {
-      id: Date.now().toString(),
-      senderId: user.id,
-      receiverId: state.activeChat.id,
-      content,
-      timestamp: new Date(),
-      type,
-      status: "sent",
-    };
-
-    // Add message to local state immediately
-    dispatch({ type: "SEND_MESSAGE", payload: message });
-
-    // Send via socket
-    const recipientPhone = state.activeChat.participants.find(
-      (p) => p.id !== user.id
-    )?.phoneNumber;
-    if (recipientPhone) {
-      socketRef.current.emit("one_to_one_message", {
-        to: recipientPhone,
-        message: content,
-        timestamp: message.timestamp.toISOString(),
-      });
-
-      // Update status to delivered after a delay
-      setTimeout(() => {
-        dispatch({
-          type: "UPDATE_MESSAGE_STATUS",
-          payload: { messageId: message.id, status: "delivered" },
+      if (
+        !currentState.activeChat ||
+        !currentUser ||
+        !socketRef.current ||
+        !isConnected
+      ) {
+        console.warn("Cannot send message: missing requirements", {
+          hasActiveChat: !!currentState.activeChat,
+          hasUser: !!currentUser,
+          hasSocket: !!socketRef.current,
+          isConnected,
         });
-      }, 1000);
-    }
-  };
+        return;
+      }
 
-  const markAsRead = (chatId: string) => {
+      const message: Message = {
+        id: Date.now().toString(),
+        senderId: currentUser.id,
+        receiverId: currentState.activeChat.id,
+        content,
+        timestamp: new Date(),
+        type,
+        status: "sent",
+      };
+
+      // Add message to local state immediately
+      dispatch({ type: "SEND_MESSAGE", payload: message });
+
+      // Send via socket
+      const recipientPhone = currentState.activeChat.participants.find(
+        (p) => p.id !== currentUser.id
+      )?.phoneNumber;
+
+      if (recipientPhone) {
+        console.log("📤 Sending message to:", recipientPhone);
+        socketRef.current.emit("one_to_one_message", {
+          to: recipientPhone,
+          message: content,
+          timestamp: message.timestamp.toISOString(),
+        });
+
+        // Update status to delivered after a delay
+        setTimeout(() => {
+          dispatch({
+            type: "UPDATE_MESSAGE_STATUS",
+            payload: { messageId: message.id, status: "delivered" },
+          });
+        }, 1000);
+      } else {
+        console.warn("No recipient phone number found for active chat");
+      }
+    },
+    [isConnected]
+  );
+
+  const markAsRead = useCallback((chatId: string) => {
     dispatch({ type: "MARK_AS_READ", payload: chatId });
 
     // Emit seen message event
-    if (socketRef.current && user) {
-      const chat = state.chats.find((c) => c.id === chatId);
-      const recipient = chat?.participants.find((p) => p.id !== user.id);
+    const currentState = stateRef.current;
+    const currentUser = userRef.current;
+
+    if (socketRef.current && currentUser) {
+      const chat = currentState.chats.find((c) => c.id === chatId);
+      const recipient = chat?.participants.find((p) => p.id !== currentUser.id);
       if (recipient) {
         socketRef.current.emit("seen_message", {
-          from: user.phoneNumber,
+          from: currentUser.phoneNumber,
           to: recipient.phoneNumber,
         });
       }
     }
-  };
+  }, []);
 
-  const startTyping = (chatId: string) => {
-    if (socketRef.current && user) {
+  const startTyping = useCallback((chatId: string) => {
+    const currentUser = userRef.current;
+    if (socketRef.current && currentUser) {
       socketRef.current.emit("typing", {
         chatId,
-        user: { id: user.id, displayName: user.displayName },
+        user: { id: currentUser.id, displayName: currentUser.displayName },
       });
     }
-  };
+  }, []);
 
-  const stopTyping = (chatId: string) => {
-    if (socketRef.current && user) {
+  const stopTyping = useCallback((chatId: string) => {
+    const currentUser = userRef.current;
+    if (socketRef.current && currentUser) {
       socketRef.current.emit("stop_typing", {
         chatId,
-        user: { id: user.id, displayName: user.displayName },
+        user: { id: currentUser.id, displayName: currentUser.displayName },
       });
     }
-  };
+  }, []);
 
-  const addContact = (user: User) => {
+  const addContact = useCallback((user: User) => {
     dispatch({ type: "ADD_CONTACT", payload: user });
-  };
+  }, []);
 
-  const setSearchQuery = (query: string) => {
+  const setSearchQuery = useCallback((query: string) => {
     dispatch({ type: "SET_SEARCH_QUERY", payload: query });
-  };
+  }, []);
 
-  const createGroupChat = (name: string, participants: User[]) => {
+  const createGroupChat = useCallback((name: string, participants: User[]) => {
+    const currentUser = userRef.current;
     const newChat: Chat = {
       id: Date.now().toString(),
       participants,
       messages: [],
       isGroup: true,
       groupName: name,
-      groupAdmin: user?.id,
+      groupAdmin: currentUser?.id,
       unreadCount: 0,
       isPinned: false,
       isMuted: false,
     };
     dispatch({ type: "CREATE_GROUP_CHAT", payload: newChat });
-  };
+  }, []);
 
-  const addUserToGroup = (chatId: string, user: User) => {
+  const addUserToGroup = useCallback((chatId: string, user: User) => {
     dispatch({ type: "ADD_USER_TO_GROUP", payload: { chatId, user } });
-  };
+  }, []);
 
-  const removeUserFromGroup = (chatId: string, userId: string) => {
+  const removeUserFromGroup = useCallback((chatId: string, userId: string) => {
     dispatch({ type: "REMOVE_USER_FROM_GROUP", payload: { chatId, userId } });
-  };
+  }, []);
 
-  const pinChat = (chatId: string) => {
+  const pinChat = useCallback((chatId: string) => {
     dispatch({ type: "PIN_CHAT", payload: chatId });
-  };
+  }, []);
 
-  const muteChat = (chatId: string) => {
+  const muteChat = useCallback((chatId: string) => {
     dispatch({ type: "MUTE_CHAT", payload: chatId });
-  };
+  }, []);
 
-  const sendContactRequest = (userId: string) => {
+  const sendContactRequest = useCallback((userId: string) => {
     // TODO: Implement actual API call
     console.log("Sending contact request to:", userId);
-  };
+  }, []);
 
-  const acceptContactRequest = (requestId: string) => {
+  const acceptContactRequest = useCallback((requestId: string) => {
     dispatch({ type: "ACCEPT_CONTACT_REQUEST", payload: requestId });
-  };
+  }, []);
 
-  const rejectContactRequest = (requestId: string) => {
+  const rejectContactRequest = useCallback((requestId: string) => {
     dispatch({ type: "REJECT_CONTACT_REQUEST", payload: requestId });
-  };
+  }, []);
 
   return (
     <ChatContext.Provider
@@ -476,6 +604,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
+      {connectionError && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            background: "#ff4444",
+            color: "white",
+            padding: "8px",
+            textAlign: "center",
+            zIndex: 9999,
+          }}
+        >
+          {connectionError}
+        </div>
+      )}
     </ChatContext.Provider>
   );
 }
