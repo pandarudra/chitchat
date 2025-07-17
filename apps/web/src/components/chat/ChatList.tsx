@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { Pin, VolumeX, MessageCircle, Users } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import type { Chat } from "../../types";
@@ -14,8 +14,8 @@ export function ChatList() {
     const searchLower = searchQuery.toLowerCase();
     return (
       chat.groupName?.toLowerCase().includes(searchLower) ||
-      chat.participants.some((p) =>
-        p.name.toLowerCase().includes(searchLower)
+      chat.participants?.some((p) =>
+        p.displayName?.toLowerCase().includes(searchLower)
       ) ||
       chat.lastMessage?.content.toLowerCase().includes(searchLower)
     );
@@ -36,14 +36,17 @@ export function ChatList() {
     if (chat.isGroup) {
       return chat.groupName || "Group Chat";
     }
-    return chat.participants.find((p) => p.id !== user?.id)?.name || "Unknown";
+    return (
+      chat.participants?.find((p) => p.id !== user?.id)?.displayName ||
+      "Unknown"
+    );
   };
 
   const getChatAvatar = (chat: Chat) => {
     if (chat.isGroup) {
       return null; // Group avatar logic
     }
-    return chat.participants.find((p) => p.id !== user?.id)?.avatar;
+    return chat.participants?.find((p) => p.id !== user?.id)?.avatarUrl || null;
   };
 
   const getLastMessagePreview = (chat: Chat) => {
@@ -53,7 +56,7 @@ export function ChatList() {
     const sender =
       senderId === user?.id
         ? "You"
-        : chat.participants.find((p) => p.id === senderId)?.name;
+        : chat.participants?.find((p) => p.id === senderId)?.displayName;
 
     const prefix = chat.isGroup
       ? `${sender}: `
@@ -73,12 +76,15 @@ export function ChatList() {
     }
   };
 
+  const formatMessageTime = (timestamp: Date) => {
+    if (!timestamp || !isValid(timestamp)) {
+      return ""; // Return empty string for invalid dates
+    }
+    return format(timestamp, "HH:mm");
+  };
+
   return (
     <div className="flex flex-col h-full bg-white">
-      <div className="p-4 border-b border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900">Chats</h2>
-      </div>
-
       <div className="flex-1 overflow-y-auto">
         {sortedChats.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-500">
@@ -104,16 +110,13 @@ export function ChatList() {
                     </div>
                   ) : (
                     <img
-                      src={
-                        getChatAvatar(chat) ||
-                        "https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1"
-                      }
+                      src={getChatAvatar(chat) ?? undefined}
                       alt={getChatName(chat)}
                       className="w-12 h-12 rounded-full object-cover"
                     />
                   )}
                   {!chat.isGroup &&
-                    chat.participants.find((p) => p.id !== user?.id)
+                    chat.participants?.find((p) => p.id !== user?.id)
                       ?.isOnline && (
                       <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
                     )}
@@ -134,7 +137,7 @@ export function ChatList() {
                     </div>
                     {chat.lastMessage && (
                       <span className="text-xs text-gray-500">
-                        {format(chat.lastMessage.timestamp, "HH:mm")}
+                        {formatMessageTime(chat.lastMessage.timestamp)}
                       </span>
                     )}
                   </div>

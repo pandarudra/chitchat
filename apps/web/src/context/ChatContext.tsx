@@ -10,12 +10,13 @@ import React, {
 import { io, Socket } from "socket.io-client";
 import type { ChatState, Chat, Message, User, ContactRequest } from "../types";
 import { useAuth } from "./AuthContext";
+import api from "../lib/api";
 
 interface ChatContextType extends ChatState {
   setActiveChat: (chat: Chat | null) => void;
   sendMessage: (content: string, type?: Message["type"]) => void;
   markAsRead: (chatId: string) => void;
-  addContact: (user: User) => void;
+  addContact: (phoneNumber: string) => void;
   setSearchQuery: (query: string) => void;
   createGroupChat: (name: string, participants: User[]) => void;
   addUserToGroup: (chatId: string, user: User) => void;
@@ -36,6 +37,7 @@ type ChatAction =
   | { type: "SET_ACTIVE_CHAT"; payload: Chat | null }
   | { type: "SET_CHATS"; payload: Chat[] }
   | { type: "SEND_MESSAGE"; payload: Message }
+  | { type: "ADD_NEW_CHAT"; payload: Chat }
   | { type: "RECEIVE_MESSAGE"; payload: Message }
   | {
       type: "UPDATE_MESSAGE_STATUS";
@@ -65,7 +67,11 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
 
     case "SET_CHATS":
       return { ...state, chats: action.payload };
-
+    case "ADD_NEW_CHAT":
+      return {
+        ...state,
+        chats: [action.payload, ...state.chats],
+      };
     case "SEND_MESSAGE":
     case "RECEIVE_MESSAGE": {
       const message = action.payload;
@@ -266,22 +272,92 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const handleReceiveMessage = useCallback((data: any) => {
+  const handleReceiveMessage = useCallback(async (data: any) => {
     console.log("📨 Received message:", data);
     const currentUser = userRef.current;
+    const currentState = stateRef.current;
 
     if (!currentUser) return;
 
+    // Validate timestamp and provide fallback
+    const timestamp = data.timestamp ? new Date(data.timestamp) : new Date();
+    const isValidTimestamp = !isNaN(timestamp.getTime());
+
+    // Ensure content is a string, not an object
+    let actualContent = "";
+    if (typeof data.content === "string") {
+      actualContent = data.content;
+    } else if (typeof data.message === "string") {
+      actualContent = data.message;
+    } else if (data.content && typeof data.content.content === "string") {
+      actualContent = data.content.content;
+    } else if (data.message && typeof data.message.content === "string") {
+      actualContent = data.message.content;
+    }
+
+    // Transform the received message to match our Message interface
     const message: Message = {
-      id: Date.now().toString(),
+      id: data._id || Date.now().toString(),
       senderId: data.from,
-      receiverId: currentUser.id,
-      content: data.message,
-      timestamp: new Date(data.timestamp),
+      receiverId: data.to || currentUser.id,
+      content: actualContent,
+      timestamp: isValidTimestamp ? timestamp : new Date(),
       type: "text",
       status: "delivered",
     };
-    dispatch({ type: "RECEIVE_MESSAGE", payload: message });
+
+    // Check if chat already exists for this contact
+    const existingChat = currentState.chats.find((chat) =>
+      chat.participants.some((p) => p.phoneNumber === data.from)
+    );
+
+    if (!existingChat) {
+      try {
+        // Add contact if not already present
+        const res = await api.post("/api/user/add-contact", {
+          contactNumber: data.senderNumber,
+        });
+
+        // console.log("✅ Contact added:", res.data);
+
+        // Create new chat for this contact
+        const newChat: Chat = {
+          id: data.from, // Use sender's phone as chat ID
+          participants: [
+            {
+              id: data.from,
+              displayName: res.data.contact?.name || data.from,
+              phoneNumber: data.from,
+              avatarUrl: res.data.contact?.avatarUrl || null,
+              isOnline: false,
+            },
+            {
+              id: currentUser.id,
+              displayName: currentUser.displayName,
+              phoneNumber: currentUser.phoneNumber,
+              avatarUrl: currentUser.avatarUrl,
+              isOnline: true,
+            },
+          ],
+          messages: [message],
+          lastMessage: message,
+          isGroup: false,
+          unreadCount: 1,
+          isPinned: false,
+          isMuted: false,
+        };
+
+        // Add the new chat to state
+        dispatch({ type: "ADD_NEW_CHAT", payload: newChat });
+      } catch (error) {
+        // console.error("Failed to add contact:", error);
+        // Still dispatch the message even if contact addition fails
+        dispatch({ type: "RECEIVE_MESSAGE", payload: message });
+      }
+    } else {
+      // Chat exists, just add the message
+      dispatch({ type: "RECEIVE_MESSAGE", payload: message });
+    }
   }, []);
 
   const handleUserTyping = useCallback((data: any) => {
@@ -301,7 +377,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // Socket.IO connection effect - only depends on authentication
   useEffect(() => {
     if (isAuthenticated && user) {
-      console.log("Connecting to socket.io...", user.id);
+      console.log("Connecting to socket.io...", user);
       const be_url = import.meta.env.VITE_BE_URL;
 
       // Clean up existing connection
@@ -324,6 +400,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       // Connection events
       socket.on("connect", () => {
         console.log("✅ Socket connected successfully with ID:", socket.id);
+
         setIsConnected(true);
         setConnectionError(null);
       });
@@ -411,21 +488,83 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const fetchChats = useCallback(async () => {
     try {
-      // TODO: Implement actual API call to fetch chats
-      // const response = await api.get('/api/chats');
-      // dispatch({ type: "SET_CHATS", payload: response.data.chats });
+      const res = await api.get("/api/user/contacts");
+      console.log("📞 Fetching contacts:", res.data.contacts);
 
-      // For now, using mock data
-      dispatch({ type: "SET_CHATS", payload: [] });
+      // Transform contacts to chat objects
+      const chatsFromContacts: Chat[] = res.data.contacts.map(
+        (contact: any) => ({
+          id: contact.user, // Use contact's user ID as chat ID
+          participants: [
+            {
+              id: contact.user,
+              displayName: contact.name,
+              phoneNumber: contact.phonenumber,
+              avatarUrl: contact.avatarUrl,
+              isOnline: false, // You can update this based on actual online status
+            },
+            // Add current user to participants
+            ...(userRef.current
+              ? [
+                  {
+                    id: userRef.current.id,
+                    displayName: userRef.current.displayName,
+                    phoneNumber: userRef.current.phoneNumber,
+                    avatarUrl: userRef.current.avatarUrl,
+                    isOnline: true,
+                  },
+                ]
+              : []),
+          ],
+          messages: [], // Start with empty messages
+          isGroup: false,
+          unreadCount: 0,
+          isPinned: false,
+          isMuted: false,
+        })
+      );
+
+      dispatch({ type: "SET_CHATS", payload: chatsFromContacts });
     } catch (error) {
       console.error("Failed to fetch chats:", error);
     }
   }, []);
+  const setActiveChat = useCallback(async (chat: Chat | null) => {
+    if (!chat) {
+      dispatch({ type: "SET_ACTIVE_CHAT", payload: null });
+      return;
+    }
 
-  const setActiveChat = useCallback((chat: Chat | null) => {
-    dispatch({ type: "SET_ACTIVE_CHAT", payload: chat });
-    if (chat) {
-      dispatch({ type: "MARK_AS_READ", payload: chat.id });
+    dispatch({ type: "MARK_AS_READ", payload: chat.id });
+
+    try {
+      // Fetch previous messages for this chat
+      const res = await api.get(`/api/chats/${chat.id}/messages`);
+      console.log("📜 Fetched chat history:", res.data.messages);
+
+      // Map backend messages to frontend Message type
+      const mappedMessages: Message[] = res.data.messages.map((msg: any) => ({
+        id: msg._id,
+        senderId: msg.from,
+        receiverId: msg.to,
+        content: msg.content,
+        timestamp: new Date(msg.timestamp),
+        type: "text",
+        status: msg.seen ? "read" : msg.delivered ? "delivered" : "sent",
+      }));
+
+      // Update the chat's messages in state and set activeChat to the updated chat object
+      const updatedChats = stateRef.current.chats.map((c) =>
+        c.id === chat.id ? { ...c, messages: mappedMessages } : c
+      );
+      const updatedActiveChat =
+        updatedChats.find((c) => c.id === chat.id) || chat;
+
+      dispatch({ type: "SET_CHATS", payload: updatedChats });
+      dispatch({ type: "SET_ACTIVE_CHAT", payload: updatedActiveChat });
+    } catch (error) {
+      console.error("Failed to fetch chat history:", error);
+      dispatch({ type: "SET_ACTIVE_CHAT", payload: chat }); // fallback
     }
   }, []);
 
@@ -528,8 +667,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const addContact = useCallback((user: User) => {
-    dispatch({ type: "ADD_CONTACT", payload: user });
+  const addContact = useCallback(async (phoneNumber: string) => {
+    try {
+      const res = await api.post("/api/user/add-contact", {
+        contactNumber: phoneNumber,
+      });
+      console.log("📞 Adding contact:", res);
+      dispatch({
+        type: "ADD_CONTACT",
+        payload: res.data.contact, // assuming the API returns the new contact as 'contact'
+      });
+    } catch (error) {
+      console.error("Failed to add contact:", error);
+    }
   }, []);
 
   const setSearchQuery = useCallback((query: string) => {

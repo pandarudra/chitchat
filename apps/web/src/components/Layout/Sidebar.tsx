@@ -4,17 +4,13 @@ import { useAuth } from "../../context/AuthContext";
 import { useChat } from "../../context/ChatContext";
 import { SearchInput } from "../ui/SearchInput";
 import { ChatList } from "../chat/ChatList";
-import { ContactPanel } from "../chat/ContactPanel";
 
 export function Sidebar() {
   const [activeTab, setActiveTab] = useState<"chats" | "contacts">("chats");
   const { user, logout } = useAuth();
   const { searchQuery, setSearchQuery } = useChat();
 
-  const tabs = [
-    { id: "chats", label: "Chats", icon: MessageCircle },
-    { id: "contacts", label: "Contacts", icon: Users },
-  ];
+  const tabs = [{ id: "chats", label: "Chats", icon: MessageCircle }];
 
   return (
     <div className="w-full lg:w-80 bg-white border-r border-gray-200 flex flex-col">
@@ -23,11 +19,8 @@ export function Sidebar() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <img
-              src={
-                user?.avatar ||
-                "https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1"
-              }
-              alt={user?.name}
+              src={user?.avatarUrl}
+              alt={user?.displayName}
               className="w-10 h-10 rounded-full object-cover"
             />
             <div>
@@ -81,7 +74,7 @@ export function Sidebar() {
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">
-        {activeTab === "chats" ? <ChatList /> : <ContactPanel />}
+        <ChatList />
       </div>
     </div>
   );

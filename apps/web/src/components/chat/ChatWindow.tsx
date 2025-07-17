@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Phone, Video, MoreVertical, Info } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
@@ -47,7 +47,8 @@ export function ChatWindow() {
       return activeChat.groupName || "Group Chat";
     }
     return (
-      activeChat.participants.find((p) => p.id !== user?.id)?.name || "Unknown"
+      activeChat.participants.find((p) => p.id !== user?.id)?.displayName ||
+      "Unknown"
     );
   };
 
@@ -55,7 +56,7 @@ export function ChatWindow() {
     if (activeChat.isGroup) {
       return null;
     }
-    return activeChat.participants.find((p) => p.id !== user?.id)?.avatar;
+    return activeChat.participants.find((p) => p.id !== user?.id)?.avatarUrl;
   };
 
   const getOnlineStatus = () => {
@@ -83,10 +84,7 @@ export function ChatWindow() {
               </div>
             ) : (
               <img
-                src={
-                  getChatAvatar() ||
-                  "https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1"
-                }
+                src={getChatAvatar() ?? undefined}
                 alt={getChatName()}
                 className="w-10 h-10 rounded-full object-cover"
               />
@@ -136,7 +134,7 @@ export function ChatWindow() {
                 activeChat.isGroup
                   ? activeChat.participants.find(
                       (p) => p.id === message.senderId
-                    )?.name
+                    )?.displayName
                   : undefined
               }
             />

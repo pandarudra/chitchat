@@ -6,6 +6,8 @@ import { SocketService } from "./services/socket.service";
 import authRouter from "./routes/auth.routes";
 import { connectMongo } from "./utils/mongoDB";
 import cookieparser from "cookie-parser";
+import userRouter from "./routes/user.routes";
+import chatRouter from "./routes/chat.routes";
 
 dotenv.config();
 const app = express();
@@ -14,9 +16,14 @@ const PORT = process.env.PORT || 8000;
 async function init() {
   app.use(
     cors({
-      origin: "http://localhost:5173",
-      credentials: true, // Allow cookies to be sent
-      // Adjust this to your frontend URL
+      origin: [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:4173",
+      ],
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
     })
   );
   app.use(express.json());
@@ -25,6 +32,8 @@ async function init() {
 
   // Initialize routes
   app.use("/api/auth", authRouter);
+  app.use("/api/user", userRouter);
+  app.use("/api/chats", chatRouter);
   const httpServer = http.createServer(app);
 
   // socket.io setup

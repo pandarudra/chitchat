@@ -6,6 +6,11 @@ export interface IUser extends Document {
   avatarUrl?: string;
   status?: string;
   lastSeen?: Date;
+  contacts: {
+    user: mongoose.Types.ObjectId;
+    name: string;
+    phonenumber: string;
+  }[];
 }
 
 const userSchema = new Schema<IUser>(
@@ -13,8 +18,25 @@ const userSchema = new Schema<IUser>(
     phoneNumber: { type: String, required: true, unique: true },
     displayName: { type: String, required: true },
     avatarUrl: { type: String },
-    status: { type: String },
+    status: { type: String, default: "Hey there! I am using ChitChat." },
     lastSeen: { type: Date },
+    contacts: [
+      {
+        user: {
+          type: Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        name: {
+          type: String,
+          required: true,
+        },
+        phonenumber: {
+          type: String,
+          required: true,
+        },
+      },
+    ],
   },
   { timestamps: true }
 );

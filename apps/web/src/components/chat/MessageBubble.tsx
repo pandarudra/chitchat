@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { Check, CheckCheck } from "lucide-react";
 import type { Message } from "../../types";
 
@@ -30,6 +30,17 @@ export function MessageBubble({
     }
   };
 
+  // Ensure we have a valid timestamp
+  const messageTime =
+    message.timestamp && isValid(message.timestamp)
+      ? format(message.timestamp, "HH:mm")
+      : "";
+
+  // Ensure content is a string
+  const messageContent =
+    typeof message.content === "string"
+      ? message.content
+      : JSON.stringify(message.content);
   return (
     <div className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
       <div className={`max-w-xs lg:max-w-md ${isOwn ? "order-2" : "order-1"}`}>
@@ -46,7 +57,7 @@ export function MessageBubble({
           }`}
         >
           {message.type === "text" ? (
-            <p className="text-sm">{message.content}</p>
+            <p className="text-sm">{messageContent}</p>
           ) : (
             <div className="space-y-2">
               {message.type === "image" && (
@@ -86,7 +97,7 @@ export function MessageBubble({
                   </div>
                 </div>
               )}
-              {message.content && <p className="text-sm">{message.content}</p>}
+              {messageContent && <p className="text-sm">{messageContent}</p>}
             </div>
           )}
 
@@ -95,9 +106,7 @@ export function MessageBubble({
               isOwn ? "text-green-100" : "text-gray-500"
             }`}
           >
-            <span className="text-xs">
-              {format(message.timestamp, "HH:mm")}
-            </span>
+            <span className="text-xs">{messageTime}</span>
             {getStatusIcon()}
           </div>
         </div>

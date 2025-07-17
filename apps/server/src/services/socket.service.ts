@@ -94,6 +94,8 @@ export class SocketService {
           return;
         }
 
+        console.log(data);
+
         const enrichedData = {
           from: userId,
           to,
@@ -181,64 +183,33 @@ export class SocketService {
         }
         const toSocketId = await pub.get(socketKey(rID.toString()));
 
+        const sender = await UserModel.findById(from);
+        const obj_data = {
+          fromId: from,
+          senderNumber: sender?.phoneNumber,
+          senderName: sender?.displayName,
+          toId: rID.toString(),
+          recipientNumber: to,
+          message: newMsg,
+        };
+
         if (toSocketId) {
-          this._io.to(toSocketId).emit("one_to_one_message", data);
+          this._io.to(toSocketId).emit("one_to_one_message", obj_data);
           newMsg.delivered = true;
           await newMsg.save();
+
           console.log(`Message sent from ${from} to ${toSocketId}: ${message}`);
         } else {
           console.warn(`User ${to} is not online.`);
         }
       }
     });
-
-    // sub.on("message", async (channel, messages) => {
-    //   if (channel === "CHITCHAT") {
-    //     const data = JSON.parse(messages);
-
-    //     const { from, to, message, timestamp } = data;
-    //     if (!from || !to || !message) {
-    //       console.error("Invalid message data:", data);
-    //       return;
-    //     }
-
-    //     const newMsg = await MessageModel.create({
-    //       from,
-    //       to,
-    //       content: message,
-    //       delivered: false,
-    //       seen: false,
-    //       timestamp: new Date(timestamp),
-    //     });
-
-    //     const recipent = await UserModel.findOne({ phoneNumber: to });
-    //     console.log(
-    //       `Recipient found: ${recipent ? recipent.phoneNumber : "not found"}`
-    //     );
-    //     if (!recipent) {
-    //       console.error(`No messages found for recipient: ${to}`);
-    //       return;
-    //     }
-    //     const rID = recipent._id;
-    //     console.log("Messages for recipient:", rID);
-    //     if (!rID) {
-    //       console.error(`Recipient ID not found for phone number: ${to}`);
-    //       return;
-    //     }
-    //     const toSocketId = await pub.get(socketKey(rID.toString())); // Get socket ID from Redis
-    //     if (toSocketId) {
-    //       this._io.to(toSocketId).emit("one_to_one_message", data);
-    //       newMsg.delivered = true;
-    //       await newMsg.save();
-    //       console.log(
-    //         `Message sent from ${data.from} to ${toSocketId}: ${data.message}`
-    //       );
-    //     } else {
-    //       console.warn(`User ${data.to} is not online.`);
-    //       // optional: store offline message
-    //     }
-    //   }
-    // });
+    pub.on("error", (err) => {
+      console.error("[Redis pub] Error:", err);
+    });
+    sub.on("error", (err) => {
+      console.error("[Redis sub] Error:", err);
+    });
   }
 
   public get io(): SocketIOServer {

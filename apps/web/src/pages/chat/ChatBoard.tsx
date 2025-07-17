@@ -1,6 +1,7 @@
 import { ChatWindow } from "../../components/chat/ChatWindow";
 import { Sidebar } from "../../components/Layout/Sidebar";
 import { useChat } from "../../context/ChatContext";
+
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 
 export function ChatBoard() {
