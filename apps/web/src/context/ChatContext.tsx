@@ -85,7 +85,7 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
 
       if (chatIndex !== -1) {
         const updatedChats = [...state.chats];
-        updatedChats[chatIndex] = {
+        const updatedChat = {
           ...updatedChats[chatIndex],
           messages: [...updatedChats[chatIndex].messages, message],
           lastMessage: message,
@@ -95,8 +95,15 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
               ? updatedChats[chatIndex].unreadCount + 1
               : updatedChats[chatIndex].unreadCount,
         };
+        updatedChats[chatIndex] = updatedChat;
 
-        return { ...state, chats: updatedChats };
+        // If the active chat is the one being updated, update activeChat too
+        const updatedActiveChat =
+          state.activeChat?.id === updatedChat.id
+            ? updatedChat
+            : state.activeChat;
+
+        return { ...state, chats: updatedChats, activeChat: updatedActiveChat };
       }
       return state;
     }
