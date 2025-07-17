@@ -1,14 +1,21 @@
-import React, { createContext, useContext, useEffect, useReducer } from "react";
+// AuthContext.tsx - Enhanced version
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useReducer,
+  useCallback,
+} from "react";
 import type { AuthState, User } from "../types";
-import axios from "axios";
-import api from "../lib/api";
+import api, { addAuthEventListener, removeAuthEventListener } from "../lib/api";
 
 interface AuthContextType extends AuthState {
   login: (phone: string) => Promise<void>;
   signup: (name: string, phone: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
   clearError: () => void;
+  refreshAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -81,66 +88,78 @@ const initialState: AuthState = {
   error: null,
 };
 
-const be_url = import.meta.env.VITE_BE_URL;
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  useEffect(() => {
-    checkAuthStatus();
+  const transformUser = useCallback((userData: any): User => {
+    return {
+      id: userData._id || userData.id,
+      phoneNumber: userData.phoneNumber,
+      displayName: userData.displayName,
+      avatarUrl: userData.avatarUrl,
+      status: userData.status,
+      lastSeen: userData.lastSeen ? new Date(userData.lastSeen) : undefined,
+      isOnline: userData.lastSeen
+        ? new Date().getTime() - new Date(userData.lastSeen).getTime() <
+          5 * 60 * 1000
+        : false,
+      createdAt: userData.createdAt ? new Date(userData.createdAt) : undefined,
+      updatedAt: userData.updatedAt ? new Date(userData.updatedAt) : undefined,
+    };
   }, []);
 
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = useCallback(async () => {
     dispatch({ type: "SET_LOADING", payload: true });
     try {
       const res = await api.get(`/api/auth/me`);
-
-      // Transform backend user data to frontend format
-      const user: User = {
-        id: res.data.user._id || res.data.user.id,
-        phoneNumber: res.data.user.phoneNumber,
-        displayName: res.data.user.displayName,
-        avatarUrl: res.data.user.avatarUrl,
-        status: res.data.user.status,
-        lastSeen: res.data.user.lastSeen
-          ? new Date(res.data.user.lastSeen)
-          : undefined,
-        isOnline: res.data.user.lastSeen
-          ? new Date().getTime() - new Date(res.data.user.lastSeen).getTime() <
-            5 * 60 * 1000
-          : false,
-        createdAt: res.data.user.createdAt
-          ? new Date(res.data.user.createdAt)
-          : undefined,
-        updatedAt: res.data.user.updatedAt
-          ? new Date(res.data.user.updatedAt)
-          : undefined,
-      };
-
-      dispatch({
-        type: "AUTH_SUCCESS",
-        payload: user,
-      });
-    } catch (error) {
-      dispatch({
-        type: "SET_LOADING",
-        payload: false,
-      });
+      const user = transformUser(res.data.user);
+      dispatch({ type: "AUTH_SUCCESS", payload: user });
+    } catch (error: any) {
+      dispatch({ type: "SET_LOADING", payload: false });
+      console.log("Auth check failed:", error?.response?.data?.message);
     }
-  };
+  }, [transformUser]);
+
+  const handleTokenRefresh = useCallback(() => {
+    console.log("Token was refreshed, updating auth state");
+    // Optionally refresh user data after token refresh
+    // checkAuthStatus();
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    console.log("Logout triggered by token refresh failure");
+    dispatch({ type: "LOGOUT" });
+  }, []);
+
+  useEffect(() => {
+    // Initial auth check
+    checkAuthStatus();
+
+    // Listen for auth events from the API interceptor
+    addAuthEventListener("logout", handleLogout);
+    addAuthEventListener("tokenRefreshed", handleTokenRefresh);
+
+    // Cleanup listeners on unmount
+    return () => {
+      removeAuthEventListener("logout", handleLogout);
+      removeAuthEventListener("tokenRefreshed", handleTokenRefresh);
+    };
+  }, [checkAuthStatus, handleLogout, handleTokenRefresh]);
 
   const login = async (phoneNumber: string) => {
     dispatch({ type: "AUTH_START" });
     try {
       const res = await api.post(`/api/auth/login`, { phoneNumber });
+      console.log("Login successful:", res.data);
 
-      // Transform and dispatch user data
-      checkAuthStatus();
+      // Check auth status after login to get user data
+      await checkAuthStatus();
     } catch (error: any) {
       dispatch({
         type: "AUTH_FAILURE",
         payload: error?.response?.data?.message || "Login failed",
       });
+      throw error;
     }
   };
 
@@ -151,21 +170,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         displayName,
         phoneNumber,
       });
+      console.log("Signup successful:", res.data);
 
-      console.log("Signup response:", res.data);
-      // Transform and dispatch user data
-      checkAuthStatus();
+      // Check auth status after signup to get user data
+      await checkAuthStatus();
     } catch (error: any) {
       dispatch({
         type: "AUTH_FAILURE",
         payload: error?.response?.data?.message || "Signup failed",
       });
+      throw error;
     }
   };
 
   const logout = async () => {
     try {
       await api.post(`/api/auth/logout`, {});
+      console.log("Logout successful");
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
@@ -176,43 +197,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = async (updates: Partial<User>) => {
     dispatch({ type: "SET_LOADING", payload: true });
     try {
-      const res = await axios.put(
-        `${be_url}/api/auth/update-profile`,
-        updates,
-        {
-          withCredentials: true,
-        }
-      );
-
-      // Transform and dispatch updated user data
-      const user: User = {
-        id: res.data.user._id || res.data.user.id,
-        phoneNumber: res.data.user.phoneNumber,
-        displayName: res.data.user.displayName,
-        avatarUrl: res.data.user.avatarUrl,
-        status: res.data.user.status,
-        lastSeen: res.data.user.lastSeen
-          ? new Date(res.data.user.lastSeen)
-          : undefined,
-        isOnline: res.data.user.lastSeen
-          ? new Date().getTime() - new Date(res.data.user.lastSeen).getTime() <
-            5 * 60 * 1000
-          : false,
-        createdAt: res.data.user.createdAt
-          ? new Date(res.data.user.createdAt)
-          : undefined,
-        updatedAt: res.data.user.updatedAt
-          ? new Date(res.data.user.updatedAt)
-          : undefined,
-      };
-
+      const res = await api.put(`/api/auth/update-profile`, updates);
+      const user = transformUser(res.data.user);
       dispatch({ type: "UPDATE_PROFILE", payload: user });
     } catch (error: any) {
       dispatch({
         type: "AUTH_FAILURE",
         payload: error?.response?.data?.message || "Failed to update profile",
       });
+      throw error;
     }
+  };
+
+  const refreshAuth = async () => {
+    await checkAuthStatus();
   };
 
   const clearError = () => {
@@ -228,6 +226,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         updateProfile,
         clearError,
+        refreshAuth,
       }}
     >
       {children}
