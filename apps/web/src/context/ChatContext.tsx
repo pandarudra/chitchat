@@ -75,12 +75,9 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
     case "SEND_MESSAGE":
     case "RECEIVE_MESSAGE": {
       const message = action.payload;
+      // For direct chats, chat.id should match either senderId or receiverId
       const chatIndex = state.chats.findIndex(
-        (chat) =>
-          chat.id === message.receiverId ||
-          chat.participants.some(
-            (p) => p.id === message.senderId || p.id === message.receiverId
-          )
+        (chat) => chat.id === message.receiverId || chat.id === message.senderId
       );
 
       if (chatIndex !== -1) {
@@ -280,89 +277,102 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleReceiveMessage = useCallback(async (data: any) => {
-    console.log("📨 Received message:", data);
     const currentUser = userRef.current;
     const currentState = stateRef.current;
 
     if (!currentUser) return;
 
-    // Validate timestamp and provide fallback
-    const timestamp = data.timestamp ? new Date(data.timestamp) : new Date();
-    const isValidTimestamp = !isNaN(timestamp.getTime());
+    // If the payload is nested, extract from data.message
+    const msgData = data.message || data;
 
-    // Ensure content is a string, not an object
+    // Extract content safely
     let actualContent = "";
-    if (typeof data.content === "string") {
-      actualContent = data.content;
-    } else if (typeof data.message === "string") {
-      actualContent = data.message;
-    } else if (data.content && typeof data.content.content === "string") {
-      actualContent = data.content.content;
-    } else if (data.message && typeof data.message.content === "string") {
-      actualContent = data.message.content;
+    if (typeof msgData.content === "string") {
+      actualContent = msgData.content;
+    } else if (typeof msgData.message === "string") {
+      actualContent = msgData.message;
+    } else if (msgData.content && typeof msgData.content.content === "string") {
+      actualContent = msgData.content.content;
+    } else if (msgData.message && typeof msgData.message.content === "string") {
+      actualContent = msgData.message.content;
     }
 
-    // Transform the received message to match our Message interface
+    // Validate timestamp and provide fallback
+    const timestamp = msgData.timestamp
+      ? new Date(msgData.timestamp)
+      : new Date();
+    const isValidTimestamp = !isNaN(timestamp.getTime());
+
+    // Use fromId and toId if present, else fallback to msgData.from/to
+    const senderId = data.fromId || msgData.from;
+    const receiverId = data.toId || msgData.to || currentUser.id;
+
+    if (!senderId || !receiverId) {
+      console.error("Incoming message missing senderId or receiverId:", data);
+      return;
+    }
+
     const message: Message = {
-      id: data._id || Date.now().toString(),
-      senderId: data.from,
-      receiverId: data.to || currentUser.id,
+      id: msgData._id || Date.now().toString(),
+      senderId,
+      receiverId,
       content: actualContent,
       timestamp: isValidTimestamp ? timestamp : new Date(),
       type: "text",
-      status: "delivered",
+      status: msgData.seen ? "read" : msgData.delivered ? "delivered" : "sent",
     };
 
-    // Check if chat already exists for this contact
-    const existingChat = currentState.chats.find((chat) =>
-      chat.participants.some((p) => p.phoneNumber === data.from)
+    // Always match chat by the other user's user id
+    const contactId = senderId === currentUser.id ? receiverId : senderId;
+
+    console.log(
+      "Current chats:",
+      currentState.chats.map((c) => c.id)
+    );
+    console.log("Incoming message:", message);
+    console.log(
+      "Incoming message senderId:",
+      message.senderId,
+      "receiverId:",
+      message.receiverId
+    );
+    console.log("Calculated contactId:", contactId);
+
+    // Match by user id only
+    const existingChat = currentState.chats.find(
+      (chat) => chat.id === contactId
     );
 
     if (!existingChat) {
-      try {
-        // Add contact if not already present
-        const res = await api.post("/api/user/add-contact", {
-          contactNumber: data.senderNumber,
-        });
+      // Only create a new chat if it truly doesn't exist
+      const newChat: Chat = {
+        id: contactId,
+        participants: [
+          {
+            id: contactId,
+            displayName: data.senderName || contactId,
+            phoneNumber: data.senderNumber || "",
+            avatarUrl: data.senderAvatarUrl || null,
+            isOnline: false,
+          },
+          {
+            id: currentUser.id,
+            displayName: currentUser.displayName,
+            phoneNumber: currentUser.phoneNumber,
+            avatarUrl: currentUser.avatarUrl,
+            isOnline: true,
+          },
+        ],
+        messages: [message],
+        lastMessage: message,
+        isGroup: false,
+        unreadCount: 1,
+        isPinned: false,
+        isMuted: false,
+      };
 
-        // console.log("✅ Contact added:", res.data);
-
-        // Create new chat for this contact
-        const newChat: Chat = {
-          id: data.from, // Use sender's phone as chat ID
-          participants: [
-            {
-              id: data.from,
-              displayName: res.data.contact?.name || data.from,
-              phoneNumber: data.from,
-              avatarUrl: res.data.contact?.avatarUrl || null,
-              isOnline: false,
-            },
-            {
-              id: currentUser.id,
-              displayName: currentUser.displayName,
-              phoneNumber: currentUser.phoneNumber,
-              avatarUrl: currentUser.avatarUrl,
-              isOnline: true,
-            },
-          ],
-          messages: [message],
-          lastMessage: message,
-          isGroup: false,
-          unreadCount: 1,
-          isPinned: false,
-          isMuted: false,
-        };
-
-        // Add the new chat to state
-        dispatch({ type: "ADD_NEW_CHAT", payload: newChat });
-      } catch (error) {
-        // console.error("Failed to add contact:", error);
-        // Still dispatch the message even if contact addition fails
-        dispatch({ type: "RECEIVE_MESSAGE", payload: message });
-      }
+      dispatch({ type: "ADD_NEW_CHAT", payload: newChat });
     } else {
-      // Chat exists, just add the message
       dispatch({ type: "RECEIVE_MESSAGE", payload: message });
     }
   }, []);
@@ -564,6 +574,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const updatedChats = stateRef.current.chats.map((c) =>
         c.id === chat.id ? { ...c, messages: mappedMessages } : c
       );
+      console.log("Updated chats:", updatedChats);
       const updatedActiveChat =
         updatedChats.find((c) => c.id === chat.id) || chat;
 
