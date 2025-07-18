@@ -8,6 +8,7 @@ import { connectMongo } from "./utils/mongoDB";
 import cookieparser from "cookie-parser";
 import userRouter from "./routes/user.routes";
 import chatRouter from "./routes/chat.routes";
+import OtpRouter from "./routes/otp.routes";
 
 dotenv.config();
 const app = express();
@@ -34,6 +35,8 @@ async function init() {
   app.use("/api/auth", authRouter);
   app.use("/api/user", userRouter);
   app.use("/api/chats", chatRouter);
+  app.use("/api/otp", OtpRouter);
+
   const httpServer = http.createServer(app);
 
   // socket.io setup
