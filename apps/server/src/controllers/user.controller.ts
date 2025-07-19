@@ -112,3 +112,14 @@ const getAvatarUrl = async (userId: any): Promise<string | undefined> => {
   const user = await UserModel.findById(userId);
   return user?.avatarUrl;
 };
+
+export const isUserExists = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  const phoneNumber = req.body.phoneNumber;
+  const user = await UserModel.findOne({ phoneNumber });
+  return res.status(200).json({
+    exists: !!user,
+  });
+};

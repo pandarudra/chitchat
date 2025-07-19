@@ -4,6 +4,7 @@ import { Phone, Loader2 } from "lucide-react";
 import { COUNTRY_CODES } from "../../utils/constants";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../lib/api";
+import toast from "react-hot-toast";
 
 interface LoginFormData {
   countryCode: string;
@@ -35,12 +36,25 @@ export function Login() {
   const onSendOtp = async ({ countryCode, phoneNumber }: LoginFormData) => {
     const fullPhone = `${countryCode}${phoneNumber}`;
     setPhone(fullPhone);
+
     try {
-      setSending(true);
-      await api.post("/api/otp/send", { phoneNumber: fullPhone });
+      const res = await api.post("/api/user/is-user-exists", {
+        phoneNumber: fullPhone,
+      });
+
+      if (res.data.exists) {
+        setSending(true);
+        await api.post("/api/otp/send", { phoneNumber: fullPhone });
+      } else {
+        // Handle user not found case
+        console.error("User does not exist.");
+        toast.error("User does not exist. Please sign up first.");
+        return;
+      }
       setShowOtp(true);
     } catch (err) {
       console.error("Failed to send OTP:", err);
+      toast.error("Failed to send OTP. Please try again.");
     } finally {
       setSending(false);
     }
@@ -57,11 +71,15 @@ export function Login() {
       });
       if (res.data.message === "OTP verified") {
         await login(phone); // Now call your login API
+        toast.success("Login successful!");
       } else {
         // Show error
+        toast.error("OTP verification failed. Please try again.");
+        return;
       }
     } catch (err) {
       console.error("OTP verification failed:", err);
+      toast.error("OTP verification failed. Please try again.");
     } finally {
       setSending(false);
     }
