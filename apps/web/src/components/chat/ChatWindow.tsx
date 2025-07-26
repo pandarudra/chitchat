@@ -2,8 +2,10 @@ import { useEffect, useRef } from "react";
 import { Phone, Video, MoreVertical, Info } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
+import { DateSeparator } from "./DateSeparator";
 import { useChat } from "../../context/ChatContext";
 import { useAuth } from "../../context/AuthContext";
+import { groupMessagesByDate } from "../../utils/messageUtils";
 
 export function ChatWindow() {
   const { activeChat } = useChat();
@@ -71,9 +73,9 @@ export function ChatWindow() {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-white">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+    <div className="flex-1 flex flex-col bg-white relative">
+      {/* Fixed Header */}
+      <div className="fixed top-0 left-0 right-0 lg:left-80 flex items-center justify-between p-4 border-b border-gray-200 bg-white z-30">
         <div className="flex items-center space-x-3">
           <div className="relative">
             {activeChat.isGroup ? (
@@ -112,8 +114,8 @@ export function ChatWindow() {
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+      {/* Messages with top padding to account for fixed header */}
+      <div className="flex-1 overflow-y-auto p-4 pt-20 pb-24 space-y-2 bg-gray-50">
         {activeChat.messages.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-500">
@@ -121,30 +123,55 @@ export function ChatWindow() {
             </p>
           </div>
         ) : (
-          activeChat.messages.map((message, index) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              isOwn={message.senderId === user?.id}
-              showAvatar={
-                index === 0 ||
-                activeChat.messages[index - 1].senderId !== message.senderId
-              }
-              senderName={
-                activeChat.isGroup
-                  ? activeChat.participants.find(
-                      (p) => p.id === message.senderId
-                    )?.displayName
-                  : undefined
-              }
-            />
-          ))
+          (() => {
+            const messageGroups = groupMessagesByDate(activeChat.messages);
+
+            return messageGroups.map((group, groupIndex) => (
+              <div key={group.date.toISOString()} className="space-y-2">
+                {/* Date Separator */}
+                <DateSeparator date={group.date} />
+
+                {/* Messages for this date */}
+                {group.messages.map((message, messageIndex) => {
+                  const previousMessage =
+                    messageIndex > 0
+                      ? group.messages[messageIndex - 1]
+                      : groupIndex > 0
+                        ? messageGroups[groupIndex - 1].messages[
+                            messageGroups[groupIndex - 1].messages.length - 1
+                          ]
+                        : null;
+
+                  return (
+                    <MessageBubble
+                      key={message.id}
+                      message={message}
+                      isOwn={message.senderId === user?.id}
+                      showAvatar={
+                        !previousMessage ||
+                        previousMessage.senderId !== message.senderId
+                      }
+                      senderName={
+                        activeChat.isGroup
+                          ? activeChat.participants.find(
+                              (p) => p.id === message.senderId
+                            )?.displayName
+                          : undefined
+                      }
+                    />
+                  );
+                })}
+              </div>
+            ));
+          })()
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
-      <MessageInput />
+      {/* Fixed Message Input */}
+      <div className="fixed bottom-0 left-0 right-0 lg:left-80 bg-white z-30">
+        <MessageInput />
+      </div>
     </div>
   );
 }

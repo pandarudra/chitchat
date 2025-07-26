@@ -9,7 +9,7 @@ import { UserPlus } from "lucide-react";
 
 export function ChatBoard() {
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
-  const isMobile = useMediaQuery("(max-width: 768px)");
+  const isMobile = useMediaQuery("(max-width: 1030px)");
   const { activeChat } = useChat();
   const [showbtn, setShowbtn] = useState(true);
 
