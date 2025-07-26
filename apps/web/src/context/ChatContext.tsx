@@ -695,8 +695,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         type: "ADD_CONTACT",
         payload: res.data.contact, // assuming the API returns the new contact as 'contact'
       });
+      return res.data.contact;
     } catch (error) {
       console.error("Failed to add contact:", error);
+      throw error; // Re-throw the error so the component can handle it
     }
   }, []);
 

@@ -56,6 +56,13 @@ export const onAddContact = async (
     });
     await existingUser.save();
 
+    existingContact.contacts.push({
+      user: existingUser._id as mongoose.Types.ObjectId,
+      name: existingUser.displayName,
+      phonenumber: existingUser.phoneNumber,
+    });
+    await existingContact.save();
+
     return res.status(200).json({
       message: "Contact added successfully.",
       contact: existingContact,

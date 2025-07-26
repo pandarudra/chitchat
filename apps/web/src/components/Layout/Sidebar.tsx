@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings, LogOut, MessageCircle, Users } from "lucide-react";
+import { Settings, LogOut, MessageCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useChat } from "../../context/ChatContext";
 import { SearchInput } from "../ui/SearchInput";
@@ -24,7 +24,7 @@ export function Sidebar() {
               className="w-10 h-10 rounded-full object-cover"
             />
             <div>
-              <h2 className="font-semibold">{user?.name}</h2>
+              <h2 className="font-semibold">{user?.displayName}</h2>
               <p className="text-sm text-green-100">
                 {user?.status || "Available"}
               </p>
