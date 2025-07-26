@@ -1,20 +1,26 @@
 import { useEffect, useRef } from "react";
-import { Phone, Video, MoreVertical, Info } from "lucide-react";
+import { Phone, Video, MoreVertical, Info, ArrowLeft } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
 import { DateSeparator } from "./DateSeparator";
 import { useChat } from "../../context/ChatContext";
 import { useAuth } from "../../context/AuthContext";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { groupMessagesByDate } from "../../utils/messageUtils";
 
 export function ChatWindow() {
-  const { activeChat } = useChat();
+  const { activeChat, setActiveChat } = useChat();
   const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const showBackButton = useMediaQuery("(max-width: 1030px)");
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeChat?.messages]);
+
+  const handleBackClick = () => {
+    setActiveChat(null);
+  };
 
   if (!activeChat) {
     return (
@@ -77,6 +83,15 @@ export function ChatWindow() {
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 lg:left-80 flex items-center justify-between p-4 border-b border-gray-200 bg-white z-30">
         <div className="flex items-center space-x-3">
+          {showBackButton && (
+            <button
+              onClick={handleBackClick}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+              title="Back to chats"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          )}
           <div className="relative">
             {activeChat.isGroup ? (
               <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
