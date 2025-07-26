@@ -14,12 +14,13 @@ export function ChatBoard() {
   const [showbtn, setShowbtn] = useState(true);
 
   useEffect(() => {
-    const interval = setInterval(() => console.log(activeChat, showbtn), 1000);
-    if (activeChat) {
-      setShowbtn(false);
-    } else {
-      setShowbtn(true);
-    }
+    const interval = setInterval(() => {
+      if (activeChat) {
+        setShowbtn(false);
+      } else {
+        setShowbtn(true);
+      }
+    }, 1000);
     return () => clearInterval(interval);
   }, [activeChat, showbtn]);
 
@@ -52,6 +53,7 @@ export function ChatBoard() {
         onClick={() => setIsAddContactOpen(true)}
         icon={<UserPlus className="h-6 w-6" />}
         title="Add Contact"
+        position={activeChat ? "bottom-left" : "bottom-right"}
       />
       <AddContact
         isOpen={isAddContactOpen}
