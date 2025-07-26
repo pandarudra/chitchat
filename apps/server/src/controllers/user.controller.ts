@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import e, { Request, Response } from "express";
 import { UserModel } from "../models/User";
 import mongoose from "mongoose";
 
@@ -167,4 +167,46 @@ export const getUserOnlineStatus = async (
     console.error("Error checking user online status:", error);
     return res.status(500).json({ error: "Internal server error." });
   }
+};
+export const onBlockContact = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  const userId = req.user?._id;
+  const blockUserId = req.body.blockUserId;
+
+  if (!userId || !blockUserId) {
+    return res
+      .status(400)
+      .json({ error: "User ID and block user ID are required." });
+  }
+
+  try {
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    // Check if the user is already blocked
+    if (user.blockedContacts?.includes(blockUserId)) {
+      return res.status(400).json({ error: "User is already blocked." });
+    }
+
+    // Add to blocked contacts
+    user.blockedContacts = [...(user.blockedContacts || []), blockUserId];
+    await user.save();
+
+    return res.status(200).json({
+      message: "User blocked successfully.",
+      blockedUserId: blockUserId,
+    });
+  } catch (error) {
+    console.error("Error blocking user:", error);
+    return res.status(500).json({ error: "Internal server error." });
+  }
+};
+
+export const onUnblockContact = (req: Request, res: Response): Promise<any> => {
+  try {
+  } catch (error) {}
 };

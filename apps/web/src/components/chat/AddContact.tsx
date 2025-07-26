@@ -58,7 +58,6 @@ export function AddContact({ isOpen, onClose }: AddContactProps) {
 
   const handleClose = () => {
     setPhoneNumber("");
-
     setCountryCode("+91");
     onClose();
   };
