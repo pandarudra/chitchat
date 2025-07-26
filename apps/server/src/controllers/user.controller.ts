@@ -168,6 +168,8 @@ export const getUserOnlineStatus = async (
     return res.status(500).json({ error: "Internal server error." });
   }
 };
+
+// block and unblock contacts
 export const onBlockContact = async (
   req: Request,
   res: Response
@@ -206,7 +208,7 @@ export const onBlockContact = async (
   }
 };
 
-export const onUnblockContact = (req: Request, res: Response): Promise<any> => {
+export const onUnblockContact = (req: Request, res: Response) => {
   try {
   } catch (error) {}
 };
