@@ -45,6 +45,7 @@ type ChatAction =
     }
   | { type: "MARK_AS_READ"; payload: string }
   | { type: "ADD_CONTACT"; payload: User }
+  | { type: "SET_CONTACTS"; payload: User[] }
   | { type: "SET_SEARCH_QUERY"; payload: string }
   | { type: "CREATE_GROUP_CHAT"; payload: Chat }
   | { type: "ADD_USER_TO_GROUP"; payload: { chatId: string; user: User } }
@@ -222,6 +223,7 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
 
     case "UPDATE_USER_STATUS": {
       const { userId, isOnline, lastSeen } = action.payload;
+      console.log("🔄 Updating user status in reducer:", { userId, isOnline, lastSeen });
 
       // Update user status in chats
       const updatedChats = state.chats.map((chat) => ({
@@ -250,6 +252,7 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
           }
         : null;
 
+      console.log("🔄 Updated chats, contacts, and activeChat");
       return {
         ...state,
         chats: updatedChats,
@@ -435,9 +438,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const handleUserStatusChange = useCallback(
     (data: { userId: string; isOnline: boolean; lastSeen: Date }) => {
+      console.log("📡 Received user status change:", data);
       dispatch({
         type: "UPDATE_USER_STATUS",
-        payload: data,
+        payload: {
+          ...data,
+          lastSeen: new Date(data.lastSeen), // Ensure lastSeen is a proper Date object
+        },
       });
     },
     []
@@ -572,41 +579,56 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       // Transform contacts to chat objects
       const chatsFromContacts: Chat[] = res.data.contacts.map(
-        (contact: any) => ({
-          id: contact.user, // Use contact's user ID as chat ID
-          participants: [
-            {
-              id: contact.user,
-              displayName: contact.name,
-              phoneNumber: contact.phonenumber,
-              avatarUrl: contact.avatarUrl,
-              isOnline: contact.isOnline || false, // Use actual online status from contact
-              lastSeen: contact.lastSeen
-                ? new Date(contact.lastSeen)
-                : undefined,
-            },
-            // Add current user to participants
-            ...(userRef.current
-              ? [
-                  {
-                    id: userRef.current.id,
-                    displayName: userRef.current.displayName,
-                    phoneNumber: userRef.current.phoneNumber,
-                    avatarUrl: userRef.current.avatarUrl,
-                    isOnline: userRef.current.isOnline || false,
-                  },
-                ]
-              : []),
-          ],
-          messages: [], // Start with empty messages
-          isGroup: false,
-          unreadCount: 0,
-          isPinned: false,
-          isMuted: false,
-        })
+        (contact: any) => {
+          console.log("📞 Processing contact:", contact);
+          return {
+            id: contact.user, // Use contact's user ID as chat ID
+            participants: [
+              {
+                id: contact.user.toString(), // Ensure ID is string
+                displayName: contact.name,
+                phoneNumber: contact.phonenumber,
+                avatarUrl: contact.avatarUrl,
+                isOnline: contact.isOnline || false, // Use actual online status from contact
+                lastSeen: contact.lastSeen
+                  ? new Date(contact.lastSeen)
+                  : undefined,
+              },
+              // Add current user to participants
+              ...(userRef.current
+                ? [
+                    {
+                      id: userRef.current.id,
+                      displayName: userRef.current.displayName,
+                      phoneNumber: userRef.current.phoneNumber,
+                      avatarUrl: userRef.current.avatarUrl,
+                      isOnline: userRef.current.isOnline || false,
+                    },
+                  ]
+                : []),
+            ],
+            messages: [], // Start with empty messages
+            isGroup: false,
+            unreadCount: 0,
+            isPinned: false,
+            isMuted: false,
+          };
+        }
       );
 
       dispatch({ type: "SET_CHATS", payload: chatsFromContacts });
+      
+      // Also set contacts separately for status updates
+      const contactsList = res.data.contacts.map((contact: any) => ({
+        id: contact.user.toString(),
+        displayName: contact.name,
+        phoneNumber: contact.phonenumber,
+        avatarUrl: contact.avatarUrl,
+        isOnline: contact.isOnline || false,
+        lastSeen: contact.lastSeen ? new Date(contact.lastSeen) : undefined,
+      }));
+      
+      dispatch({ type: "ADD_CONTACT", payload: contactsList });
     } catch (error) {
       console.error("Failed to fetch chats:", error);
     }

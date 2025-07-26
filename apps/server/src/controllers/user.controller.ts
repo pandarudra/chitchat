@@ -100,7 +100,7 @@ export const onGetContacts = async (
       user.contacts.map(async (contact) => {
         const contactUser = await UserModel.findById(contact.user);
         return {
-          user: contact.user,
+          user: contact.user.toString(), // Convert ObjectId to string
           name: contact.name,
           phonenumber: contact.phonenumber,
           avatarUrl: contactUser?.avatarUrl,
