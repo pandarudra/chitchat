@@ -97,12 +97,18 @@ export const onGetContacts = async (
     }
 
     const contact_obj = await Promise.all(
-      user.contacts.map(async (contact) => ({
-        user: contact.user,
-        name: contact.name,
-        phonenumber: contact.phonenumber,
-        avatarUrl: await getAvatarUrl(contact.user),
-      }))
+      user.contacts.map(async (contact) => {
+        const contactUser = await UserModel.findById(contact.user);
+        return {
+          user: contact.user,
+          name: contact.name,
+          phonenumber: contact.phonenumber,
+          avatarUrl: contactUser?.avatarUrl,
+          isOnline: contactUser?.isOnline || false,
+          lastSeen: contactUser?.lastSeen,
+          displayName: contactUser?.displayName,
+        };
+      })
     );
 
     return res.status(200).json({
@@ -129,4 +135,36 @@ export const isUserExists = async (
   return res.status(200).json({
     exists: !!user,
   });
+};
+
+export const getUserOnlineStatus = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  const { userId } = req.params;
+
+  if (!userId) {
+    return res.status(400).json({ error: "User ID is required." });
+  }
+
+  try {
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    // Consider user online if lastSeen is within the last 5 minutes
+    const isOnline = user.lastSeen
+      ? new Date().getTime() - new Date(user.lastSeen).getTime() < 5 * 60 * 1000
+      : false;
+
+    return res.json({
+      isOnline,
+      lastSeen: user.lastSeen,
+      status: user.status,
+    });
+  } catch (error) {
+    console.error("Error checking user online status:", error);
+    return res.status(500).json({ error: "Internal server error." });
+  }
 };

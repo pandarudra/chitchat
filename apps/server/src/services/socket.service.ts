@@ -80,6 +80,20 @@ export class SocketService {
         console.error("User ID not found in socket data.");
         return;
       }
+
+      // Update user's lastSeen and set as online
+      try {
+        await UserModel.findByIdAndUpdate(userId, {
+          lastSeen: new Date(),
+          isOnline: true,
+        });
+
+        // Broadcast user online status to contacts
+        await this.broadcastUserStatusChange(userId, true);
+      } catch (error) {
+        console.error("Error updating user lastSeen:", error);
+      }
+
       // redis map upload userId -> socketId
       await pub.set(socketKey(userId), socket.id, "EX", 60 * 10); // Store socket ID in Redis with a TTL of 10 mins
       socket.emit("connected", { socketId: socket.id });
@@ -95,6 +109,15 @@ export class SocketService {
         }
 
         console.log(data);
+
+        // Update sender's lastSeen
+        try {
+          await UserModel.findByIdAndUpdate(userId, {
+            lastSeen: new Date(),
+          });
+        } catch (error) {
+          console.error("Error updating sender lastSeen:", error);
+        }
 
         const enrichedData = {
           from: userId,
@@ -142,10 +165,34 @@ export class SocketService {
         }
       });
 
-      socket.on("disconnect", () => {
+      // Heartbeat to keep user online
+      socket.on("heartbeat", async () => {
+        try {
+          await UserModel.findByIdAndUpdate(userId, {
+            lastSeen: new Date(),
+          });
+        } catch (error) {
+          console.error("Error updating user lastSeen on heartbeat:", error);
+        }
+      });
+
+      socket.on("disconnect", async () => {
         console.log(
           `User disconnected: ${userId} with socket ID: ${socket.id}`
         );
+
+        // Update user's lastSeen timestamp and set offline when they disconnect
+        try {
+          await UserModel.findByIdAndUpdate(userId, {
+            lastSeen: new Date(),
+            isOnline: false,
+          });
+
+          // Broadcast user offline status to contacts
+          await this.broadcastUserStatusChange(userId, false);
+        } catch (error) {
+          console.error("Error updating user lastSeen on disconnect:", error);
+        }
 
         pub.del(socketKey(userId)); // Remove socket ID from Redis
       });
@@ -214,5 +261,47 @@ export class SocketService {
 
   public get io(): SocketIOServer {
     return this._io;
+  }
+
+  // Method to broadcast user status change to their contacts
+  private async broadcastUserStatusChange(
+    userId: string,
+    isOnline: boolean
+  ): Promise<void> {
+    try {
+      // Find the user and their contacts
+      const user = await UserModel.findById(userId).populate(
+        "contacts.user",
+        "_id phoneNumber displayName"
+      );
+      if (!user) return;
+
+      // Also find users who have this user in their contacts
+      const usersWithThisContact = (await UserModel.find({
+        "contacts.user": userId,
+      })) as Array<{ _id: string }>;
+
+      const allContactsToNotify = [
+        ...user.contacts.map((contact) => contact.user.toString()),
+        ...usersWithThisContact.map((u) => u._id.toString()),
+      ];
+
+      // Remove duplicates
+      const uniqueContacts = [...new Set(allContactsToNotify)];
+
+      // Send status update to each online contact
+      for (const contactId of uniqueContacts) {
+        const contactSocketId = await pub.get(socketKey(contactId));
+        if (contactSocketId) {
+          this._io.to(contactSocketId).emit("user_status_change", {
+            userId,
+            isOnline,
+            lastSeen: new Date(),
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error broadcasting user status change:", error);
+    }
   }
 }

@@ -6,6 +6,7 @@ export interface IUser extends Document {
   avatarUrl?: string;
   status?: string;
   lastSeen?: Date;
+  isOnline: boolean;
   contacts: {
     user: mongoose.Types.ObjectId;
     name: string;
@@ -19,7 +20,8 @@ const userSchema = new Schema<IUser>(
     displayName: { type: String, required: true },
     avatarUrl: { type: String },
     status: { type: String, default: "Hey there! I am using ChitChat." },
-    lastSeen: { type: Date },
+    lastSeen: { type: Date, default: Date.now },
+    isOnline: { type: Boolean, default: false },
     contacts: [
       {
         user: {

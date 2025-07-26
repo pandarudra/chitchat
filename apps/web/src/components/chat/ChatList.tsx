@@ -3,6 +3,7 @@ import { Pin, VolumeX, MessageCircle, Users } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import type { Chat } from "../../types";
 import { useChat } from "../../context/ChatContext";
+import { isUserOnline } from "../../utils/userUtils";
 
 export function ChatList() {
   const { chats, activeChat, setActiveChat, searchQuery } = useChat();
@@ -116,10 +117,14 @@ export function ChatList() {
                     />
                   )}
                   {!chat.isGroup &&
-                    chat.participants?.find((p) => p.id !== user?.id)
-                      ?.isOnline && (
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
-                    )}
+                    (() => {
+                      const otherUser = chat.participants?.find(
+                        (p) => p.id !== user?.id
+                      );
+                      return otherUser && isUserOnline(otherUser) ? (
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+                      ) : null;
+                    })()}
                 </div>
 
                 <div className="flex-1 min-w-0">

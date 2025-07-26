@@ -7,6 +7,7 @@ import { useChat } from "../../context/ChatContext";
 import { useAuth } from "../../context/AuthContext";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { groupMessagesByDate } from "../../utils/messageUtils";
+import { isUserOnline, getUserOnlineStatusText } from "../../utils/userUtils";
 
 export function ChatWindow() {
   const { activeChat, setActiveChat } = useChat();
@@ -69,13 +70,15 @@ export function ChatWindow() {
 
   const getOnlineStatus = () => {
     if (activeChat.isGroup) {
-      const onlineCount = activeChat.participants.filter(
-        (p) => p.isOnline
+      const onlineCount = activeChat.participants.filter((p) =>
+        isUserOnline(p)
       ).length;
       return `${onlineCount} online`;
     }
     const otherUser = activeChat.participants.find((p) => p.id !== user?.id);
-    return otherUser?.isOnline ? "Online" : "Last seen recently";
+    return otherUser
+      ? getUserOnlineStatusText(otherUser)
+      : "Last seen recently";
   };
 
   return (
@@ -100,11 +103,22 @@ export function ChatWindow() {
                 </span>
               </div>
             ) : (
-              <img
-                src={getChatAvatar() ?? undefined}
-                alt={getChatName()}
-                className="w-10 h-10 rounded-full object-cover"
-              />
+              <>
+                <img
+                  src={getChatAvatar() ?? undefined}
+                  alt={getChatName()}
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+                {/* Online status indicator */}
+                {(() => {
+                  const otherUser = activeChat.participants.find(
+                    (p) => p.id !== user?.id
+                  );
+                  return otherUser && isUserOnline(otherUser) ? (
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                  ) : null;
+                })()}
+              </>
             )}
           </div>
           <div>

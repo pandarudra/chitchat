@@ -99,10 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       avatarUrl: userData.avatarUrl,
       status: userData.status,
       lastSeen: userData.lastSeen ? new Date(userData.lastSeen) : undefined,
-      isOnline: userData.lastSeen
-        ? new Date().getTime() - new Date(userData.lastSeen).getTime() <
-          5 * 60 * 1000
-        : false,
+      isOnline: userData.isOnline || false, // Use the actual isOnline value from database
       createdAt: userData.createdAt ? new Date(userData.createdAt) : undefined,
       updatedAt: userData.updatedAt ? new Date(userData.updatedAt) : undefined,
     };

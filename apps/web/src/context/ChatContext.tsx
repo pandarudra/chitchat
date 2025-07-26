@@ -58,7 +58,11 @@ type ChatAction =
   | { type: "ACCEPT_CONTACT_REQUEST"; payload: string }
   | { type: "REJECT_CONTACT_REQUEST"; payload: string }
   | { type: "SET_TYPING"; payload: { chatId: string; users: User[] } }
-  | { type: "SET_CONNECTION_STATUS"; payload: boolean };
+  | { type: "SET_CONNECTION_STATUS"; payload: boolean }
+  | {
+      type: "UPDATE_USER_STATUS";
+      payload: { userId: string; isOnline: boolean; lastSeen: Date };
+    };
 
 const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
   switch (action.type) {
@@ -216,6 +220,44 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
         ),
       };
 
+    case "UPDATE_USER_STATUS": {
+      const { userId, isOnline, lastSeen } = action.payload;
+
+      // Update user status in chats
+      const updatedChats = state.chats.map((chat) => ({
+        ...chat,
+        participants: chat.participants.map((participant) =>
+          participant.id === userId
+            ? { ...participant, isOnline, lastSeen }
+            : participant
+        ),
+      }));
+
+      // Update user status in contacts
+      const updatedContacts = state.contacts.map((contact) =>
+        contact.id === userId ? { ...contact, isOnline, lastSeen } : contact
+      );
+
+      // Update active chat if it contains this user
+      const updatedActiveChat = state.activeChat
+        ? {
+            ...state.activeChat,
+            participants: state.activeChat.participants.map((participant) =>
+              participant.id === userId
+                ? { ...participant, isOnline, lastSeen }
+                : participant
+            ),
+          }
+        : null;
+
+      return {
+        ...state,
+        chats: updatedChats,
+        contacts: updatedContacts,
+        activeChat: updatedActiveChat,
+      };
+    }
+
     default:
       return state;
   }
@@ -353,14 +395,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             displayName: data.senderName || contactId,
             phoneNumber: data.senderNumber || "",
             avatarUrl: data.senderAvatarUrl || null,
-            isOnline: false,
+            isOnline: false, // We don't have this info in message data, would need separate API call
           },
           {
             id: currentUser.id,
             displayName: currentUser.displayName,
             phoneNumber: currentUser.phoneNumber,
             avatarUrl: currentUser.avatarUrl,
-            isOnline: true,
+            isOnline: currentUser.isOnline || false,
           },
         ],
         messages: [message],
@@ -390,6 +432,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       payload: { chatId: data.chatId, users: [] },
     });
   }, []);
+
+  const handleUserStatusChange = useCallback(
+    (data: { userId: string; isOnline: boolean; lastSeen: Date }) => {
+      dispatch({
+        type: "UPDATE_USER_STATUS",
+        payload: data,
+      });
+    },
+    []
+  );
 
   // Socket.IO connection effect - only depends on authentication
   useEffect(() => {
@@ -466,12 +518,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       socket.on("seen_message", handleSeenMessage);
       socket.on("user_typing", handleUserTyping);
       socket.on("user_stopped_typing", handleUserStoppedTyping);
+      socket.on("user_status_change", handleUserStatusChange);
+
+      // Set up heartbeat to keep connection alive and update online status
+      const heartbeatInterval = setInterval(() => {
+        if (socket.connected) {
+          socket.emit("heartbeat");
+        }
+      }, 30000); // Send heartbeat every 30 seconds
 
       // Cleanup function
       return () => {
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
         }
+        clearInterval(heartbeatInterval);
         if (socket) {
           console.log("🧹 Cleaning up socket connection");
           socket.disconnect();
@@ -494,6 +555,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     handleSeenMessage,
     handleUserTyping,
     handleUserStoppedTyping,
+    handleUserStatusChange,
   ]); // Only include stable dependencies
 
   // Separate effect for fetching chats
@@ -518,7 +580,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               displayName: contact.name,
               phoneNumber: contact.phonenumber,
               avatarUrl: contact.avatarUrl,
-              isOnline: false, // You can update this based on actual online status
+              isOnline: contact.isOnline || false, // Use actual online status from contact
+              lastSeen: contact.lastSeen
+                ? new Date(contact.lastSeen)
+                : undefined,
             },
             // Add current user to participants
             ...(userRef.current
@@ -528,7 +593,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     displayName: userRef.current.displayName,
                     phoneNumber: userRef.current.phoneNumber,
                     avatarUrl: userRef.current.avatarUrl,
-                    isOnline: true,
+                    isOnline: userRef.current.isOnline || false,
                   },
                 ]
               : []),
