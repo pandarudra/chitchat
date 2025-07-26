@@ -12,7 +12,6 @@ interface AddContactProps {
 export function AddContact({ isOpen, onClose }: AddContactProps) {
   const [countryCode, setCountryCode] = useState("+91");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { addContact } = useChat();
 
@@ -59,7 +58,7 @@ export function AddContact({ isOpen, onClose }: AddContactProps) {
 
   const handleClose = () => {
     setPhoneNumber("");
-    setName("");
+
     setCountryCode("+91");
     onClose();
   };
@@ -71,7 +70,7 @@ export function AddContact({ isOpen, onClose }: AddContactProps) {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setPhoneNumber("");
-        setName("");
+
         setCountryCode("+91");
         onClose();
       }
@@ -91,7 +90,7 @@ export function AddContact({ isOpen, onClose }: AddContactProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-transparent bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -112,22 +111,6 @@ export function AddContact({ isOpen, onClose }: AddContactProps) {
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Contact Name (Optional) */}
-          <div>
-            <label
-              htmlFor="name"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Contact Name (Optional)
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter contact name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            />
-          </div>
 
           {/* Country Code */}
           <div>

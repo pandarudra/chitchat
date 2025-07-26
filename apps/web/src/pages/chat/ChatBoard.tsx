@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { use, useEffect, useState } from "react";
 import { ChatWindow } from "../../components/chat/ChatWindow";
 import { Sidebar } from "../../components/Layout/Sidebar";
 import { AddContact } from "../../components/chat/AddContact";
@@ -11,20 +11,35 @@ export function ChatBoard() {
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
   const { activeChat } = useChat();
+  const [showbtn, setShowbtn] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => console.log(activeChat, showbtn), 1000);
+    if (activeChat) {
+      setShowbtn(false);
+    } else {
+      setShowbtn(true);
+    }
+    return () => clearInterval(interval);
+  }, [activeChat, showbtn]);
 
   if (isMobile) {
     return (
       <div className="h-screen bg-gray-100 relative">
         {activeChat ? <ChatWindow /> : <Sidebar />}
-        <FloatingActionButton
-          onClick={() => setIsAddContactOpen(true)}
-          icon={<UserPlus className="h-6 w-6" />}
-          title="Add Contact"
-        />
-        <AddContact
-          isOpen={isAddContactOpen}
-          onClose={() => setIsAddContactOpen(false)}
-        />
+        {showbtn && (
+          <>
+            <FloatingActionButton
+              onClick={() => setIsAddContactOpen(true)}
+              icon={<UserPlus className="h-6 w-6" />}
+              title="Add Contact"
+            />
+            <AddContact
+              isOpen={isAddContactOpen}
+              onClose={() => setIsAddContactOpen(false)}
+            />
+          </>
+        )}
       </div>
     );
   }
