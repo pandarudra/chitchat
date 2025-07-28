@@ -125,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleLogout = useCallback(async () => {
-    await api.post(`/api/auth/logout`);
+    // await api.post(`/api/auth/logout`);
     console.log("Logout triggered by token refresh failure");
     dispatch({ type: "LOGOUT" });
   }, []);
@@ -184,7 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await api.post(`/api/auth/logout`);
+      await api.post("/api/auth/logout");
       console.log("Logout successful");
     } catch (error) {
       console.error("Logout error:", error);
