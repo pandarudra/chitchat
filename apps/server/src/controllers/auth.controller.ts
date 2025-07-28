@@ -76,7 +76,7 @@ export const onLogin = async (req: Request, res: Response): Promise<any> => {
     res.cookie("ref_token", ref_token, {
       httpOnly: true,
       secure: true,
-      sameSite: "strict", // Prevent CSRF attacks
+      sameSite: "none", // Prevent CSRF attacks
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -84,7 +84,7 @@ export const onLogin = async (req: Request, res: Response): Promise<any> => {
     res.cookie("token", token, {
       httpOnly: true,
       secure: true,
-      sameSite: "strict", // Prevent CSRF attacks
+      sameSite: "none", // Prevent CSRF attacks
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
@@ -149,7 +149,7 @@ export const onRefreshToken = async (
     res.cookie("token", newAccessToken, {
       httpOnly: true,
       secure: true,
-      sameSite: "strict", // Prevent CSRF attacks
+      sameSite: "none", // Prevent CSRF attacks
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
     return res.status(200).json({
