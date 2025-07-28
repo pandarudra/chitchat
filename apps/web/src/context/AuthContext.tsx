@@ -18,7 +18,6 @@ interface AuthContextType extends AuthState {
   refreshAuth: () => Promise<void>;
 }
 
-const be_url = import.meta.env.VITE_BE_URL;
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 type AuthAction =
