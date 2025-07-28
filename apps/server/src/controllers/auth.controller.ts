@@ -105,6 +105,7 @@ export const onLogout = async (req: Request, res: Response): Promise<any> => {
   // Clear the cookie
   res.clearCookie("token");
   res.clearCookie("ref_token");
+  console.log(`User ${userId} logged out successfully.`);
 
   // lastSeen update logic
   const user = await UserModel.findById(userId);
