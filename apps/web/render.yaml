@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: react-frontend
+    env: static
+    buildCommand: npm run build
+    staticPublishPath: apps/web/dist
+    routes:
+      - type: rewrite
+        source: "/*"
+        destination: "/index.html"
