@@ -13,6 +13,7 @@ import OtpRouter from "./routes/otp.routes";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 8000;
+const fe_url = process.env.FE_URL as string;
 
 async function init() {
   app.use(
@@ -21,6 +22,7 @@ async function init() {
         "http://localhost:3000",
         "http://localhost:5173",
         "http://localhost:4173",
+        fe_url,
       ],
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
