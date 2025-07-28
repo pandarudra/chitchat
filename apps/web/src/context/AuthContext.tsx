@@ -19,6 +19,7 @@ interface AuthContextType extends AuthState {
   refreshAuth: () => Promise<void>;
 }
 
+const be_url = import.meta.env.VITE_BE_URL;
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 type AuthAction =
@@ -125,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleLogout = useCallback(async () => {
-    await axios.get(`${process.env.VITE_BE_URL}/api/auth/logout`, {
+    await axios.get(`${be_url}/api/auth/logout`, {
       withCredentials: true,
     });
     console.log("Logout triggered by token refresh failure");
@@ -186,7 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await axios.get(`${process.env.VITE_BE_URL}/api/auth/logout`, {
+      await axios.get(`${be_url}/api/auth/logout`, {
         withCredentials: true,
       });
       console.log("Logout successful");
