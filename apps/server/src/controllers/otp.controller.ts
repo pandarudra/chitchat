@@ -8,9 +8,10 @@ export const sendOtp = async (req: Request, res: Response): Promise<any> => {
     return res.status(400).json({ error: "Phone number required" });
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  console.log(`Generated OTP for ${phoneNumber}: ${otp}`);
   await redisClient.setex(`otp:${phoneNumber}`, 300, otp); // 5 min expiry
 
-  await sendOtpSms(phoneNumber, otp);
+  // await sendOtpSms(phoneNumber, otp);
   return res.json({ message: "OTP sent" });
 };
 
