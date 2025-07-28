@@ -1,8 +1,7 @@
 services:
   - type: web
-    name: react-frontend
-    env: static
-    buildCommand: npm run build
+    name: vite-frontend
+    buildCommand: npm run build --prefix apps/web
     staticPublishPath: apps/web/dist
     routes:
       - type: rewrite
