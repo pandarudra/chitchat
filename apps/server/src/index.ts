@@ -22,7 +22,6 @@ async function init() {
         "http://localhost:5173",
         "http://localhost:4173",
         "https://chitchat-web-chi.vercel.app",
-        "https://chitchat-h135.onrender.com",
       ],
       credentials: true,
       methods: ["*"],

@@ -1,9 +1,0 @@
-services:
-  - type: web
-    name: vite-frontend
-    buildCommand: npm run build --prefix apps/web
-    staticPublishPath: apps/web/dist
-    routes:
-      - type: rewrite
-        source: "/*"
-        destination: "/index.html"
