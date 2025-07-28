@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import type { AuthState, User } from "../types";
 import api, { addAuthEventListener, removeAuthEventListener } from "../lib/api";
+import axios from "axios";
 
 interface AuthContextType extends AuthState {
   login: (phone: string) => Promise<void>;
@@ -123,7 +124,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // checkAuthStatus();
   }, []);
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
+    await axios.get(`${process.env.VITE_BE_URL}/api/auth/logout`, {
+      withCredentials: true,
+    });
     console.log("Logout triggered by token refresh failure");
     dispatch({ type: "LOGOUT" });
   }, []);
@@ -182,7 +186,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await api.post(`/api/auth/logout`, {});
+      await axios.get(`${process.env.VITE_BE_URL}/api/auth/logout`, {
+        withCredentials: true,
+      });
       console.log("Logout successful");
     } catch (error) {
       console.error("Logout error:", error);
