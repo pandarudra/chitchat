@@ -45,6 +45,7 @@ chitchat/
    - `MONGO_URI` (MongoDB connection string)
    - `REDIS_HOST`, `REDIS_PORT`, `REDIS_USERNAME`, `REDIS_PASSWORD`
    - `JWT_SECRET`, `REFRESH_SECRET`
+   - `FRONTEND_URL` (your deployed frontend URL for production CORS)
    - SMS provider keys (if using real SMS)
 3. Start the server:
    ```bash
