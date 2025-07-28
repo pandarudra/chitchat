@@ -13,7 +13,6 @@ import OtpRouter from "./routes/otp.routes";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 8000;
-const fe_url = "https://chitchat-web-chi.vercel.app";
 
 async function init() {
   app.use(
@@ -22,11 +21,10 @@ async function init() {
         "http://localhost:3000",
         "http://localhost:5173",
         "http://localhost:4173",
-        fe_url,
+        "https://chitchat-web-chi.vercel.app",
       ],
       credentials: true,
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
+      methods: ["*"],
     })
   );
   app.use(express.json());

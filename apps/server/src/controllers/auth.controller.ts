@@ -99,6 +99,7 @@ export const onLogin = async (req: Request, res: Response): Promise<any> => {
 
 export const onLogout = async (req: Request, res: Response): Promise<any> => {
   const userId = req.user?._id;
+  console.log(`User ID from request: ${userId}`);
   if (!userId) {
     return res.status(400).json({ error: "User ID is required for logout." });
   }
