@@ -11,6 +11,7 @@ import { io, Socket } from "socket.io-client";
 import type { ChatState, Chat, Message, User, ContactRequest } from "../types";
 import { useAuth } from "./AuthContext";
 import api from "../lib/api";
+import { is } from "date-fns/locale";
 
 interface ChatContextType extends ChatState {
   setActiveChat: (chat: Chat | null) => void;
@@ -22,6 +23,7 @@ interface ChatContextType extends ChatState {
   addUserToGroup: (chatId: string, user: User) => void;
   removeUserFromGroup: (chatId: string, userId: string) => void;
   pinChat: (chatId: string) => void;
+  unpinChat: (chatId: string) => void;
   muteChat: (chatId: string) => void;
   sendContactRequest: (userId: string) => void;
   acceptContactRequest: (requestId: string) => void;
@@ -55,6 +57,7 @@ type ChatAction =
       payload: { chatId: string; userId: string };
     }
   | { type: "PIN_CHAT"; payload: string }
+  | { type: "UNPIN_CHAT"; payload: string }
   | { type: "MUTE_CHAT"; payload: string }
   | { type: "SEND_CONTACT_REQUEST"; payload: ContactRequest }
   | { type: "ACCEPT_CONTACT_REQUEST"; payload: string }
@@ -690,6 +693,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 ? new Date(contact.lastSeen)
                 : undefined,
               isBlocked: contact.blocked, // Include isBlocked status
+              isPinned: contact.pinned, // Include isPinned status
             },
             // Add current user to participants
             ...(userRef.current
@@ -701,6 +705,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     avatarUrl: userRef.current.avatarUrl,
                     isOnline: userRef.current.isOnline || false,
                     isBlocked: contact.blocked,
+                    isPinned: contact.pinned,
                   },
                 ]
               : []),
@@ -708,11 +713,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           messages: [], // Start with empty messages
           isGroup: false,
           unreadCount: 0,
-          isPinned: false,
+          isPinned: contact.pinned,
           isMuted: false,
         })
       );
 
+      console.log("Transformed chats from contacts:", chatsFromContacts);
       dispatch({ type: "SET_CHATS", payload: chatsFromContacts });
     } catch (error) {
       console.error("Failed to fetch chats:", error);
@@ -741,6 +747,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         type: "text",
         status: msg.seen ? "read" : msg.delivered ? "delivered" : "sent",
         isBlocked: msg.blocked, // Add isBlocked field if available
+        isPinned: msg.pinned, // Add isPinned field if available
       }));
 
       // Update the chat's messages in state and set activeChat to the updated chat object
@@ -903,8 +910,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "REMOVE_USER_FROM_GROUP", payload: { chatId, userId } });
   }, []);
 
-  const pinChat = useCallback((chatId: string) => {
+  const pinChat = useCallback(async (chatId: string) => {
+    const res = await api.post("/api/user/pin-contact", { contactId: chatId });
+    console.log("📌 Pinning chat:", res);
     dispatch({ type: "PIN_CHAT", payload: chatId });
+  }, []);
+
+  const unpinChat = useCallback(async (chatId: string) => {
+    const res = await api.post("/api/user/unpin-contact", {
+      contactId: chatId,
+    });
+    console.log("📌 Unpinning chat:", res);
+    dispatch({ type: "UNPIN_CHAT", payload: chatId });
   }, []);
 
   const muteChat = useCallback((chatId: string) => {
@@ -937,6 +954,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         addUserToGroup,
         removeUserFromGroup,
         pinChat,
+        unpinChat,
         muteChat,
         sendContactRequest,
         acceptContactRequest,

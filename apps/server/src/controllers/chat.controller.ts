@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { MessageModel } from "../models/Message";
 import { UserModel } from "../models/User";
 
-// GET /api/chats/:userId/messages
 export const getChats = async (req: Request, res: Response): Promise<any> => {
   try {
     // Authenticated user (from JWT middleware)

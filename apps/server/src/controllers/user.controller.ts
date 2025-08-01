@@ -108,6 +108,7 @@ export const onGetContacts = async (
           lastSeen: contactUser?.lastSeen,
           displayName: contactUser?.displayName,
           blocked: user.blockedContacts?.includes(contactUser?._id as any),
+          pinned: user.pinnedContacts?.includes(contactUser?._id as any),
         };
       })
     );
@@ -238,6 +239,82 @@ export const onUnblockContact = async (
     });
   } catch (error) {
     console.error("Error unblocking user:", error);
+    return res.status(500).json({ error: "Internal server error." });
+  }
+};
+
+export const onPinContact = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  const userId = req.user?._id;
+  const contactId = req.body.contactId;
+  if (!userId || !contactId) {
+    return res
+      .status(400)
+      .json({ error: "User ID and contact ID are required." });
+  }
+  try {
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    // Check if the contact is already pinned
+    if (user.pinnedContacts?.includes(contactId)) {
+      return res.status(400).json({ error: "Contact is already pinned." });
+    }
+
+    // Add to pinned contacts
+    user.pinnedContacts = [...(user.pinnedContacts || []), contactId];
+    await user.save();
+
+    return res.status(200).json({
+      message: "Contact pinned successfully.",
+      pinnedContactId: user.pinnedContacts,
+    });
+  } catch (error) {
+    console.error("Error pinning contact:", error);
+    return res.status(500).json({ error: "Internal server error." });
+  }
+};
+
+export const onUnpinContact = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  const userId = req.user?._id;
+  const contactId = req.body.contactId;
+
+  if (!userId || !contactId) {
+    return res
+      .status(400)
+      .json({ error: "User ID and contact ID are required." });
+  }
+
+  try {
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    // Check if the contact is pinned
+    if (!user.pinnedContacts?.includes(contactId)) {
+      return res.status(400).json({ error: "Contact is not pinned." });
+    }
+
+    // Remove from pinned contacts
+    user.pinnedContacts = user.pinnedContacts.filter(
+      (id) => id.toString() !== contactId.toString()
+    );
+    await user.save();
+
+    return res.status(200).json({
+      message: "Contact unpinned successfully.",
+      unpinnedContactId: user.pinnedContacts,
+    });
+  } catch (error) {
+    console.error("Error unpinning contact:", error);
     return res.status(500).json({ error: "Internal server error." });
   }
 };

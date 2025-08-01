@@ -16,7 +16,9 @@ interface ChatOptionsProps {
 
 export function ChatOptions({ chat }: ChatOptionsProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const { blockContact, unblockContact, pinChat, muteChat } = useChat();
+  const { blockContact, unblockContact, pinChat, unpinChat, muteChat } =
+    useChat();
+  const [ChatPin, setChatPin] = useState(chat.isPinned);
 
   const handleBlockContact = async () => {
     try {
@@ -37,7 +39,12 @@ export function ChatOptions({ chat }: ChatOptionsProps) {
   };
 
   const handlePinChat = () => {
-    pinChat(chat.id);
+    if (ChatPin) {
+      unpinChat(chat.id);
+    } else {
+      pinChat(chat.id);
+    }
+    setChatPin(!ChatPin);
     setIsOpen(false);
   };
 

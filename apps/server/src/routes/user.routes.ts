@@ -6,6 +6,8 @@ import {
   getUserOnlineStatus,
   onBlockContact,
   onUnblockContact,
+  onPinContact,
+  onUnpinContact,
 } from "../controllers/user.controller";
 import { authenticate } from "../middleware/auth.middleware";
 const userRouter = express.Router();
@@ -18,5 +20,8 @@ userRouter.get("/online-status/:userId", authenticate, getUserOnlineStatus);
 
 userRouter.post("/block-contact", authenticate, onBlockContact);
 userRouter.post("/unblock-contact", authenticate, onUnblockContact);
+
+userRouter.post("/pin-contact", authenticate, onPinContact);
+userRouter.post("/unpin-contact", authenticate, onUnpinContact);
 
 export default userRouter;

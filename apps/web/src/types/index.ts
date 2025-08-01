@@ -30,6 +30,7 @@ export interface Message {
   fileSize?: number;
   mediaUrl?: string;
   isBlocked?: boolean; // Indicates if the message is from a blocked contact
+  isPinned?: boolean; // Indicates if the message is pinned in the chat
 }
 export interface Chat {
   id: string;
