@@ -1,4 +1,4 @@
-import e, { Request, Response } from "express";
+import { Request, Response } from "express";
 import { UserModel } from "../models/User";
 import mongoose from "mongoose";
 
@@ -107,6 +107,7 @@ export const onGetContacts = async (
           isOnline: contactUser?.isOnline || false,
           lastSeen: contactUser?.lastSeen,
           displayName: contactUser?.displayName,
+          blocked: (contactUser?.blockedContacts ?? []).includes(userId),
         };
       })
     );
@@ -208,7 +209,35 @@ export const onBlockContact = async (
   }
 };
 
-export const onUnblockContact = (req: Request, res: Response) => {
+export const onUnblockContact = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
   try {
-  } catch (error) {}
+    const userId = req.user?._id;
+    const unblockUserId = req.body.unblockUserId;
+
+    if (!userId || !unblockUserId) {
+      return res
+        .status(400)
+        .json({ error: "User ID and unblock user ID are required." });
+    }
+
+    const updatedUser = await UserModel.findByIdAndUpdate(
+      userId,
+      { $pull: { blockedContacts: unblockUserId } },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found." });
+    }
+    return res.status(200).json({
+      message: "User unblocked successfully.",
+      updatedBlockedContacts: updatedUser.blockedContacts,
+    });
+  } catch (error) {
+    console.error("Error unblocking user:", error);
+    return res.status(500).json({ error: "Internal server error." });
+  }
 };

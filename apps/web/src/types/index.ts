@@ -8,6 +8,7 @@ export interface User {
   isOnline: boolean; // This should be computed on frontend based on lastSeen
   createdAt?: Date;
   updatedAt?: Date;
+  isBlocked?: boolean; // Indicates if the user has blocked the current user
 }
 export interface AuthState {
   user: User | null;
@@ -40,6 +41,7 @@ export interface Chat {
   unreadCount: number;
   isPinned: boolean;
   isMuted: boolean;
+  isBlocked?: boolean;
 }
 export interface ChatState {
   chats: Chat[];

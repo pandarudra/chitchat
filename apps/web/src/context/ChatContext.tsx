@@ -11,6 +11,7 @@ import { io, Socket } from "socket.io-client";
 import type { ChatState, Chat, Message, User, ContactRequest } from "../types";
 import { useAuth } from "./AuthContext";
 import api from "../lib/api";
+import { th } from "date-fns/locale";
 
 interface ChatContextType extends ChatState {
   setActiveChat: (chat: Chat | null) => void;
@@ -29,6 +30,8 @@ interface ChatContextType extends ChatState {
   startTyping: (chatId: string) => void;
   stopTyping: (chatId: string) => void;
   isConnected: boolean;
+  blockContact: (blockUserId: string) => void;
+  unblockContact: (unblockUserId: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -62,6 +65,14 @@ type ChatAction =
   | {
       type: "UPDATE_USER_STATUS";
       payload: { userId: string; isOnline: boolean; lastSeen: Date };
+    }
+  | {
+      type: "BLOCK_CONTACT";
+      payload: string;
+    }
+  | {
+      type: "UNBLOCK_CONTACT";
+      payload: string;
     };
 
 const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
@@ -257,6 +268,47 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
         activeChat: updatedActiveChat,
       };
     }
+    case "BLOCK_CONTACT": {
+      const blockedUserId = action.payload;
+
+      // Update contacts to mark as blocked
+      const updatedContacts = state.contacts.map((contact) =>
+        contact.id === blockedUserId ? { ...contact, isBlocked: true } : contact
+      );
+
+      // Update chats to mark as blocked
+      const updatedChats = state.chats.map((chat) =>
+        chat.id === blockedUserId ? { ...chat, isBlocked: true } : chat
+      );
+
+      return {
+        ...state,
+        contacts: updatedContacts,
+        chats: updatedChats,
+      };
+    }
+
+    case "UNBLOCK_CONTACT": {
+      const unblockedUserId = action.payload;
+
+      // Update contacts to mark as unblocked
+      const updatedContacts = state.contacts.map((contact) =>
+        contact.id === unblockedUserId
+          ? { ...contact, isBlocked: false }
+          : contact
+      );
+
+      // Update chats to mark as unblocked
+      const updatedChats = state.chats.map((chat) =>
+        chat.id === unblockedUserId ? { ...chat, isBlocked: false } : chat
+      );
+
+      return {
+        ...state,
+        contacts: updatedContacts,
+        chats: updatedChats,
+      };
+    }
 
     default:
       return state;
@@ -324,6 +376,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     if (!currentUser) return;
 
+    // Extract sender information
+    const senderId = data.fromId || data.from;
+
+    // Check if sender is blocked
+    const isBlockedSender = currentState.contacts.some(
+      (contact) => contact.id === senderId && contact.isBlocked
+    );
+
+    if (isBlockedSender) {
+      console.log("Ignoring message from blocked contact:", senderId);
+      return; // Don't process message from blocked contact
+    }
+
     // If the payload is nested, extract from data.message
     const msgData = data.message || data;
 
@@ -346,7 +411,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const isValidTimestamp = !isNaN(timestamp.getTime());
 
     // Use fromId and toId if present, else fallback to msgData.from/to
-    const senderId = data.fromId || msgData.from;
+    // senderId is already declared above
     const receiverId = data.toId || msgData.to || currentUser.id;
 
     if (!senderId || !receiverId) {
@@ -442,6 +507,47 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     },
     []
   );
+
+  const blockContact = useCallback(async (blockUserId: string) => {
+    try {
+      const res = await api.post("/api/user/block-contact", {
+        blockUserId: blockUserId,
+      });
+      console.log("Contact blocked successfully:", res);
+      // Optionally update state or notify user
+      dispatch({
+        type: "BLOCK_CONTACT",
+        payload: blockUserId,
+      });
+
+      const currentState = stateRef.current;
+      if (currentState.activeChat?.id === blockUserId) {
+        dispatch({ type: "SET_ACTIVE_CHAT", payload: null });
+      }
+
+      return res.data;
+    } catch (error) {
+      console.error("Failed to block contact:", error);
+      throw error;
+    }
+  }, []);
+
+  const unblockContact = useCallback(async (unblockUserId: string) => {
+    try {
+      const res = await api.post("/api/user/unblock-contact", {
+        unblockUserId: unblockUserId,
+      });
+      console.log("✅ Contact unblocked:", res.data);
+
+      // Update local state to reflect unblocked status
+      dispatch({ type: "UNBLOCK_CONTACT", payload: unblockUserId });
+
+      return res.data;
+    } catch (error) {
+      console.error("Failed to unblock contact:", error);
+      throw error;
+    }
+  }, []);
 
   // Socket.IO connection effect - only depends on authentication
   useEffect(() => {
@@ -836,6 +942,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         startTyping,
         stopTyping,
         isConnected,
+        blockContact,
+        unblockContact,
       }}
     >
       {children}

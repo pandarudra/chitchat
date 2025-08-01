@@ -8,6 +8,7 @@ export interface IMessage extends Document {
   seen: boolean;
   seenAt?: Date; // Optional timestamp
   timestamp: Date;
+  blocked?: boolean; // Indicates if the message is blocked
 }
 
 const messageSchema = new Schema<IMessage>(
@@ -19,6 +20,7 @@ const messageSchema = new Schema<IMessage>(
     seen: { type: Boolean, default: false },
     seenAt: { type: Date },
     timestamp: { type: Date, default: Date.now },
+    blocked: { type: Boolean, default: false }, // Indicates if the message is blocked
   },
   { timestamps: true }
 );

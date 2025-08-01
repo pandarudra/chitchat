@@ -89,7 +89,7 @@ export class SocketService {
         });
 
         // Broadcast user online status to contacts
-        await this.broadcastUserStatusChange(userId, true);
+        await this.broadcastUserStatusChange(userId.toString(), true);
       } catch (error) {
         console.error("Error updating user lastSeen:", error);
       }
@@ -189,7 +189,7 @@ export class SocketService {
           });
 
           // Broadcast user offline status to contacts
-          await this.broadcastUserStatusChange(userId, false);
+          await this.broadcastUserStatusChange(userId.toString(), false);
         } catch (error) {
           console.error("Error updating user lastSeen on disconnect:", error);
         }
@@ -215,6 +215,10 @@ export class SocketService {
         }
 
         const rID = recipient._id;
+        let blocked = false;
+        if (recipient.blockedContacts?.includes(from)) {
+          blocked = true;
+        }
         const newMsg = await MessageModel.create({
           from,
           to: rID,
@@ -222,6 +226,7 @@ export class SocketService {
           delivered: false,
           seen: false,
           timestamp: new Date(timestamp),
+          blocked, // Set blocked status based on recipient's blocked contacts
         });
 
         if (!rID) {
@@ -289,15 +294,25 @@ export class SocketService {
       // Remove duplicates
       const uniqueContacts = [...new Set(allContactsToNotify)];
 
+      console.log(
+        `📡 Broadcasting status change for user ${userId} (${isOnline ? "online" : "offline"}) to contacts:`,
+        uniqueContacts
+      );
+
       // Send status update to each online contact
       for (const contactId of uniqueContacts) {
         const contactSocketId = await pub.get(socketKey(contactId));
         if (contactSocketId) {
           this._io.to(contactSocketId).emit("user_status_change", {
-            userId,
+            userId: userId.toString(), // Ensure userId is always a string
             isOnline,
             lastSeen: new Date(),
           });
+          console.log(
+            `✅ Sent status update to contact ${contactId} via socket ${contactSocketId}`
+          );
+        } else {
+          console.log(`❌ Contact ${contactId} is not online`);
         }
       }
     } catch (error) {

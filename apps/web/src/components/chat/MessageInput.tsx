@@ -3,17 +3,35 @@ import { Send, Paperclip, Smile, Mic } from "lucide-react";
 
 import EmojiPicker from "emoji-picker-react";
 import { useChat } from "../../context/ChatContext";
+import { useAuth } from "../../context/AuthContext";
 
 export function MessageInput() {
+  const { activeChat, sendMessage } = useChat();
+  const { user } = useAuth();
   const [message, setMessage] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const { sendMessage, activeChat } = useChat();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check if current chat is blocked - multiple ways to check
+  const otherParticipant = activeChat?.participants.find(
+    (p) => p.id !== user?.id
+  );
+  const isBlocked =
+    activeChat?.isBlocked ||
+    otherParticipant?.isBlocked ||
+    activeChat?.participants.some((p) => p.isBlocked);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (message.trim() && activeChat) {
+
+    if (isBlocked) {
+      // Show error message or toast
+      console.warn("Cannot send message to blocked contact");
+      return;
+    }
+
+    if (message.trim()) {
       sendMessage(message.trim());
       setMessage("");
     }
@@ -44,7 +62,16 @@ export function MessageInput() {
     }
   };
 
-  if (!activeChat) return null;
+  if (isBlocked) {
+    return (
+      <div className="border-t border-gray-200 p-4 bg-gray-50">
+        <div className="text-center text-gray-500">
+          <p className="text-sm">You cannot send messages to this contact.</p>
+          <p className="text-xs">This contact has been blocked.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="border-t border-gray-200 p-4 bg-white">
