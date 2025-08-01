@@ -3,24 +3,18 @@ import { Send, Paperclip, Smile, Mic } from "lucide-react";
 
 import EmojiPicker from "emoji-picker-react";
 import { useChat } from "../../context/ChatContext";
-import { useAuth } from "../../context/AuthContext";
 
 export function MessageInput() {
   const { activeChat, sendMessage } = useChat();
-  const { user } = useAuth();
   const [message, setMessage] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Check if current chat is blocked - multiple ways to check
-  const otherParticipant = activeChat?.participants.find(
-    (p) => p.id !== user?.id
-  );
+  // Check if current chat is blocked
   const isBlocked =
     activeChat?.isBlocked ||
-    otherParticipant?.isBlocked ||
-    activeChat?.participants.some((p) => p.isBlocked);
+    activeChat?.participants.find((p) => p.id === activeChat?.id)?.isBlocked;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
