@@ -229,6 +229,11 @@ export class SocketService {
           blocked, // Set blocked status based on recipient's blocked contacts
         });
 
+        if (blocked) {
+          await newMsg.save();
+          return;
+        }
+
         if (!rID) {
           console.error(`Recipient ID not found for phone number: ${to}`);
           return;

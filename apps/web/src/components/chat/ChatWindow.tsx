@@ -187,6 +187,7 @@ export function ChatWindow() {
                             )?.displayName
                           : undefined
                       }
+                      ifblocked={message.isBlocked}
                     />
                   );
                 })}

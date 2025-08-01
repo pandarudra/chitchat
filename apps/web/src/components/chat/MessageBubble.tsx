@@ -1,12 +1,14 @@
 import { format, isValid } from "date-fns";
 import { Check, CheckCheck } from "lucide-react";
 import type { Message } from "../../types";
+import { useEffect } from "react";
 
 interface MessageBubbleProps {
   message: Message;
   isOwn: boolean;
   showAvatar: boolean;
   senderName?: string;
+  ifblocked?: boolean; // Optional prop to handle blocked contacts
 }
 
 export function MessageBubble({
@@ -14,6 +16,7 @@ export function MessageBubble({
   isOwn,
   showAvatar,
   senderName,
+  ifblocked,
 }: MessageBubbleProps) {
   const getStatusIcon = () => {
     if (!isOwn) return null;
@@ -53,7 +56,9 @@ export function MessageBubble({
           className={`px-4 py-2 rounded-lg ${
             isOwn
               ? "bg-green-500 text-white"
-              : "bg-white text-gray-900 border border-gray-200"
+              : ifblocked
+                ? "hidden"
+                : "bg-white text-gray-800"
           }`}
         >
           {message.type === "text" ? (

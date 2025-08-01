@@ -29,6 +29,7 @@ export interface Message {
   fileName?: string;
   fileSize?: number;
   mediaUrl?: string;
+  isBlocked?: boolean; // Indicates if the message is from a blocked contact
 }
 export interface Chat {
   id: string;

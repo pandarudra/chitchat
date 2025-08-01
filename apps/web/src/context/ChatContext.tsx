@@ -11,7 +11,6 @@ import { io, Socket } from "socket.io-client";
 import type { ChatState, Chat, Message, User, ContactRequest } from "../types";
 import { useAuth } from "./AuthContext";
 import api from "../lib/api";
-import { th } from "date-fns/locale";
 
 interface ChatContextType extends ChatState {
   setActiveChat: (chat: Chat | null) => void;
@@ -690,6 +689,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               lastSeen: contact.lastSeen
                 ? new Date(contact.lastSeen)
                 : undefined,
+              isBlocked: contact.blocked, // Include isBlocked status
             },
             // Add current user to participants
             ...(userRef.current
@@ -700,6 +700,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     phoneNumber: userRef.current.phoneNumber,
                     avatarUrl: userRef.current.avatarUrl,
                     isOnline: userRef.current.isOnline || false,
+                    isBlocked: contact.blocked,
                   },
                 ]
               : []),
@@ -739,6 +740,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         timestamp: new Date(msg.timestamp),
         type: "text",
         status: msg.seen ? "read" : msg.delivered ? "delivered" : "sent",
+        isBlocked: msg.blocked, // Add isBlocked field if available
       }));
 
       // Update the chat's messages in state and set activeChat to the updated chat object

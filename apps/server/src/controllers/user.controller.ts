@@ -107,7 +107,7 @@ export const onGetContacts = async (
           isOnline: contactUser?.isOnline || false,
           lastSeen: contactUser?.lastSeen,
           displayName: contactUser?.displayName,
-          blocked: (contactUser?.blockedContacts ?? []).includes(userId),
+          blocked: user.blockedContacts?.includes(contactUser?._id as any),
         };
       })
     );

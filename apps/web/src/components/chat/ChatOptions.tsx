@@ -8,7 +8,6 @@ import {
   VolumeX,
 } from "lucide-react";
 import { useChat } from "../../context/ChatContext";
-import { useAuth } from "../../context/AuthContext";
 import type { Chat } from "../../types";
 
 interface ChatOptionsProps {
@@ -18,15 +17,10 @@ interface ChatOptionsProps {
 export function ChatOptions({ chat }: ChatOptionsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { blockContact, unblockContact, pinChat, muteChat } = useChat();
-  const { user } = useAuth();
 
   const handleBlockContact = async () => {
     try {
-      // For one-on-one chats, get the other participant's ID
-      const otherParticipant = chat.participants.find((p) => p.id !== user?.id);
-      if (otherParticipant) {
-        await blockContact(otherParticipant.id);
-      }
+      await blockContact(chat.id);
       setIsOpen(false);
     } catch (error) {
       console.error("Failed to block contact:", error);
@@ -35,11 +29,7 @@ export function ChatOptions({ chat }: ChatOptionsProps) {
 
   const handleUnblockContact = async () => {
     try {
-      // For one-on-one chats, get the other participant's ID
-      const otherParticipant = chat.participants.find((p) => p.id !== user?.id);
-      if (otherParticipant) {
-        await unblockContact(otherParticipant.id);
-      }
+      await unblockContact(chat.id);
       setIsOpen(false);
     } catch (error) {
       console.error("Failed to unblock contact:", error);
@@ -56,17 +46,16 @@ export function ChatOptions({ chat }: ChatOptionsProps) {
     setIsOpen(false);
   };
 
-  // Get the other participant (for one-on-one chats)
-  const otherParticipant = chat.participants.find((p) => p.id !== user?.id);
+  const otherParticipant = chat.participants.find((p) => p.id === chat.id);
   const isBlocked = otherParticipant?.isBlocked || chat.isBlocked;
 
   return (
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
       >
-        <MoreVertical className="h-5 w-5" />
+        <MoreVertical className="h-5 w-5 text-gray-600" />
       </button>
 
       {isOpen && (
