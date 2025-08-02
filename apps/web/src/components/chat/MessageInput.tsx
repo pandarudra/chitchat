@@ -1,15 +1,27 @@
 import React, { useState, useRef } from "react";
-import { Send, Paperclip, Smile, Mic } from "lucide-react";
-
+import { Send, Paperclip, Smile } from "lucide-react";
+import toast from "react-hot-toast";
 import EmojiPicker from "emoji-picker-react";
 import { useChat } from "../../context/ChatContext";
+import { useVoiceRecording } from "../../hooks/useVoiceRecording";
+import { VoiceRecorder } from "./VoiceRecorder";
 
 export function MessageInput() {
-  const { activeChat, sendMessage } = useChat();
+  const { activeChat, sendMessage, sendAudioMessage } = useChat();
   const [message, setMessage] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Voice recording hook
+  const {
+    isRecording,
+    recordingTime,
+    audioBlob,
+    startRecording,
+    stopRecording,
+    cancelRecording,
+    error: recordingError,
+  } = useVoiceRecording();
 
   // Check if current chat is blocked
   const isBlocked =
@@ -44,9 +56,36 @@ export function MessageInput() {
     }
   };
 
-  const handleVoiceRecord = () => {
-    setIsRecording(!isRecording);
-    // Handle voice recording logic here
+  const handleVoiceRecord = async () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      try {
+        await startRecording();
+      } catch (error) {
+        console.log("Error starting recording:", error);
+        toast.error(
+          "Failed to start recording. Please check microphone permissions."
+        );
+      }
+    }
+  };
+
+  const handleSendAudio = async () => {
+    if (audioBlob && recordingTime > 0) {
+      try {
+        await sendAudioMessage(audioBlob, recordingTime);
+        cancelRecording(); // Clear the recording
+        toast.success("Voice message sent!");
+      } catch (error) {
+        toast.error("Failed to send voice message");
+        console.error("Error sending voice message:", error);
+      }
+    }
+  };
+
+  const handleCancelAudio = () => {
+    cancelRecording();
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -125,17 +164,16 @@ export function MessageInput() {
             <Send className="h-5 w-5" />
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={handleVoiceRecord}
-            className={`p-2 rounded-full transition-colors ${
-              isRecording
-                ? "bg-red-500 text-white"
-                : "bg-gray-500 text-white hover:bg-gray-600"
-            }`}
-          >
-            <Mic className="h-5 w-5" />
-          </button>
+          <VoiceRecorder
+            isRecording={isRecording}
+            recordingTime={recordingTime}
+            onStart={handleVoiceRecord}
+            onStop={handleVoiceRecord}
+            onCancel={handleCancelAudio}
+            onSend={handleSendAudio}
+            hasRecording={!!audioBlob}
+            error={recordingError}
+          />
         )}
       </form>
     </div>

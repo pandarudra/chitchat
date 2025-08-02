@@ -1,7 +1,6 @@
 import { format, isValid } from "date-fns";
 import { Check, CheckCheck } from "lucide-react";
 import type { Message } from "../../types";
-import { useEffect } from "react";
 
 interface MessageBubbleProps {
   message: Message;

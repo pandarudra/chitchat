@@ -9,6 +9,8 @@ export interface IMessage extends Document {
   seenAt?: Date; // Optional timestamp
   timestamp: Date;
   blocked?: boolean; // Indicates if the message is blocked
+  path?: string; // Optional path for audio files
+  type: "text" | "audio"; // Type of message
 }
 
 const messageSchema = new Schema<IMessage>(
@@ -21,6 +23,8 @@ const messageSchema = new Schema<IMessage>(
     seenAt: { type: Date },
     timestamp: { type: Date, default: Date.now },
     blocked: { type: Boolean, default: false }, // Indicates if the message is blocked
+    path: { type: String }, // Optional path for audio files
+    type: { type: String, enum: ["text", "audio"], default: "text" }, // Type of message
   },
   { timestamps: true }
 );

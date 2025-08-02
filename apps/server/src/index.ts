@@ -9,6 +9,7 @@ import cookieparser from "cookie-parser";
 import userRouter from "./routes/user.routes";
 import chatRouter from "./routes/chat.routes";
 import OtpRouter from "./routes/otp.routes";
+import uploadRouter from "./routes/upload.routes";
 
 dotenv.config();
 const app = express();
@@ -36,6 +37,7 @@ async function init() {
   app.use("/api/user", userRouter);
   app.use("/api/chats", chatRouter);
   app.use("/api/otp", OtpRouter);
+  app.use("/api/upload", uploadRouter);
 
   const httpServer = http.createServer(app);
 

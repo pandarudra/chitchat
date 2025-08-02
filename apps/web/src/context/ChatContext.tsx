@@ -11,11 +11,11 @@ import { io, Socket } from "socket.io-client";
 import type { ChatState, Chat, Message, User, ContactRequest } from "../types";
 import { useAuth } from "./AuthContext";
 import api from "../lib/api";
-import { is } from "date-fns/locale";
 
 interface ChatContextType extends ChatState {
   setActiveChat: (chat: Chat | null) => void;
   sendMessage: (content: string, type?: Message["type"]) => void;
+  sendAudioMessage: (audioBlob: Blob, duration: number) => Promise<void>;
   markAsRead: (chatId: string) => void;
   addContact: (phoneNumber: string) => void;
   setSearchQuery: (query: string) => void;
@@ -394,6 +394,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     // If the payload is nested, extract from data.message
     const msgData = data.message || data;
 
+    // console.log("Incoming message data:", msgData);
+
     // Extract content safely
     let actualContent = "";
     if (typeof msgData.content === "string") {
@@ -427,7 +429,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       receiverId,
       content: actualContent,
       timestamp: isValidTimestamp ? timestamp : new Date(),
-      type: "text",
+      type: msgData.type || "text", // Default to text if type is missing
       status: msgData.seen ? "read" : msgData.delivered ? "delivered" : "sent",
     };
 
@@ -744,11 +746,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         receiverId: msg.to,
         content: msg.content,
         timestamp: new Date(msg.timestamp),
-        type: "text",
+        type: msg.type || "text", // Default to text if type is not provided
+        mediaUrl: msg.path || null, // Handle media URL if available
         status: msg.seen ? "read" : msg.delivered ? "delivered" : "sent",
         isBlocked: msg.blocked, // Add isBlocked field if available
         isPinned: msg.pinned, // Add isPinned field if available
       }));
+
+      console.log("Mapped messages:", mappedMessages);
 
       // Update the chat's messages in state and set activeChat to the updated chat object
       const updatedChats = stateRef.current.chats.map((c) =>
@@ -821,6 +826,93 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }, 1000);
       } else {
         console.warn("No recipient phone number found for active chat");
+      }
+    },
+    [isConnected]
+  );
+
+  const sendAudioMessage = useCallback(
+    async (audioBlob: Blob, duration: number) => {
+      const currentState = stateRef.current;
+      const currentUser = userRef.current;
+
+      if (
+        !currentState.activeChat ||
+        !currentUser ||
+        !socketRef.current ||
+        !isConnected
+      ) {
+        console.warn("Cannot send audio message: missing requirements");
+        return;
+      }
+
+      try {
+        // Create FormData for file upload
+        const formData = new FormData();
+        const audioFile = new File([audioBlob], `audio_${Date.now()}.webm`, {
+          type: audioBlob.type,
+        });
+
+        formData.append("audio", audioFile);
+        formData.append("duration", duration.toString());
+        formData.append("receiverId", currentState.activeChat.id);
+
+        // Upload audio file to server
+        const uploadResponse = await api.post("/api/upload/audio", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+
+        const { audioUrl, fileName, fileSize } = uploadResponse.data;
+
+        // Create message with audio metadata
+        const message: Message = {
+          id: Date.now().toString(),
+          senderId: currentUser.id,
+          receiverId: currentState.activeChat.id,
+          content: `Audio message (${Math.floor(duration)}s)`,
+          timestamp: new Date(),
+          type: "audio",
+          status: "sent",
+          mediaUrl: audioUrl,
+          fileName,
+          fileSize,
+        };
+
+        // Add message to local state immediately
+        dispatch({ type: "SEND_MESSAGE", payload: message });
+
+        // Send via socket
+        const recipientPhone = currentState.activeChat.participants.find(
+          (p) => p.id !== currentUser.id
+        )?.phoneNumber;
+
+        if (recipientPhone) {
+          console.log("📤 Sending audio message to:", recipientPhone);
+          socketRef.current.emit("one_to_one_message", {
+            to: recipientPhone,
+            message: message.content,
+            timestamp: message.timestamp.toISOString(),
+            type: "audio",
+            mediaUrl: audioUrl,
+            fileName,
+            fileSize,
+          });
+
+          // Update status to delivered after a delay
+          setTimeout(() => {
+            dispatch({
+              type: "UPDATE_MESSAGE_STATUS",
+              payload: { messageId: message.id, status: "delivered" },
+            });
+          }, 1000);
+        } else {
+          console.warn("No recipient phone number found for active chat");
+        }
+      } catch (error) {
+        console.error("Failed to send audio message:", error);
+        throw error;
       }
     },
     [isConnected]
@@ -947,6 +1039,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         ...state,
         setActiveChat,
         sendMessage,
+        sendAudioMessage,
         markAsRead,
         addContact,
         setSearchQuery,

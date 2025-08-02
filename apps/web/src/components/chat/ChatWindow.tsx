@@ -205,24 +205,3 @@ export function ChatWindow() {
     </div>
   );
 }
-
-function ChatHeader({ chat }: { chat: Chat }) {
-  const otherParticipant = chat.participants.find((p) => p.id === chat.id);
-  const isBlocked = otherParticipant?.isBlocked || chat.isBlocked;
-
-  return (
-    <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
-      <div className="flex items-center space-x-3">
-        {/* ...existing avatar and user info... */}
-
-        {isBlocked && (
-          <span className="px-2 py-1 text-xs bg-red-100 text-red-600 rounded-full">
-            Blocked
-          </span>
-        )}
-      </div>
-
-      <ChatOptions chat={chat} />
-    </div>
-  );
-}

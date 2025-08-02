@@ -12,19 +12,15 @@ dotenv.config();
 // pub/sub Redis clients
 const pub = new Redis({
   host: process.env.REDIS_HOST,
-  port: process.env.REDIS_PORT
-    ? parseInt(process.env.REDIS_PORT, 10)
-    : undefined,
-  username: process.env.REDIS_USERNAME,
-  password: process.env.REDIS_PASSWORD,
+  port: Number(process.env.REDIS_PORT),
+  // username: process.env.REDIS_USERNAME,
+  // password: process.env.REDIS_PASSWORD,
 });
 const sub = new Redis({
   host: process.env.REDIS_HOST,
-  port: process.env.REDIS_PORT
-    ? parseInt(process.env.REDIS_PORT, 10)
-    : undefined,
-  username: process.env.REDIS_USERNAME,
-  password: process.env.REDIS_PASSWORD,
+  port: Number(process.env.REDIS_PORT),
+  // username: process.env.REDIS_USERNAME,
+  // password: process.env.REDIS_PASSWORD,
 });
 
 // redis map userid -> socketId key
@@ -108,7 +104,7 @@ export class SocketService {
           return;
         }
 
-        console.log(data);
+        console.log("data : ", data);
 
         // Update sender's lastSeen
         try {
@@ -119,12 +115,24 @@ export class SocketService {
           console.error("Error updating sender lastSeen:", error);
         }
 
-        const enrichedData = {
+        const enrichedData: {
+          from: string;
+          to: string;
+          message: any;
+          timestamp: string;
+          mediaUrl?: string;
+        } = {
           from: userId,
           to,
           message,
           timestamp: new Date().toISOString(),
         };
+
+        if (data.mediaUrl) {
+          enrichedData.mediaUrl = data.mediaUrl;
+        }
+
+        console.log("Enriched data:", enrichedData);
 
         await pub.publish("CHITCHAT", JSON.stringify(enrichedData));
       });
@@ -200,7 +208,14 @@ export class SocketService {
     sub.on("message", async (channel, messages) => {
       if (channel === "CHITCHAT") {
         const data = JSON.parse(messages);
+
         const { from, to, message, timestamp } = data;
+
+        let media_path = "";
+
+        if (data.mediaUrl && data.mediaUrl.endsWith(".webm")) {
+          media_path = data.mediaUrl; // Store the path for audio files
+        }
 
         if (!from || !to || !message) {
           console.error("Invalid message data:", data);
@@ -219,6 +234,7 @@ export class SocketService {
         if (recipient.blockedContacts?.includes(from)) {
           blocked = true;
         }
+
         const newMsg = await MessageModel.create({
           from,
           to: rID,
@@ -228,6 +244,12 @@ export class SocketService {
           timestamp: new Date(timestamp),
           blocked, // Set blocked status based on recipient's blocked contacts
         });
+
+        if (media_path) {
+          newMsg.path = media_path; // Save the path for audio files
+          newMsg.type = "audio";
+        }
+        console.log(`New message created: ${newMsg} from ${from} to ${to}`);
 
         if (blocked) {
           await newMsg.save();
