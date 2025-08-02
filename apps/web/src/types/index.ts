@@ -29,6 +29,7 @@ export interface Message {
   fileName?: string;
   fileSize?: number;
   mediaUrl?: string;
+  duration?: number; // Duration in seconds for audio messages
   isBlocked?: boolean; // Indicates if the message is from a blocked contact
   isPinned?: boolean; // Indicates if the message is pinned in the chat
 }

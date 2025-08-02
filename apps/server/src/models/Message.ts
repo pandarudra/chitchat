@@ -11,6 +11,7 @@ export interface IMessage extends Document {
   blocked?: boolean; // Indicates if the message is blocked
   path?: string; // Optional path for audio files
   type: "text" | "audio"; // Type of message
+  duration?: number; // Duration in seconds for audio messages
 }
 
 const messageSchema = new Schema<IMessage>(
@@ -25,6 +26,7 @@ const messageSchema = new Schema<IMessage>(
     blocked: { type: Boolean, default: false }, // Indicates if the message is blocked
     path: { type: String }, // Optional path for audio files
     type: { type: String, enum: ["text", "audio"], default: "text" }, // Type of message
+    duration: { type: Number, default: 0 }, // Duration in seconds for audio messages
   },
   { timestamps: true }
 );

@@ -394,7 +394,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     // If the payload is nested, extract from data.message
     const msgData = data.message || data;
 
-    // console.log("Incoming message data:", msgData);
+    console.log("Incoming message data:", msgData);
 
     // Extract content safely
     let actualContent = "";
@@ -431,6 +431,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       timestamp: isValidTimestamp ? timestamp : new Date(),
       type: msgData.type || "text", // Default to text if type is missing
       status: msgData.seen ? "read" : msgData.delivered ? "delivered" : "sent",
+      mediaUrl: msgData.path || data.mediaUrl,
+      fileName: msgData.fileName || data.fileName,
+      fileSize: msgData.fileSize || data.fileSize,
+      duration: msgData.duration || data.duration,
     };
 
     // Always match chat by the other user's user id
@@ -751,6 +755,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         status: msg.seen ? "read" : msg.delivered ? "delivered" : "sent",
         isBlocked: msg.blocked, // Add isBlocked field if available
         isPinned: msg.pinned, // Add isPinned field if available
+        duration: msg.duration || 0, // Add duration field if available
       }));
 
       console.log("Mapped messages:", mappedMessages);
@@ -878,6 +883,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           mediaUrl: audioUrl,
           fileName,
           fileSize,
+          duration,
         };
 
         // Add message to local state immediately
@@ -898,6 +904,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             mediaUrl: audioUrl,
             fileName,
             fileSize,
+            duration,
           });
 
           // Update status to delivered after a delay

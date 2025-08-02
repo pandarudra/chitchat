@@ -121,6 +121,7 @@ export class SocketService {
           message: any;
           timestamp: string;
           mediaUrl?: string;
+          duration?: number;
         } = {
           from: userId,
           to,
@@ -130,6 +131,7 @@ export class SocketService {
 
         if (data.mediaUrl) {
           enrichedData.mediaUrl = data.mediaUrl;
+          enrichedData.duration = data.duration;
         }
 
         console.log("Enriched data:", enrichedData);
@@ -212,6 +214,7 @@ export class SocketService {
         const { from, to, message, timestamp } = data;
 
         let media_path = "";
+        let duration = data.duration || 0;
 
         if (data.mediaUrl && data.mediaUrl.endsWith(".webm")) {
           media_path = data.mediaUrl; // Store the path for audio files
@@ -235,7 +238,7 @@ export class SocketService {
           blocked = true;
         }
 
-        const newMsg = await MessageModel.create({
+        const messageData: any = {
           from,
           to: rID,
           content: message,
@@ -243,12 +246,15 @@ export class SocketService {
           seen: false,
           timestamp: new Date(timestamp),
           blocked, // Set blocked status based on recipient's blocked contacts
-        });
+        };
 
         if (media_path) {
-          newMsg.path = media_path; // Save the path for audio files
-          newMsg.type = "audio";
+          messageData.path = media_path; // Save the path for audio files
+          messageData.type = "audio";
+          messageData.duration = duration; // Save the duration for audio messages
         }
+
+        const newMsg = await MessageModel.create(messageData);
         console.log(`New message created: ${newMsg} from ${from} to ${to}`);
 
         if (blocked) {

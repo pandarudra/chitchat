@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import http from "http";
 import cors from "cors";
+import path from "path";
 import { SocketService } from "./services/socket.service";
 import authRouter from "./routes/auth.routes";
 import { connectMongo } from "./utils/mongoDB";
@@ -31,6 +32,23 @@ async function init() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieparser());
+
+  // Serve static files from uploads directory
+  app.use(
+    "/uploads",
+    express.static(path.join(__dirname, "../uploads"), {
+      setHeaders: (res, path) => {
+        if (
+          path.endsWith(".webm") ||
+          path.endsWith(".mp3") ||
+          path.endsWith(".wav")
+        ) {
+          res.setHeader("Accept-Ranges", "bytes");
+          res.setHeader("Cache-Control", "public, max-age=0");
+        }
+      },
+    })
+  );
 
   // Initialize routes
   app.use("/api/auth", authRouter);
