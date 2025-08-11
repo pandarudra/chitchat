@@ -1,11 +1,11 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document } from "mongoose";
 
 export interface ICallHistory extends Document {
   callId: string;
   caller: string; // User ID
-  callee: string; // User ID  
-  callType: 'audio' | 'video';
-  status: 'completed' | 'missed' | 'declined' | 'failed';
+  callee: string; // User ID
+  callType: "audio" | "video";
+  status: "completed" | "missed" | "declined" | "failed";
   duration: number; // in seconds
   startTime: Date;
   endTime?: Date;
@@ -16,48 +16,51 @@ const callHistorySchema: Schema = new Schema({
   callId: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
   },
   caller: {
     type: String,
     required: true,
-    ref: 'User'
+    ref: "User",
   },
   callee: {
     type: String,
     required: true,
-    ref: 'User'
+    ref: "User",
   },
   callType: {
     type: String,
-    enum: ['audio', 'video'],
-    required: true
+    enum: ["audio", "video"],
+    required: true,
   },
   status: {
     type: String,
-    enum: ['completed', 'missed', 'declined', 'failed'],
-    required: true
+    enum: ["completed", "missed", "declined", "failed"],
+    required: true,
   },
   duration: {
     type: Number,
-    default: 0
+    default: 0,
   },
   startTime: {
     type: Date,
-    required: true
+    required: true,
   },
   endTime: {
-    type: Date
+    type: Date,
   },
   createdAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
 // Indexes for better query performance
 callHistorySchema.index({ caller: 1, createdAt: -1 });
 callHistorySchema.index({ callee: 1, createdAt: -1 });
-callHistorySchema.index({ callId: 1 });
+// Note: callId index is automatically created by unique: true
 
-export const CallHistoryModel = mongoose.model<ICallHistory>('CallHistory', callHistorySchema);
+export const CallHistoryModel = mongoose.model<ICallHistory>(
+  "CallHistory",
+  callHistorySchema
+);
