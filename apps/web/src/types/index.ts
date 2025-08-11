@@ -33,6 +33,18 @@ export interface Message {
   isBlocked?: boolean; // Indicates if the message is from a blocked contact
   isPinned?: boolean; // Indicates if the message is pinned in the chat
 }
+
+export type CallState = {
+  callId: string | null;
+  status: "idle" | "calling" | "ringing" | "connected" | "ended" | "declined" | "missed" | "timeout";
+  callType: "audio" | "video" | null;
+  peerConnection: RTCPeerConnection | null;
+  localStream: MediaStream | null;
+  remoteStream: MediaStream | null;
+  caller: User | null;
+  callee: User | null;
+};
+
 export interface Chat {
   id: string;
   participants: User[];
@@ -53,6 +65,7 @@ export interface ChatState {
   contactRequests: ContactRequest[];
   isTyping: Record<string, User[]>;
   searchQuery: string;
+  call: CallState;
 }
 
 export interface ContactRequest {

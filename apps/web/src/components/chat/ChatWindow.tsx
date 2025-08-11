@@ -9,9 +9,10 @@ import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { groupMessagesByDate } from "../../utils/messageUtils";
 import { isUserOnline, getUserOnlineStatusText } from "../../utils/userUtils";
 import { ChatOptions } from "./ChatOptions";
+import CallModal from "../call/CallModal";
 
 export function ChatWindow() {
-  const { activeChat, setActiveChat } = useChat();
+  const { activeChat, setActiveChat, initiateCall } = useChat();
   const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const showBackButton = useMediaQuery("(max-width: 1030px)");
@@ -23,6 +24,14 @@ export function ChatWindow() {
 
   const handleBackClick = () => {
     setActiveChat(null);
+  };
+
+  const handleInitiateCall = (callType: "audio" | "video") => {
+    if (!activeChat || !user) return;
+    const callee = activeChat.participants.find((p) => p.id !== user.id);
+    if (callee) {
+      initiateCall(callee, callType);
+    }
   };
 
   if (!activeChat) {
@@ -130,10 +139,20 @@ export function ChatWindow() {
         </div>
 
         <div className="flex items-center space-x-2">
-          <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
+          <button
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+            onClick={() => handleInitiateCall("audio")}
+            disabled={activeChat.isGroup}
+            title={activeChat.isGroup ? "Calls not supported in group chats" : "Start audio call"}
+          >
             <Phone className="h-5 w-5" />
           </button>
-          <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
+          <button
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+            onClick={() => handleInitiateCall("video")}
+            disabled={activeChat.isGroup}
+            title={activeChat.isGroup ? "Calls not supported in group chats" : "Start video call"}
+          >
             <Video className="h-5 w-5" />
           </button>
           <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
@@ -202,6 +221,9 @@ export function ChatWindow() {
       <div className="fixed bottom-0 left-0 right-0 lg:left-80 bg-white z-30">
         <MessageInput />
       </div>
+      
+      {/* Call Modal for incoming and ongoing calls */}
+      <CallModal />
     </div>
   );
 }
