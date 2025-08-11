@@ -23,10 +23,10 @@ async function init() {
         "http://localhost:3000",
         "http://localhost:5173",
         "http://localhost:4173",
+        "https://chitchat-web-chi.vercel.app",
       ],
       credentials: true,
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
+      methods: ["*"],
     })
   );
   app.use(express.json());
