@@ -8,6 +8,7 @@ export interface User {
   isOnline: boolean; // This should be computed on frontend based on lastSeen
   createdAt?: Date;
   updatedAt?: Date;
+  isBlocked?: boolean; // Indicates if the user has blocked the current user
 }
 export interface AuthState {
   user: User | null;
@@ -28,6 +29,9 @@ export interface Message {
   fileName?: string;
   fileSize?: number;
   mediaUrl?: string;
+  duration?: number; // Duration in seconds for audio messages
+  isBlocked?: boolean; // Indicates if the message is from a blocked contact
+  isPinned?: boolean; // Indicates if the message is pinned in the chat
 }
 export interface Chat {
   id: string;
@@ -40,6 +44,7 @@ export interface Chat {
   unreadCount: number;
   isPinned: boolean;
   isMuted: boolean;
+  isBlocked?: boolean;
 }
 export interface ChatState {
   chats: Chat[];

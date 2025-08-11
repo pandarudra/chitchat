@@ -1,36 +1,14 @@
 import { Server as SocketIOServer } from "socket.io";
 import { Server as httpServer } from "http";
-import Redis from "ioredis";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import * as cookie from "cookie";
-
 import { MessageModel } from "../models/Message";
 import { UserModel } from "../models/User";
+import { pub, sub } from "../utils/redisClient";
+import { socketKey } from "../lib/ext";
+
 dotenv.config();
-
-// pub/sub Redis clients
-const pub = new Redis({
-  host: process.env.REDIS_HOST,
-  port: process.env.REDIS_PORT
-    ? parseInt(process.env.REDIS_PORT, 10)
-    : undefined,
-  username: process.env.REDIS_USERNAME,
-  password: process.env.REDIS_PASSWORD,
-});
-const sub = new Redis({
-  host: process.env.REDIS_HOST,
-  port: process.env.REDIS_PORT
-    ? parseInt(process.env.REDIS_PORT, 10)
-    : undefined,
-  username: process.env.REDIS_USERNAME,
-  password: process.env.REDIS_PASSWORD,
-});
-
-// redis map userid -> socketId key
-const socketKey = (userId: string): string => {
-  return `socket:${userId}`;
-};
 
 export class SocketService {
   private _io: SocketIOServer;
@@ -44,7 +22,7 @@ export class SocketService {
       transports: ["websocket", "polling"],
     });
 
-    // ✅ JWT Authentication Middleware
+    // JWT Authentication Middleware
     this._io.use((socket, next) => {
       const cookies = socket.handshake.headers.cookie;
       if (!cookies) return next(new Error("No cookies found."));
@@ -108,7 +86,7 @@ export class SocketService {
           return;
         }
 
-        console.log(data);
+        console.log("data : ", data);
 
         // Update sender's lastSeen
         try {
@@ -119,12 +97,26 @@ export class SocketService {
           console.error("Error updating sender lastSeen:", error);
         }
 
-        const enrichedData = {
+        const enrichedData: {
+          from: string;
+          to: string;
+          message: any;
+          timestamp: string;
+          mediaUrl?: string;
+          duration?: number;
+        } = {
           from: userId,
           to,
           message,
           timestamp: new Date().toISOString(),
         };
+
+        if (data.mediaUrl) {
+          enrichedData.mediaUrl = data.mediaUrl;
+          enrichedData.duration = data.duration;
+        }
+
+        console.log("Enriched data:", enrichedData);
 
         await pub.publish("CHITCHAT", JSON.stringify(enrichedData));
       });
@@ -200,7 +192,15 @@ export class SocketService {
     sub.on("message", async (channel, messages) => {
       if (channel === "CHITCHAT") {
         const data = JSON.parse(messages);
+
         const { from, to, message, timestamp } = data;
+
+        let media_path = "";
+        let duration = data.duration || 0;
+
+        if (data.mediaUrl && data.mediaUrl.endsWith(".webm")) {
+          media_path = data.mediaUrl; // Store the path for audio files
+        }
 
         if (!from || !to || !message) {
           console.error("Invalid message data:", data);
@@ -215,14 +215,34 @@ export class SocketService {
         }
 
         const rID = recipient._id;
-        const newMsg = await MessageModel.create({
+        let blocked = false;
+        if (recipient.blockedContacts?.includes(from)) {
+          blocked = true;
+        }
+
+        const messageData: any = {
           from,
           to: rID,
           content: message,
           delivered: false,
           seen: false,
           timestamp: new Date(timestamp),
-        });
+          blocked, // Set blocked status based on recipient's blocked contacts
+        };
+
+        if (media_path) {
+          messageData.path = media_path; // Save the path for audio files
+          messageData.type = "audio";
+          messageData.duration = duration; // Save the duration for audio messages
+        }
+
+        const newMsg = await MessageModel.create(messageData);
+        console.log(`New message created: ${newMsg} from ${from} to ${to}`);
+
+        if (blocked) {
+          await newMsg.save();
+          return;
+        }
 
         if (!rID) {
           console.error(`Recipient ID not found for phone number: ${to}`);
@@ -251,6 +271,7 @@ export class SocketService {
         }
       }
     });
+
     pub.on("error", (err) => {
       console.error("[Redis pub] Error:", err);
     });
@@ -289,7 +310,9 @@ export class SocketService {
       // Remove duplicates
       const uniqueContacts = [...new Set(allContactsToNotify)];
 
+
       console.log(`📡 Broadcasting status change for user ${userId} (${isOnline ? 'online' : 'offline'}) to contacts:`, uniqueContacts);
+
 
       // Send status update to each online contact
       for (const contactId of uniqueContacts) {
@@ -300,7 +323,9 @@ export class SocketService {
             isOnline,
             lastSeen: new Date(),
           });
+
           console.log(`✅ Sent status update to contact ${contactId} via socket ${contactSocketId}`);
+
         } else {
           console.log(`❌ Contact ${contactId} is not online`);
         }

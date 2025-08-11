@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Phone, Video, MoreVertical, Info, ArrowLeft } from "lucide-react";
+import { Phone, Video, Info, ArrowLeft } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
 import { DateSeparator } from "./DateSeparator";
@@ -8,6 +8,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { groupMessagesByDate } from "../../utils/messageUtils";
 import { isUserOnline, getUserOnlineStatusText } from "../../utils/userUtils";
+import { ChatOptions } from "./ChatOptions";
 
 export function ChatWindow() {
   const { activeChat, setActiveChat } = useChat();
@@ -17,6 +18,7 @@ export function ChatWindow() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    console.log(activeChat);
   }, [activeChat?.messages]);
 
   const handleBackClick = () => {
@@ -137,9 +139,7 @@ export function ChatWindow() {
           <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
             <Info className="h-5 w-5" />
           </button>
-          <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
-            <MoreVertical className="h-5 w-5" />
-          </button>
+          <ChatOptions chat={activeChat} />
         </div>
       </div>
 
@@ -187,6 +187,7 @@ export function ChatWindow() {
                             )?.displayName
                           : undefined
                       }
+                      ifblocked={message.isBlocked}
                     />
                   );
                 })}

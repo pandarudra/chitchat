@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import http from "http";
 import cors from "cors";
+import path from "path";
 import { SocketService } from "./services/socket.service";
 import authRouter from "./routes/auth.routes";
 import { connectMongo } from "./utils/mongoDB";
@@ -9,6 +10,7 @@ import cookieparser from "cookie-parser";
 import userRouter from "./routes/user.routes";
 import chatRouter from "./routes/chat.routes";
 import OtpRouter from "./routes/otp.routes";
+import uploadRouter from "./routes/upload.routes";
 
 dotenv.config();
 const app = express();
@@ -31,11 +33,29 @@ async function init() {
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieparser());
 
+  // Serve static files from uploads directory
+  app.use(
+    "/uploads",
+    express.static(path.join(__dirname, "../uploads"), {
+      setHeaders: (res, path) => {
+        if (
+          path.endsWith(".webm") ||
+          path.endsWith(".mp3") ||
+          path.endsWith(".wav")
+        ) {
+          res.setHeader("Accept-Ranges", "bytes");
+          res.setHeader("Cache-Control", "public, max-age=0");
+        }
+      },
+    })
+  );
+
   // Initialize routes
   app.use("/api/auth", authRouter);
   app.use("/api/user", userRouter);
   app.use("/api/chats", chatRouter);
   app.use("/api/otp", OtpRouter);
+  app.use("/api/upload", uploadRouter);
 
   const httpServer = http.createServer(app);
 

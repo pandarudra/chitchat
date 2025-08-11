@@ -12,6 +12,8 @@ export interface IUser extends Document {
     name: string;
     phonenumber: string;
   }[];
+  blockedContacts?: mongoose.Types.ObjectId[];
+  pinnedContacts?: mongoose.Types.ObjectId[];
 }
 
 const userSchema = new Schema<IUser>(
@@ -37,6 +39,18 @@ const userSchema = new Schema<IUser>(
           type: String,
           required: true,
         },
+      },
+    ],
+    blockedContacts: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    pinnedContacts: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
       },
     ],
   },

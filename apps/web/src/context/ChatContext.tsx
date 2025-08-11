@@ -15,6 +15,7 @@ import api from "../lib/api";
 interface ChatContextType extends ChatState {
   setActiveChat: (chat: Chat | null) => void;
   sendMessage: (content: string, type?: Message["type"]) => void;
+  sendAudioMessage: (audioBlob: Blob, duration: number) => Promise<void>;
   markAsRead: (chatId: string) => void;
   addContact: (phoneNumber: string) => void;
   setSearchQuery: (query: string) => void;
@@ -22,6 +23,7 @@ interface ChatContextType extends ChatState {
   addUserToGroup: (chatId: string, user: User) => void;
   removeUserFromGroup: (chatId: string, userId: string) => void;
   pinChat: (chatId: string) => void;
+  unpinChat: (chatId: string) => void;
   muteChat: (chatId: string) => void;
   sendContactRequest: (userId: string) => void;
   acceptContactRequest: (requestId: string) => void;
@@ -29,6 +31,8 @@ interface ChatContextType extends ChatState {
   startTyping: (chatId: string) => void;
   stopTyping: (chatId: string) => void;
   isConnected: boolean;
+  blockContact: (blockUserId: string) => void;
+  unblockContact: (unblockUserId: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -54,6 +58,7 @@ type ChatAction =
       payload: { chatId: string; userId: string };
     }
   | { type: "PIN_CHAT"; payload: string }
+  | { type: "UNPIN_CHAT"; payload: string }
   | { type: "MUTE_CHAT"; payload: string }
   | { type: "SEND_CONTACT_REQUEST"; payload: ContactRequest }
   | { type: "ACCEPT_CONTACT_REQUEST"; payload: string }
@@ -63,6 +68,14 @@ type ChatAction =
   | {
       type: "UPDATE_USER_STATUS";
       payload: { userId: string; isOnline: boolean; lastSeen: Date };
+    }
+  | {
+      type: "BLOCK_CONTACT";
+      payload: string;
+    }
+  | {
+      type: "UNBLOCK_CONTACT";
+      payload: string;
     };
 
 const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
@@ -260,6 +273,47 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
         activeChat: updatedActiveChat,
       };
     }
+    case "BLOCK_CONTACT": {
+      const blockedUserId = action.payload;
+
+      // Update contacts to mark as blocked
+      const updatedContacts = state.contacts.map((contact) =>
+        contact.id === blockedUserId ? { ...contact, isBlocked: true } : contact
+      );
+
+      // Update chats to mark as blocked
+      const updatedChats = state.chats.map((chat) =>
+        chat.id === blockedUserId ? { ...chat, isBlocked: true } : chat
+      );
+
+      return {
+        ...state,
+        contacts: updatedContacts,
+        chats: updatedChats,
+      };
+    }
+
+    case "UNBLOCK_CONTACT": {
+      const unblockedUserId = action.payload;
+
+      // Update contacts to mark as unblocked
+      const updatedContacts = state.contacts.map((contact) =>
+        contact.id === unblockedUserId
+          ? { ...contact, isBlocked: false }
+          : contact
+      );
+
+      // Update chats to mark as unblocked
+      const updatedChats = state.chats.map((chat) =>
+        chat.id === unblockedUserId ? { ...chat, isBlocked: false } : chat
+      );
+
+      return {
+        ...state,
+        contacts: updatedContacts,
+        chats: updatedChats,
+      };
+    }
 
     default:
       return state;
@@ -327,8 +381,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     if (!currentUser) return;
 
+    // Extract sender information
+    const senderId = data.fromId || data.from;
+
+    // Check if sender is blocked
+    const isBlockedSender = currentState.contacts.some(
+      (contact) => contact.id === senderId && contact.isBlocked
+    );
+
+    if (isBlockedSender) {
+      console.log("Ignoring message from blocked contact:", senderId);
+      return; // Don't process message from blocked contact
+    }
+
     // If the payload is nested, extract from data.message
     const msgData = data.message || data;
+
+    console.log("Incoming message data:", msgData);
 
     // Extract content safely
     let actualContent = "";
@@ -349,7 +418,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const isValidTimestamp = !isNaN(timestamp.getTime());
 
     // Use fromId and toId if present, else fallback to msgData.from/to
-    const senderId = data.fromId || msgData.from;
+    // senderId is already declared above
     const receiverId = data.toId || msgData.to || currentUser.id;
 
     if (!senderId || !receiverId) {
@@ -363,8 +432,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       receiverId,
       content: actualContent,
       timestamp: isValidTimestamp ? timestamp : new Date(),
-      type: "text",
+      type: msgData.type || "text", // Default to text if type is missing
       status: msgData.seen ? "read" : msgData.delivered ? "delivered" : "sent",
+      mediaUrl: msgData.path || data.mediaUrl,
+      fileName: msgData.fileName || data.fileName,
+      fileSize: msgData.fileSize || data.fileSize,
+      duration: msgData.duration || data.duration,
     };
 
     // Always match chat by the other user's user id
@@ -449,6 +522,47 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     },
     []
   );
+
+  const blockContact = useCallback(async (blockUserId: string) => {
+    try {
+      const res = await api.post("/api/user/block-contact", {
+        blockUserId: blockUserId,
+      });
+      console.log("Contact blocked successfully:", res);
+      // Optionally update state or notify user
+      dispatch({
+        type: "BLOCK_CONTACT",
+        payload: blockUserId,
+      });
+
+      const currentState = stateRef.current;
+      if (currentState.activeChat?.id === blockUserId) {
+        dispatch({ type: "SET_ACTIVE_CHAT", payload: null });
+      }
+
+      return res.data;
+    } catch (error) {
+      console.error("Failed to block contact:", error);
+      throw error;
+    }
+  }, []);
+
+  const unblockContact = useCallback(async (unblockUserId: string) => {
+    try {
+      const res = await api.post("/api/user/unblock-contact", {
+        unblockUserId: unblockUserId,
+      });
+      console.log("✅ Contact unblocked:", res.data);
+
+      // Update local state to reflect unblocked status
+      dispatch({ type: "UNBLOCK_CONTACT", payload: unblockUserId });
+
+      return res.data;
+    } catch (error) {
+      console.error("Failed to unblock contact:", error);
+      throw error;
+    }
+  }, []);
 
   // Socket.IO connection effect - only depends on authentication
   useEffect(() => {
@@ -579,43 +693,47 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       // Transform contacts to chat objects
       const chatsFromContacts: Chat[] = res.data.contacts.map(
-        (contact: any) => {
-          console.log("📞 Processing contact:", contact);
-          return {
-            id: contact.user, // Use contact's user ID as chat ID
-            participants: [
-              {
-                id: contact.user.toString(), // Ensure ID is string
-                displayName: contact.name,
-                phoneNumber: contact.phonenumber,
-                avatarUrl: contact.avatarUrl,
-                isOnline: contact.isOnline || false, // Use actual online status from contact
-                lastSeen: contact.lastSeen
-                  ? new Date(contact.lastSeen)
-                  : undefined,
-              },
-              // Add current user to participants
-              ...(userRef.current
-                ? [
-                    {
-                      id: userRef.current.id,
-                      displayName: userRef.current.displayName,
-                      phoneNumber: userRef.current.phoneNumber,
-                      avatarUrl: userRef.current.avatarUrl,
-                      isOnline: userRef.current.isOnline || false,
-                    },
-                  ]
-                : []),
-            ],
-            messages: [], // Start with empty messages
-            isGroup: false,
-            unreadCount: 0,
-            isPinned: false,
-            isMuted: false,
-          };
-        }
+
+        (contact: any) => ({
+          id: contact.user, // Use contact's user ID as chat ID
+          participants: [
+            {
+              id: contact.user,
+              displayName: contact.name,
+              phoneNumber: contact.phonenumber,
+              avatarUrl: contact.avatarUrl,
+              isOnline: contact.isOnline || false, // Use actual online status from contact
+              lastSeen: contact.lastSeen
+                ? new Date(contact.lastSeen)
+                : undefined,
+              isBlocked: contact.blocked, // Include isBlocked status
+              isPinned: contact.pinned, // Include isPinned status
+            },
+            // Add current user to participants
+            ...(userRef.current
+              ? [
+                  {
+                    id: userRef.current.id,
+                    displayName: userRef.current.displayName,
+                    phoneNumber: userRef.current.phoneNumber,
+                    avatarUrl: userRef.current.avatarUrl,
+                    isOnline: userRef.current.isOnline || false,
+                    isBlocked: contact.blocked,
+                    isPinned: contact.pinned,
+                  },
+                ]
+              : []),
+          ],
+          messages: [], // Start with empty messages
+          isGroup: false,
+          unreadCount: 0,
+          isPinned: contact.pinned,
+          isMuted: false,
+        })
+
       );
 
+      console.log("Transformed chats from contacts:", chatsFromContacts);
       dispatch({ type: "SET_CHATS", payload: chatsFromContacts });
       
       // Also set contacts separately for status updates
@@ -653,9 +771,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         receiverId: msg.to,
         content: msg.content,
         timestamp: new Date(msg.timestamp),
-        type: "text",
+        type: msg.type || "text", // Default to text if type is not provided
+        mediaUrl: msg.path || null, // Handle media URL if available
         status: msg.seen ? "read" : msg.delivered ? "delivered" : "sent",
+        isBlocked: msg.blocked, // Add isBlocked field if available
+        isPinned: msg.pinned, // Add isPinned field if available
+        duration: msg.duration || 0, // Add duration field if available
       }));
+
+      console.log("Mapped messages:", mappedMessages);
 
       // Update the chat's messages in state and set activeChat to the updated chat object
       const updatedChats = stateRef.current.chats.map((c) =>
@@ -728,6 +852,95 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }, 1000);
       } else {
         console.warn("No recipient phone number found for active chat");
+      }
+    },
+    [isConnected]
+  );
+
+  const sendAudioMessage = useCallback(
+    async (audioBlob: Blob, duration: number) => {
+      const currentState = stateRef.current;
+      const currentUser = userRef.current;
+
+      if (
+        !currentState.activeChat ||
+        !currentUser ||
+        !socketRef.current ||
+        !isConnected
+      ) {
+        console.warn("Cannot send audio message: missing requirements");
+        return;
+      }
+
+      try {
+        // Create FormData for file upload
+        const formData = new FormData();
+        const audioFile = new File([audioBlob], `audio_${Date.now()}.webm`, {
+          type: audioBlob.type,
+        });
+
+        formData.append("audio", audioFile);
+        formData.append("duration", duration.toString());
+        formData.append("receiverId", currentState.activeChat.id);
+
+        // Upload audio file to server
+        const uploadResponse = await api.post("/api/upload/audio", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+
+        const { audioUrl, fileName, fileSize } = uploadResponse.data;
+
+        // Create message with audio metadata
+        const message: Message = {
+          id: Date.now().toString(),
+          senderId: currentUser.id,
+          receiverId: currentState.activeChat.id,
+          content: `Audio message (${Math.floor(duration)}s)`,
+          timestamp: new Date(),
+          type: "audio",
+          status: "sent",
+          mediaUrl: audioUrl,
+          fileName,
+          fileSize,
+          duration,
+        };
+
+        // Add message to local state immediately
+        dispatch({ type: "SEND_MESSAGE", payload: message });
+
+        // Send via socket
+        const recipientPhone = currentState.activeChat.participants.find(
+          (p) => p.id !== currentUser.id
+        )?.phoneNumber;
+
+        if (recipientPhone) {
+          console.log("📤 Sending audio message to:", recipientPhone);
+          socketRef.current.emit("one_to_one_message", {
+            to: recipientPhone,
+            message: message.content,
+            timestamp: message.timestamp.toISOString(),
+            type: "audio",
+            mediaUrl: audioUrl,
+            fileName,
+            fileSize,
+            duration,
+          });
+
+          // Update status to delivered after a delay
+          setTimeout(() => {
+            dispatch({
+              type: "UPDATE_MESSAGE_STATUS",
+              payload: { messageId: message.id, status: "delivered" },
+            });
+          }, 1000);
+        } else {
+          console.warn("No recipient phone number found for active chat");
+        }
+      } catch (error) {
+        console.error("Failed to send audio message:", error);
+        throw error;
       }
     },
     [isConnected]
@@ -817,8 +1030,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "REMOVE_USER_FROM_GROUP", payload: { chatId, userId } });
   }, []);
 
-  const pinChat = useCallback((chatId: string) => {
+  const pinChat = useCallback(async (chatId: string) => {
+    const res = await api.post("/api/user/pin-contact", { contactId: chatId });
+    console.log("📌 Pinning chat:", res);
     dispatch({ type: "PIN_CHAT", payload: chatId });
+  }, []);
+
+  const unpinChat = useCallback(async (chatId: string) => {
+    const res = await api.post("/api/user/unpin-contact", {
+      contactId: chatId,
+    });
+    console.log("📌 Unpinning chat:", res);
+    dispatch({ type: "UNPIN_CHAT", payload: chatId });
   }, []);
 
   const muteChat = useCallback((chatId: string) => {
@@ -844,6 +1067,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         ...state,
         setActiveChat,
         sendMessage,
+        sendAudioMessage,
         markAsRead,
         addContact,
         setSearchQuery,
@@ -851,6 +1075,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         addUserToGroup,
         removeUserFromGroup,
         pinChat,
+        unpinChat,
         muteChat,
         sendContactRequest,
         acceptContactRequest,
@@ -858,6 +1083,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         startTyping,
         stopTyping,
         isConnected,
+        blockContact,
+        unblockContact,
       }}
     >
       {children}

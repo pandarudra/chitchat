@@ -6,8 +6,14 @@ export interface IMessage extends Document {
   content: string;
   delivered: boolean;
   seen: boolean;
-  seenAt?: Date; // Optional timestamp
+  seenAt?: Date;
   timestamp: Date;
+  blocked?: boolean;
+  path?: string;
+  type: "text" | "audio" | "ai_response";
+  duration?: number;
+  isAIMessage?: boolean; // New field to identify AI messages
+  conversationContext?: string; // For maintaining AI conversation context
 }
 
 const messageSchema = new Schema<IMessage>(
@@ -19,6 +25,16 @@ const messageSchema = new Schema<IMessage>(
     seen: { type: Boolean, default: false },
     seenAt: { type: Date },
     timestamp: { type: Date, default: Date.now },
+    blocked: { type: Boolean, default: false }, // Indicates if the message is blocked
+    path: { type: String }, // Optional path for audio files
+    type: {
+      type: String,
+      enum: ["text", "audio", "ai_response"],
+      default: "text",
+    }, // Type of message
+    duration: { type: Number, default: 0 }, // Duration in seconds for audio messages
+    isAIMessage: { type: Boolean, default: false }, // Flag to identify AI-generated messages
+    conversationContext: { type: String }, // Context for AI conversations
   },
   { timestamps: true }
 );
