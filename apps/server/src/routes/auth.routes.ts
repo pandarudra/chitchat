@@ -12,7 +12,7 @@ const authRouter = express.Router();
 
 authRouter.post("/signup", onSignup);
 authRouter.post("/login", onLogin);
-authRouter.get("/logout", authenticate, onLogout);
+authRouter.post("/logout", authenticate, onLogout);
 authRouter.get("/me", authenticate, onGetUser);
 authRouter.post("/refresh_my_token", onRefreshToken);
 

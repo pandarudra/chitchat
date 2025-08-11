@@ -45,6 +45,7 @@ chitchat/
    - `MONGO_URI` (MongoDB connection string)
    - `REDIS_HOST`, `REDIS_PORT`, `REDIS_USERNAME`, `REDIS_PASSWORD`
    - `JWT_SECRET`, `REFRESH_SECRET`
+   - `FRONTEND_URL` (your deployed frontend URL for production CORS)
    - SMS provider keys (if using real SMS)
 3. Start the server:
    ```bash
@@ -115,15 +116,21 @@ npx turbo link
 
 ## Useful Links
 
-Learn more about the power of Turborepo:
 
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
 
-## Contributing to the app
+## 🚀 Learn More About Turborepo
 
-- Saisuman Dash
+[![Monorepo Overview](https://img.shields.io/badge/Turborepo-Monorepo_Overview-blue?style=for-the-badge)](https://turborepo.com/docs)
+[![Project Structure](https://img.shields.io/badge/Turborepo-Project_Structure-blueviolet?style=for-the-badge)](https://turborepo.com/docs/crafting-your-repository/project-structure)
+[![Tasks](https://img.shields.io/badge/Turborepo-Tasks-green?style=for-the-badge)](https://turborepo.com/docs/crafting-your-repository/running-tasks)
+[![Caching](https://img.shields.io/badge/Turborepo-Caching-ff69b4?style=for-the-badge)](https://turborepo.com/docs/crafting-your-repository/caching)
+[![Remote Caching](https://img.shields.io/badge/Turborepo-Remote_Caching-yellow?style=for-the-badge)](https://turborepo.com/docs/core-concepts/remote-caching)
+[![Filtering](https://img.shields.io/badge/Turborepo-Filtering-orange?style=for-the-badge)](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
+[![Configuration](https://img.shields.io/badge/Turborepo-Configuration_Options-red?style=for-the-badge)](https://turborepo.com/docs/reference/configuration)
+[![CLI Usage](https://img.shields.io/badge/Turborepo-CLI_Usage-lightgrey?style=for-the-badge)](https://turborepo.com/docs/reference/command-line-reference)
+[![Pipelines](https://img.shields.io/badge/Turborepo-Custom_Pipelines-blue?style=for-the-badge)](https://turborepo.com/docs/features/pipelines)
+[![Environment](https://img.shields.io/badge/Turborepo-Env_Variables-teal?style=for-the-badge)](https://turborepo.com/docs/features/environment-variables)
+[![Vercel Caching](https://img.shields.io/badge/Turborepo-Vercel_Remote_Cache-9cf?style=for-the-badge)](https://turborepo.com/docs/hosting/vercel-remote-cache)
+[![GitHub Actions](https://img.shields.io/badge/Turborepo-GitHub_Actions-informational?style=for-the-badge)](https://turborepo.com/docs/ci/github-actions)
+[![Next.js Integration](https://img.shields.io/badge/Turborepo-Next.js-blue?style=for-the-badge)](https://turborepo.com/docs/quickstart/with-nextjs)
+

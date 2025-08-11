@@ -310,10 +310,9 @@ export class SocketService {
       // Remove duplicates
       const uniqueContacts = [...new Set(allContactsToNotify)];
 
-      console.log(
-        `📡 Broadcasting status change for user ${userId} (${isOnline ? "online" : "offline"}) to contacts:`,
-        uniqueContacts
-      );
+
+      console.log(`📡 Broadcasting status change for user ${userId} (${isOnline ? 'online' : 'offline'}) to contacts:`, uniqueContacts);
+
 
       // Send status update to each online contact
       for (const contactId of uniqueContacts) {
@@ -324,9 +323,9 @@ export class SocketService {
             isOnline,
             lastSeen: new Date(),
           });
-          console.log(
-            `✅ Sent status update to contact ${contactId} via socket ${contactSocketId}`
-          );
+
+          console.log(`✅ Sent status update to contact ${contactId} via socket ${contactSocketId}`);
+
         } else {
           console.log(`❌ Contact ${contactId} is not online`);
         }

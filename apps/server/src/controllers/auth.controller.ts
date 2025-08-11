@@ -76,7 +76,7 @@ export const onLogin = async (req: Request, res: Response): Promise<any> => {
     res.cookie("ref_token", ref_token, {
       httpOnly: true,
       secure: true,
-      sameSite: "strict", // Prevent CSRF attacks
+      sameSite: "none", // Prevent CSRF attacks
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -84,7 +84,7 @@ export const onLogin = async (req: Request, res: Response): Promise<any> => {
     res.cookie("token", token, {
       httpOnly: true,
       secure: true,
-      sameSite: "strict", // Prevent CSRF attacks
+      sameSite: "none", // Prevent CSRF attacks
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
@@ -99,12 +99,14 @@ export const onLogin = async (req: Request, res: Response): Promise<any> => {
 
 export const onLogout = async (req: Request, res: Response): Promise<any> => {
   const userId = req.user?._id;
+  console.log(`User ID from request: ${userId}`);
   if (!userId) {
     return res.status(400).json({ error: "User ID is required for logout." });
   }
   // Clear the cookie
   res.clearCookie("token");
   res.clearCookie("ref_token");
+  console.log(`User ${userId} logged out successfully.`);
 
   // lastSeen update logic
   const user = await UserModel.findById(userId);
@@ -149,7 +151,7 @@ export const onRefreshToken = async (
     res.cookie("token", newAccessToken, {
       httpOnly: true,
       secure: true,
-      sameSite: "strict", // Prevent CSRF attacks
+      sameSite: "none", // Prevent CSRF attacks
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
     return res.status(200).json({
