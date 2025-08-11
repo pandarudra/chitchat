@@ -8,6 +8,8 @@ import {
   onUnblockContact,
   onPinContact,
   onUnpinContact,
+  updateProfile,
+  uploadMiddleware,
 } from "../controllers/user.controller";
 import { authenticate } from "../middleware/auth.middleware";
 const userRouter = express.Router();
@@ -23,5 +25,7 @@ userRouter.post("/unblock-contact", authenticate, onUnblockContact);
 
 userRouter.post("/pin-contact", authenticate, onPinContact);
 userRouter.post("/unpin-contact", authenticate, onUnpinContact);
+
+userRouter.put("/profile", authenticate, uploadMiddleware, updateProfile);
 
 export default userRouter;

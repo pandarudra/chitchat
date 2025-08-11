@@ -26,7 +26,8 @@ async function init() {
         "https://chitchat-web-chi.vercel.app",
       ],
       credentials: true,
-      methods: ["*"],
+      methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
     })
   );
   app.use(express.json());

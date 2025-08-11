@@ -14,3 +14,25 @@ export const COUNTRY_CODES = [
   { name: "Pakistan", dial_code: "+92", code: "PK", flag: "🇵🇰" },
   { name: "Bangladesh", dial_code: "+880", code: "BD", flag: "🇧🇩" },
 ];
+
+// Get the backend URL from environment variables
+export const API_BASE_URL =
+  import.meta.env.VITE_BE_URL || "http://localhost:8000";
+
+// Utility function to get full avatar URL
+export const getAvatarUrl = (avatarPath?: string): string => {
+  if (!avatarPath) return "";
+
+  // If it's already a full URL, return as is
+  if (avatarPath.startsWith("http://") || avatarPath.startsWith("https://")) {
+    return avatarPath;
+  }
+
+  // If it's a data URL (base64), return as is
+  if (avatarPath.startsWith("data:")) {
+    return avatarPath;
+  }
+
+  // If it's a relative path, prepend the API base URL
+  return `${API_BASE_URL}${avatarPath.startsWith("/") ? "" : "/"}${avatarPath}`;
+};
