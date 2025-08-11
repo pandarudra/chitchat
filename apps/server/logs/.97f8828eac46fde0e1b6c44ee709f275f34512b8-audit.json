@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "logs\\.97f8828eac46fde0e1b6c44ee709f275f34512b8-audit.json",
+    "files": [
+        {
+            "date": 1754169597563,
+            "name": "logs\\chat-error-2025-08-03.log",
+            "hash": "19dabc263836fe5f9ae4210f33e7df070d8fc825bc4b990fe76f33257ad14b3a"
+        }
+    ],
+    "hashType": "sha256"
+}

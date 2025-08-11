@@ -1,32 +1,14 @@
 import { Server as SocketIOServer } from "socket.io";
 import { Server as httpServer } from "http";
-import Redis from "ioredis";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import * as cookie from "cookie";
-
 import { MessageModel } from "../models/Message";
 import { UserModel } from "../models/User";
+import { pub, sub } from "../utils/redisClient";
+import { socketKey } from "../lib/ext";
+
 dotenv.config();
-
-// pub/sub Redis clients
-const pub = new Redis({
-  host: process.env.REDIS_HOST,
-  port: Number(process.env.REDIS_PORT),
-  // username: process.env.REDIS_USERNAME,
-  // password: process.env.REDIS_PASSWORD,
-});
-const sub = new Redis({
-  host: process.env.REDIS_HOST,
-  port: Number(process.env.REDIS_PORT),
-  // username: process.env.REDIS_USERNAME,
-  // password: process.env.REDIS_PASSWORD,
-});
-
-// redis map userid -> socketId key
-const socketKey = (userId: string): string => {
-  return `socket:${userId}`;
-};
 
 export class SocketService {
   private _io: SocketIOServer;
@@ -40,7 +22,7 @@ export class SocketService {
       transports: ["websocket", "polling"],
     });
 
-    // ✅ JWT Authentication Middleware
+    // JWT Authentication Middleware
     this._io.use((socket, next) => {
       const cookies = socket.handshake.headers.cookie;
       if (!cookies) return next(new Error("No cookies found."));
@@ -289,6 +271,7 @@ export class SocketService {
         }
       }
     });
+
     pub.on("error", (err) => {
       console.error("[Redis pub] Error:", err);
     });

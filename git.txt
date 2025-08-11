@@ -11,6 +11,8 @@ git remote add origin https://github.com/pandarudra/chitchat.git
 git push -u origin main
 
 
+
+
 // 2 branches
 
 // dev  // main
@@ -31,3 +33,7 @@ git add -A // to stage all changes (new , modified , deleted)
 git add -u // to stage modified and deleted only
 
 git switch branch_name // to change branch
+
+// redis 
+docker run --name local-redis -d -p 6379:6379 redis
+docker start local-redis
