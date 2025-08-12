@@ -10,20 +10,128 @@ function CallNotification() {
   const [isVisible, setIsVisible] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Initialize audio on first user interaction
+  useEffect(() => {
+    const initializeAudio = () => {
+      const audio = audioRef.current;
+      if (audio) {
+        // Load the audio file
+        audio.load();
+        // Try a silent play/pause to initialize
+        audio.volume = 0;
+        audio
+          .play()
+          .then(() => {
+            audio.pause();
+            audio.volume = 0.8;
+            audio.currentTime = 0;
+          })
+          .catch(() => {
+            // Silent fail for initialization
+          });
+      }
+    };
+
+    // Initialize on user interaction
+    const handleUserInteraction = () => {
+      initializeAudio();
+      document.removeEventListener("click", handleUserInteraction);
+      document.removeEventListener("keydown", handleUserInteraction);
+      document.removeEventListener("touchstart", handleUserInteraction);
+    };
+
+    document.addEventListener("click", handleUserInteraction);
+    document.addEventListener("keydown", handleUserInteraction);
+    document.addEventListener("touchstart", handleUserInteraction);
+
+    return () => {
+      document.removeEventListener("click", handleUserInteraction);
+      document.removeEventListener("keydown", handleUserInteraction);
+      document.removeEventListener("touchstart", handleUserInteraction);
+    };
+  }, []);
+
+  // Request notification permission on component mount
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+
   // Show notification only for incoming calls
   useEffect(() => {
     if (call.status === "ringing") {
       setIsVisible(true);
 
+      // Get other user info for notifications
+      const otherUser =
+        call.caller?.id === user?.id ? call.callee : call.caller;
+      const callerName = otherUser?.displayName || "Unknown";
+
+      // Show browser notification
+      if ("Notification" in window && Notification.permission === "granted") {
+        const notification = new Notification(
+          `Incoming ${call.callType} call`,
+          {
+            body: `${callerName} is calling you`,
+            icon: otherUser?.avatarUrl
+              ? getAvatarUrl(otherUser.avatarUrl)
+              : "/vite.svg",
+            tag: "incoming-call",
+            requireInteraction: true,
+          }
+        );
+
+        // Handle notification clicks
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+          if (call.callId) {
+            acceptCall(call.callId);
+          }
+        };
+
+        // Clean up notification when call ends
+        const cleanupNotification = () => {
+          notification.close();
+        };
+
+        // Store for cleanup
+        notification.onclose = cleanupNotification;
+      }
+
       // Store audio reference for cleanup
       const audio = audioRef.current;
 
-      // Play ringing sound
+      // Play ringing sound with multiple attempts
       if (audio) {
         audio.loop = true;
-        audio.play().catch((error: unknown) => {
-          console.log("Could not play ring sound:", error);
-        });
+        audio.volume = 0.8; // Increase volume to 80%
+
+        // Reset audio to beginning
+        audio.currentTime = 0;
+
+        // Multiple attempts to play audio
+        const attemptPlay = async () => {
+          try {
+            await audio.play();
+            console.log("Ringtone started successfully");
+          } catch (error: unknown) {
+            console.log("Could not play ring sound:", error);
+
+            // Try playing after user interaction
+            const playOnInteraction = () => {
+              audio.play().catch(console.log);
+              document.removeEventListener("click", playOnInteraction);
+              document.removeEventListener("keydown", playOnInteraction);
+            };
+
+            document.addEventListener("click", playOnInteraction);
+            document.addEventListener("keydown", playOnInteraction);
+          }
+        };
+
+        attemptPlay();
       }
 
       // Auto-hide after 30 seconds if not answered
@@ -50,7 +158,15 @@ function CallNotification() {
         audio.currentTime = 0;
       }
     }
-  }, [call.status]);
+  }, [
+    call.status,
+    call.caller,
+    call.callee,
+    call.callType,
+    call.callId,
+    acceptCall,
+    user?.id,
+  ]);
 
   // Get other user info
   const otherUser = call.caller?.id === user?.id ? call.callee : call.caller;
@@ -59,14 +175,19 @@ function CallNotification() {
   if (call.status !== "ringing" || !isVisible) return null;
 
   return (
-    <div className="fixed top-2 right-2 sm:top-4 sm:right-4 z-[9999] animate-bounce">
+    <div className="fixed top-2 right-2 sm:top-4 sm:right-4 z-[9999] ">
       {/* Hidden audio element for ringing sound */}
-      <audio ref={audioRef} preload="auto">
-        {/* Using a data URL for a simple beep sound, or you can use a URL to a ring tone file */}
-        <source
-          src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAz2X0fOmeykDJoXQ8dyLOAYNaLjt4pxKCgpOqOH0wnUjBD6Wz/K7dyMELILM8+OLOAgObrzp36JNDAc+ltTyxnkpAylzx+/gpVELCFSv5feoWBUIU6nh9MN2IwQ+l9Dyw3cgBSSLy/Fhdy8FKm/E9+KlUAsHZZzW9LNLCoZQpOLzIHcoAyR0yO7oqVELB2em2fW1YQ==,M7+L0PPCdSEBJI=="
-          type="audio/wav"
-        />
+      <audio
+        ref={audioRef}
+        preload="auto"
+        muted={false}
+        controls={false}
+        style={{ display: "none" }}
+      >
+        <source src="/audio/ring.mp3" type="audio/mpeg" />
+        <source src="/audio/ring.mp3" type="audio/mp3" />
+        <source src="/audio/ring.mp3" type="audio/wav" />
+        Your browser does not support the audio element.
       </audio>
 
       {/* Notification Card */}
@@ -164,9 +285,6 @@ function CallNotification() {
           </button>
         </div>
       </div>
-
-      {/* Ring Animation */}
-      <div className="absolute inset-0 rounded-xl border-2 border-green-500 animate-ping opacity-75 pointer-events-none"></div>
     </div>
   );
 }

@@ -10,13 +10,14 @@ import {
   Maximize2,
   Minimize2,
   User,
+  Phone,
 } from "lucide-react";
 import { useChat } from "../../context/ChatContext";
 import { useAuth } from "../../context/AuthContext";
 import { getAvatarUrl } from "../../utils/constants";
 
 function CallModal() {
-  const { call, endCall } = useChat();
+  const { call, endCall, acceptCall } = useChat();
   const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
@@ -24,6 +25,16 @@ function CallModal() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
+  const [videoLayout, setVideoLayout] = useState<"remote-main" | "local-main">(
+    "remote-main"
+  );
+  const [pipPosition, setPipPosition] = useState({ x: 16, y: 64 }); // Default: top-16 right-4 (16px from right, 64px from top)
+  const [pipSize, setPipSize] = useState({ width: 128, height: 96 }); // Default: w-32 h-24 (128px x 96px)
+  const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [resizeStartPoint, setResizeStartPoint] = useState({ x: 0, y: 0 });
+  const [initialSize, setInitialSize] = useState({ width: 0, height: 0 });
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const callStartTimeRef = useRef<number | null>(null);
@@ -123,6 +134,278 @@ function CallModal() {
     }
   }, [call.localStream, isAudioEnabled]);
 
+  // Toggle video layout (switch between remote and local as main)
+  const toggleVideoLayout = useCallback(() => {
+    setVideoLayout((prev) =>
+      prev === "remote-main" ? "local-main" : "remote-main"
+    );
+    console.log("Video layout toggled:", videoLayout);
+  }, [videoLayout]);
+
+  // Drag handlers for picture-in-picture video
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation(); // Prevent triggering layout toggle
+    setIsDragging(true);
+
+    const rect = (e.target as HTMLElement)
+      .closest(".pip-container")
+      ?.getBoundingClientRect();
+    if (rect) {
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+    }
+  }, []);
+
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging) return;
+
+      e.preventDefault();
+
+      // Get container bounds to keep PiP within viewport
+      const container = document.querySelector(".call-container");
+      if (!container) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const pipWidth = pipSize.width;
+      const pipHeight = pipSize.height;
+
+      // Calculate new position
+      let newX = e.clientX - containerRect.left - dragOffset.x;
+      let newY = e.clientY - containerRect.top - dragOffset.y;
+
+      // Keep within bounds
+      newX = Math.max(0, Math.min(newX, containerRect.width - pipWidth));
+      newY = Math.max(0, Math.min(newY, containerRect.height - pipHeight));
+
+      setPipPosition({ x: newX, y: newY });
+    },
+    [isDragging, dragOffset, pipSize]
+  );
+
+  const handleMouseUp = useCallback(() => {
+    if (isDragging) {
+      // Snap to edges for better UX
+      const container = document.querySelector(".call-container");
+      if (container) {
+        const containerRect = container.getBoundingClientRect();
+        const pipWidth = 128;
+        const pipHeight = 96;
+        const margin = 16;
+
+        let { x, y } = pipPosition;
+
+        // Snap to nearest edge
+        const centerX = x + pipWidth / 2;
+        const centerY = y + pipHeight / 2;
+
+        // Snap to left or right edge
+        if (centerX < containerRect.width / 2) {
+          x = margin; // Snap to left
+        } else {
+          x = containerRect.width - pipWidth - margin; // Snap to right
+        }
+
+        // Keep Y position but ensure it's within bounds
+        y = Math.max(
+          margin,
+          Math.min(y, containerRect.height - pipHeight - margin)
+        );
+
+        setPipPosition({ x, y });
+      }
+    }
+    setIsDragging(false);
+  }, [isDragging, pipPosition]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (isDragging) {
+      // Snap to edges for better UX
+      const container = document.querySelector(".call-container");
+      if (container) {
+        const containerRect = container.getBoundingClientRect();
+        const pipWidth = 128;
+        const pipHeight = 96;
+        const margin = 16;
+
+        let { x, y } = pipPosition;
+
+        // Snap to nearest edge
+        const centerX = x + pipWidth / 2;
+        const centerY = y + pipHeight / 2;
+
+        // Snap to left or right edge
+        if (centerX < containerRect.width / 2) {
+          x = margin; // Snap to left
+        } else {
+          x = containerRect.width - pipWidth - margin; // Snap to right
+        }
+
+        // Keep Y position but ensure it's within bounds
+        y = Math.max(
+          margin,
+          Math.min(y, containerRect.height - pipHeight - margin)
+        );
+
+        setPipPosition({ x, y });
+      }
+    }
+    setIsDragging(false);
+  }, [isDragging, pipPosition]);
+
+  // Touch handlers for mobile support
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+
+    const touch = e.touches[0];
+    const rect = (e.target as HTMLElement)
+      .closest(".pip-container")
+      ?.getBoundingClientRect();
+    if (rect && touch) {
+      setDragOffset({
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top,
+      });
+    }
+  }, []);
+
+  const handleTouchMove = useCallback(
+    (e: TouchEvent) => {
+      if (!isDragging) return;
+
+      e.preventDefault();
+
+      const touch = e.touches[0];
+      if (!touch) return;
+
+      // Get container bounds to keep PiP within viewport
+      const container = document.querySelector(".call-container");
+      if (!container) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const pipWidth = pipSize.width;
+      const pipHeight = pipSize.height;
+
+      // Calculate new position
+      let newX = touch.clientX - containerRect.left - dragOffset.x;
+      let newY = touch.clientY - containerRect.top - dragOffset.y;
+
+      // Keep within bounds
+      newX = Math.max(0, Math.min(newX, containerRect.width - pipWidth));
+      newY = Math.max(0, Math.min(newY, containerRect.height - pipHeight));
+
+      setPipPosition({ x: newX, y: newY });
+    },
+    [isDragging, dragOffset, pipSize]
+  );
+
+  // Resize handlers for picture-in-picture video
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsResizing(true);
+      setResizeStartPoint({ x: e.clientX, y: e.clientY });
+      setInitialSize({ width: pipSize.width, height: pipSize.height });
+    },
+    [pipSize]
+  );
+
+  const handleResizeMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isResizing) return;
+
+      e.preventDefault();
+
+      // Calculate size change based on mouse movement
+      const deltaX = e.clientX - resizeStartPoint.x;
+      const deltaY = e.clientY - resizeStartPoint.y;
+
+      // Use the larger delta to maintain aspect ratio (16:12 or 4:3)
+      const delta = Math.max(deltaX, deltaY);
+
+      // Calculate new size (minimum 80x60, maximum 320x240)
+      const newWidth = Math.max(80, Math.min(320, initialSize.width + delta));
+      const newHeight = Math.max(60, Math.min(240, (newWidth * 3) / 4)); // Maintain 4:3 aspect ratio
+
+      // Ensure the resized PiP stays within container bounds
+      const container = document.querySelector(".call-container");
+      if (container) {
+        const containerRect = container.getBoundingClientRect();
+
+        // Adjust position if needed to keep within bounds
+        const currentPosition = pipPosition;
+        const maxX = containerRect.width - newWidth;
+        const maxY = containerRect.height - newHeight;
+
+        if (currentPosition.x > maxX) {
+          setPipPosition((prev) => ({ ...prev, x: maxX }));
+        }
+        if (currentPosition.y > maxY) {
+          setPipPosition((prev) => ({ ...prev, y: maxY }));
+        }
+      }
+
+      setPipSize({ width: newWidth, height: newHeight });
+    },
+    [isResizing, resizeStartPoint, initialSize, pipPosition]
+  );
+
+  const handleResizeEnd = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  // Add global resize event listeners
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener("mousemove", handleResizeMove);
+      document.addEventListener("mouseup", handleResizeEnd);
+      document.body.style.cursor = "nw-resize";
+      document.body.style.userSelect = "none";
+
+      return () => {
+        document.removeEventListener("mousemove", handleResizeMove);
+        document.removeEventListener("mouseup", handleResizeEnd);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+    }
+  }, [isResizing, handleResizeMove, handleResizeEnd]);
+
+  // Add global mouse and touch event listeners for dragging
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.addEventListener("touchmove", handleTouchMove, {
+        passive: false,
+      });
+      document.addEventListener("touchend", handleTouchEnd);
+      document.body.style.cursor = "grabbing";
+      document.body.style.userSelect = "none";
+
+      return () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+        document.removeEventListener("touchmove", handleTouchMove);
+        document.removeEventListener("touchend", handleTouchEnd);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+    }
+  }, [
+    isDragging,
+    handleMouseMove,
+    handleMouseUp,
+    handleTouchMove,
+    handleTouchEnd,
+  ]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -155,6 +438,12 @@ function CallModal() {
           e.preventDefault();
           setShowSettings(!showSettings);
           break;
+        case "t":
+          if (call.callType === "video") {
+            e.preventDefault();
+            toggleVideoLayout();
+          }
+          break;
         case "escape":
           e.preventDefault();
           if (isFullscreen) {
@@ -182,6 +471,7 @@ function CallModal() {
     showSettings,
     toggleAudio,
     toggleVideo,
+    toggleVideoLayout,
     endCall,
   ]);
 
@@ -225,8 +515,8 @@ function CallModal() {
   const otherUser = call.caller?.id === user?.id ? call.callee : call.caller;
 
   // Don't show CallModal for incoming calls (ringing) - let CallNotification handle it
-  // Only show for outgoing calls (calling), connected calls, and call end states
-  if (call.status === "idle" || call.status === "ringing") return null;
+  // Show for all active call states including incoming calls
+  if (call.status === "idle") return null;
 
   return (
     <div
@@ -276,6 +566,58 @@ function CallModal() {
             >
               <PhoneOff className="w-8 h-8" />
             </button>
+          </div>
+        )}
+
+        {/* Incoming Call UI */}
+        {call.status === "ringing" && (
+          <div className="p-8 text-center">
+            <div className="mb-8">
+              <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden bg-gray-700 flex items-center justify-center ring-4 ring-green-500 ring-opacity-50 animate-pulse">
+                {otherUser?.avatarUrl ? (
+                  <img
+                    src={getAvatarUrl(otherUser.avatarUrl)}
+                    alt={otherUser.displayName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-16 h-16 text-gray-400" />
+                )}
+              </div>
+              <h2 className="text-2xl font-semibold mb-2">
+                Incoming {call.callType} call
+              </h2>
+              <p className="text-xl text-gray-300">{otherUser?.displayName}</p>
+              <p className="text-sm text-gray-400 mt-1">
+                {otherUser?.phoneNumber}
+              </p>
+            </div>
+
+            {/* Answer/Decline buttons */}
+            <div className="flex items-center justify-center space-x-12">
+              <button
+                onClick={() => {
+                  if (call.callId) {
+                    endCall(call.callId);
+                  }
+                }}
+                className="w-16 h-16 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
+                title="Decline call"
+              >
+                <PhoneOff className="w-8 h-8" />
+              </button>
+              <button
+                onClick={() => {
+                  if (call.callId) {
+                    acceptCall(call.callId);
+                  }
+                }}
+                className="w-16 h-16 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center transition-colors animate-pulse"
+                title="Accept call"
+              >
+                <Phone className="w-8 h-8" />
+              </button>
+            </div>
           </div>
         )}
 
@@ -338,35 +680,121 @@ function CallModal() {
 
             {/* Video Content */}
             {call.callType === "video" ? (
-              <div className="flex-1 relative">
-                {/* Remote video (main) */}
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-cover bg-gray-800"
-                />
-
-                {/* Local video (picture-in-picture) */}
-                <div className="absolute top-16 right-4 w-32 h-24 rounded-lg overflow-hidden bg-gray-800 border-2 border-white/20">
-                  {isVideoEnabled && call.localStream ? (
+              <div className="call-container flex-1 relative">
+                {/* Main video (changes based on layout) */}
+                <div
+                  className="w-full h-full cursor-pointer"
+                  onClick={toggleVideoLayout}
+                  title="Click to switch videos (T)"
+                >
+                  {videoLayout === "remote-main" ? (
+                    /* Remote video as main */
+                    <video
+                      ref={remoteVideoRef}
+                      autoPlay
+                      playsInline
+                      className="w-full h-full object-cover bg-gray-800"
+                    />
+                  ) : /* Local video as main */
+                  isVideoEnabled && call.localStream ? (
                     <video
                       ref={localVideoRef}
                       autoPlay
                       muted
                       playsInline
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover bg-gray-800"
                     />
                   ) : (
                     <div className="w-full h-full bg-gray-700 flex items-center justify-center">
-                      <VideoOff className="w-6 h-6 text-gray-400" />
+                      <VideoOff className="w-12 h-12 text-gray-400" />
+                      <p className="ml-3 text-gray-400">Camera is off</p>
                     </div>
                   )}
                 </div>
 
-                {/* No video fallback for remote */}
-                {!call.remoteStream && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+                {/* Picture-in-picture video (changes based on layout) */}
+                <div
+                  className="pip-container absolute rounded-lg overflow-hidden bg-gray-800 border-2 border-white/20 cursor-grab hover:border-white/40 transition-colors z-10"
+                  style={{
+                    left: `${pipPosition.x}px`,
+                    top: `${pipPosition.y}px`,
+                    width: `${pipSize.width}px`,
+                    height: `${pipSize.height}px`,
+                    cursor: isDragging
+                      ? "grabbing"
+                      : isResizing
+                        ? "nw-resize"
+                        : "grab",
+                  }}
+                  onMouseDown={handleMouseDown}
+                  onTouchStart={handleTouchStart}
+                  onClick={(e) => {
+                    // Only toggle layout if not dragging or resizing
+                    if (!isDragging && !isResizing) {
+                      e.stopPropagation();
+                      toggleVideoLayout();
+                    }
+                  }}
+                  title={
+                    isDragging
+                      ? "Dragging..."
+                      : isResizing
+                        ? "Resizing..."
+                        : "Drag to move, resize from corner, or click to switch videos (T)"
+                  }
+                >
+                  {/* Drag indicator */}
+                  <div className="absolute top-1 left-1 right-1 h-1 bg-white/20 rounded-full flex justify-center z-20">
+                    <div className="w-6 h-1 bg-white/40 rounded-full"></div>
+                  </div>
+
+                  {videoLayout === "remote-main" ? (
+                    /* Local video as PiP */
+                    isVideoEnabled && call.localStream ? (
+                      <video
+                        ref={localVideoRef}
+                        autoPlay
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+                        <VideoOff className="w-4 h-4 text-gray-400" />
+                      </div>
+                    )
+                  ) : /* Remote video as PiP */
+                  call.remoteStream ? (
+                    <video
+                      ref={remoteVideoRef}
+                      autoPlay
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+                      <User className="w-4 h-4 text-gray-400" />
+                    </div>
+                  )}
+
+                  {/* Resize handle */}
+                  <div
+                    className="absolute bottom-0 right-0 w-4 h-4 bg-white/20 hover:bg-white/40 cursor-nw-resize z-30"
+                    onMouseDown={handleResizeStart}
+                    onClick={(e) => e.stopPropagation()}
+                    title="Drag to resize"
+                    style={{
+                      clipPath: "polygon(100% 0%, 0% 100%, 100% 100%)",
+                    }}
+                  />
+                </div>
+
+                {/* No video fallback for main view */}
+                {videoLayout === "remote-main" && !call.remoteStream && (
+                  <div
+                    className="absolute inset-0 flex items-center justify-center bg-gray-800 cursor-pointer"
+                    onClick={toggleVideoLayout}
+                  >
                     <div className="text-center">
                       <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden bg-gray-700 flex items-center justify-center">
                         {otherUser?.avatarUrl ? (
@@ -380,6 +808,9 @@ function CallModal() {
                         )}
                       </div>
                       <p className="text-gray-300">Camera is off</p>
+                      <p className="text-sm text-gray-400 mt-1">
+                        Click to switch views
+                      </p>
                     </div>
                   </div>
                 )}
@@ -519,6 +950,16 @@ function CallModal() {
                       {formatDuration(callDuration)}
                     </span>
                   </div>
+                  {call.callType === "video" && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-300">Main Video:</span>
+                      <span className="text-purple-400 capitalize">
+                        {videoLayout === "remote-main"
+                          ? "Their Camera"
+                          : "Your Camera"}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Audio/Video Controls */}
@@ -545,23 +986,83 @@ function CallModal() {
                       </button>
                     </div>
                     {call.callType === "video" && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-300 text-sm">Camera</span>
-                        <button
-                          onClick={toggleVideo}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                            isVideoEnabled
-                              ? "bg-green-600 hover:bg-green-700 text-white"
-                              : "bg-red-500 hover:bg-red-600 text-white"
-                          }`}
-                        >
-                          {isVideoEnabled ? (
-                            <Video className="w-3 h-3" />
-                          ) : (
-                            <VideoOff className="w-3 h-3" />
-                          )}
-                        </button>
-                      </div>
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-300 text-sm">Camera</span>
+                          <button
+                            onClick={toggleVideo}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                              isVideoEnabled
+                                ? "bg-green-600 hover:bg-green-700 text-white"
+                                : "bg-red-500 hover:bg-red-600 text-white"
+                            }`}
+                          >
+                            {isVideoEnabled ? (
+                              <Video className="w-3 h-3" />
+                            ) : (
+                              <VideoOff className="w-3 h-3" />
+                            )}
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-300 text-sm">
+                            Video Layout
+                          </span>
+                          <button
+                            onClick={toggleVideoLayout}
+                            className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center transition-colors"
+                            title={`Switch to ${videoLayout === "remote-main" ? "your" : "their"} video as main (T)`}
+                          >
+                            <Monitor className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-300 text-sm">
+                            PiP Size
+                          </span>
+                          <div className="flex space-x-1">
+                            <button
+                              onClick={() =>
+                                setPipSize({ width: 80, height: 60 })
+                              }
+                              className={`w-6 h-6 rounded text-xs flex items-center justify-center transition-colors ${
+                                pipSize.width === 80
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-gray-600 hover:bg-gray-500 text-gray-300"
+                              }`}
+                              title="Small"
+                            >
+                              S
+                            </button>
+                            <button
+                              onClick={() =>
+                                setPipSize({ width: 128, height: 96 })
+                              }
+                              className={`w-6 h-6 rounded text-xs flex items-center justify-center transition-colors ${
+                                pipSize.width === 128
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-gray-600 hover:bg-gray-500 text-gray-300"
+                              }`}
+                              title="Medium"
+                            >
+                              M
+                            </button>
+                            <button
+                              onClick={() =>
+                                setPipSize({ width: 192, height: 144 })
+                              }
+                              className={`w-6 h-6 rounded text-xs flex items-center justify-center transition-colors ${
+                                pipSize.width === 192
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-gray-600 hover:bg-gray-500 text-gray-300"
+                              }`}
+                              title="Large"
+                            >
+                              L
+                            </button>
+                          </div>
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>

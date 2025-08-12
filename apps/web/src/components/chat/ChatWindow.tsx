@@ -9,7 +9,6 @@ import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { groupMessagesByDate } from "../../utils/messageUtils";
 import { isUserOnline, getUserOnlineStatusText } from "../../utils/userUtils";
 import { ChatOptions } from "./ChatOptions";
-import CallModal from "../call/CallModal";
 
 export function ChatWindow() {
   const { activeChat, setActiveChat, initiateCall } = useChat();
@@ -20,7 +19,7 @@ export function ChatWindow() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     console.log(activeChat);
-  }, [activeChat?.messages]);
+  }, [activeChat]);
 
   const handleBackClick = () => {
     setActiveChat(null);
@@ -143,7 +142,11 @@ export function ChatWindow() {
             className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
             onClick={() => handleInitiateCall("audio")}
             disabled={activeChat.isGroup}
-            title={activeChat.isGroup ? "Calls not supported in group chats" : "Start audio call"}
+            title={
+              activeChat.isGroup
+                ? "Calls not supported in group chats"
+                : "Start audio call"
+            }
           >
             <Phone className="h-5 w-5" />
           </button>
@@ -151,7 +154,11 @@ export function ChatWindow() {
             className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
             onClick={() => handleInitiateCall("video")}
             disabled={activeChat.isGroup}
-            title={activeChat.isGroup ? "Calls not supported in group chats" : "Start video call"}
+            title={
+              activeChat.isGroup
+                ? "Calls not supported in group chats"
+                : "Start video call"
+            }
           >
             <Video className="h-5 w-5" />
           </button>
@@ -221,9 +228,6 @@ export function ChatWindow() {
       <div className="fixed bottom-0 left-0 right-0 lg:left-80 bg-white z-30">
         <MessageInput />
       </div>
-      
-      {/* Call Modal for incoming and ongoing calls */}
-      <CallModal />
     </div>
   );
 }

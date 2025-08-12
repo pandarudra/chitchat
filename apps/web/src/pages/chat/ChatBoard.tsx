@@ -8,6 +8,7 @@ import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { UserPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import CallNotification from "../../components/call/CallNotification";
+import CallModal from "../../components/call/CallModal";
 
 export function ChatBoard() {
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
@@ -49,6 +50,8 @@ export function ChatBoard() {
         )}
         {/* Global Call Notification */}
         <CallNotification />
+        {/* Global Call Modal */}
+        <CallModal />
       </div>
     );
   }
@@ -72,6 +75,8 @@ export function ChatBoard() {
       />
       {/* Global Call Notification */}
       <CallNotification />
+      {/* Global Call Modal */}
+      <CallModal />
     </div>
   );
 }
