@@ -61,6 +61,30 @@ function CallModal() {
     }
   }, [call.localStream, call.remoteStream]);
 
+  // Sync track states with component state
+  useEffect(() => {
+    if (call.localStream) {
+      const videoTracks = call.localStream.getVideoTracks();
+      const audioTracks = call.localStream.getAudioTracks();
+
+      // Sync video state
+      if (videoTracks.length > 0) {
+        const actualVideoState = videoTracks[0].enabled;
+        if (actualVideoState !== isVideoEnabled) {
+          setIsVideoEnabled(actualVideoState);
+        }
+      }
+
+      // Sync audio state
+      if (audioTracks.length > 0) {
+        const actualAudioState = audioTracks[0].enabled;
+        if (actualAudioState !== isAudioEnabled) {
+          setIsAudioEnabled(actualAudioState);
+        }
+      }
+    }
+  }, [call.localStream, isVideoEnabled, isAudioEnabled]);
+
   // Format call duration
   const formatDuration = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -77,10 +101,12 @@ function CallModal() {
   const toggleVideo = useCallback(() => {
     if (call.localStream) {
       const videoTracks = call.localStream.getVideoTracks();
+      const newVideoState = !isVideoEnabled;
+
       videoTracks.forEach((track) => {
-        track.enabled = !track.enabled;
+        track.enabled = newVideoState;
       });
-      setIsVideoEnabled(!isVideoEnabled);
+      setIsVideoEnabled(newVideoState);
     }
   }, [call.localStream, isVideoEnabled]);
 
@@ -88,10 +114,12 @@ function CallModal() {
   const toggleAudio = useCallback(() => {
     if (call.localStream) {
       const audioTracks = call.localStream.getAudioTracks();
+      const newAudioState = !isAudioEnabled;
+
       audioTracks.forEach((track) => {
-        track.enabled = !track.enabled;
+        track.enabled = newAudioState;
       });
-      setIsAudioEnabled(!isAudioEnabled);
+      setIsAudioEnabled(newAudioState);
     }
   }, [call.localStream, isAudioEnabled]);
 
@@ -202,7 +230,7 @@ function CallModal() {
 
   return (
     <div
-      className={`fixed inset-0 bg-transparent bg-opacity-95 flex items-center justify-center z-50 ${isFullscreen ? "p-0" : "p-4"}`}
+      className={`fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-[60] ${isFullscreen ? "p-0" : "p-4"}`}
     >
       <div
         className={`bg-gray-900 text-white rounded-xl shadow-2xl overflow-hidden ${isFullscreen ? "w-full h-full rounded-none" : "w-full max-w-4xl h-auto"}`}
@@ -321,7 +349,7 @@ function CallModal() {
 
                 {/* Local video (picture-in-picture) */}
                 <div className="absolute top-16 right-4 w-32 h-24 rounded-lg overflow-hidden bg-gray-800 border-2 border-white/20">
-                  {isVideoEnabled ? (
+                  {isVideoEnabled && call.localStream ? (
                     <video
                       ref={localVideoRef}
                       autoPlay
