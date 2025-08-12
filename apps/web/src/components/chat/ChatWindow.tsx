@@ -12,7 +12,7 @@ import { isUserOnline, getUserOnlineStatusText } from "../../utils/userUtils";
 import { ChatOptions } from "./ChatOptions";
 
 export function ChatWindow() {
-  const { activeChat, setActiveChat, initiateCall } = useChat();
+  const { activeChat, setActiveChat, initiateCall, deleteContact } = useChat();
   const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const showBackButton = useMediaQuery("(max-width: 1030px)");
@@ -46,10 +46,19 @@ export function ChatWindow() {
     setIsContactInfoOpen(false);
   };
 
-  const handleDeleteContact = () => {
-    // TODO: Implement delete contact functionality
-    console.log("Delete contact");
-    setIsContactInfoOpen(false);
+  const handleDeleteContact = async () => {
+    const contact = getContactFromActiveChat();
+    if (!contact) return;
+
+    try {
+      await deleteContact(contact.id);
+      setIsContactInfoOpen(false);
+      // Optional: Show success message
+      console.log("Contact deleted successfully");
+    } catch (error) {
+      console.error("Failed to delete contact:", error);
+      // Optional: Show error message to user
+    }
   };
 
   const getContactFromActiveChat = () => {

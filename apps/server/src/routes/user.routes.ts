@@ -8,6 +8,7 @@ import {
   onUnblockContact,
   onPinContact,
   onUnpinContact,
+  onDeleteContact,
   updateProfile,
   uploadMiddleware,
 } from "../controllers/user.controller";
@@ -16,6 +17,7 @@ const userRouter = express.Router();
 
 userRouter.post("/add-contact", authenticate, onAddContact);
 userRouter.get("/contacts", authenticate, onGetContacts);
+userRouter.post("/delete-contact", authenticate, onDeleteContact);
 
 userRouter.post("/is-user-exists", isUserExists);
 userRouter.get("/online-status/:userId", authenticate, getUserOnlineStatus);

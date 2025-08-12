@@ -1,4 +1,5 @@
 import { X, Phone, MessageSquare, UserMinus, ShieldOff } from "lucide-react";
+import { useState } from "react";
 import type { User } from "../../types";
 import { isUserOnline, getUserOnlineStatusText } from "../../utils/userUtils";
 
@@ -19,6 +20,8 @@ export function ContactInfo({
   onBlock,
   onDeleteContact,
 }: ContactInfoProps) {
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+
   if (!isOpen) return null;
 
   const isOnline = isUserOnline(contact);
@@ -50,6 +53,19 @@ export function ContactInfo({
     if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
 
     return new Date(lastSeen).toLocaleDateString();
+  };
+
+  const handleDeleteClick = () => {
+    setShowDeleteConfirmation(true);
+  };
+
+  const handleConfirmDelete = () => {
+    onDeleteContact?.();
+    setShowDeleteConfirmation(false);
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirmation(false);
   };
 
   return (
@@ -168,7 +184,7 @@ export function ContactInfo({
                 <span>Block Contact</span>
               </button>
               <button
-                onClick={onDeleteContact}
+                onClick={handleDeleteClick}
                 className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               >
                 <UserMinus className="h-4 w-4" />
@@ -178,6 +194,36 @@ export function ContactInfo({
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirmation && (
+        <div className="fixed inset-0 bg-gray-800/5 bg-opacity-50 flex items-center justify-center z-60">
+          <div className="bg-white rounded-lg shadow-xl max-w-sm mx-4 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Delete Contact
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete {contact.displayName} from your
+              contacts? This action cannot be undone and will also remove your
+              chat history.
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={handleCancelDelete}
+                className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

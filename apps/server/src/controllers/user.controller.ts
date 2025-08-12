@@ -538,3 +538,53 @@ export const deleteCloudinaryImage = async (
     return res.status(500).json({ error: "Failed to delete image." });
   }
 };
+
+export const onDeleteContact = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  const userId = req.user?._id;
+  const { contactId } = req.body;
+
+  if (!userId || !contactId) {
+    return res
+      .status(400)
+      .json({ error: "User ID and contact ID are required." });
+  }
+
+  try {
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    // Check if contact exists in user's contacts
+    const contactIndex = user.contacts.findIndex(
+      (contact) => contact.user.toString() === contactId
+    );
+
+    if (contactIndex === -1) {
+      return res.status(404).json({ error: "Contact not found." });
+    }
+
+    // Remove contact from user's contacts array
+    user.contacts.splice(contactIndex, 1);
+
+    // Also remove from pinned contacts if it exists
+    if (user.pinnedContacts) {
+      user.pinnedContacts = user.pinnedContacts.filter(
+        (pinnedContactId) => pinnedContactId.toString() !== contactId
+      );
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Contact deleted successfully.",
+    });
+  } catch (error) {
+    console.error("Error deleting contact:", error);
+    return res.status(500).json({ error: "Failed to delete contact." });
+  }
+};
