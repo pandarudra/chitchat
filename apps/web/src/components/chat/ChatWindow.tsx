@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Phone, Video, Info, ArrowLeft } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
 import { DateSeparator } from "./DateSeparator";
+import { ContactInfo } from "./ContactInfo";
 import { useChat } from "../../context/ChatContext";
 import { useAuth } from "../../context/AuthContext";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
@@ -15,6 +16,7 @@ export function ChatWindow() {
   const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const showBackButton = useMediaQuery("(max-width: 1030px)");
+  const [isContactInfoOpen, setIsContactInfoOpen] = useState(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -31,6 +33,28 @@ export function ChatWindow() {
     if (callee) {
       initiateCall(callee, callType);
     }
+  };
+
+  const handleContactInfoCall = (callType: "audio" | "video") => {
+    handleInitiateCall(callType);
+    setIsContactInfoOpen(false);
+  };
+
+  const handleBlockContact = () => {
+    // TODO: Implement block contact functionality
+    console.log("Block contact");
+    setIsContactInfoOpen(false);
+  };
+
+  const handleDeleteContact = () => {
+    // TODO: Implement delete contact functionality
+    console.log("Delete contact");
+    setIsContactInfoOpen(false);
+  };
+
+  const getContactFromActiveChat = () => {
+    if (!activeChat || !user) return null;
+    return activeChat.participants.find((p) => p.id !== user.id) || null;
   };
 
   if (!activeChat) {
@@ -162,7 +186,16 @@ export function ChatWindow() {
           >
             <Video className="h-5 w-5" />
           </button>
-          <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
+          <button
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => setIsContactInfoOpen(true)}
+            disabled={activeChat.isGroup}
+            title={
+              activeChat.isGroup
+                ? "Contact info not available for groups"
+                : "Contact information"
+            }
+          >
             <Info className="h-5 w-5" />
           </button>
           <ChatOptions chat={activeChat} />
@@ -228,6 +261,18 @@ export function ChatWindow() {
       <div className="fixed bottom-0 left-0 right-0 lg:left-80 bg-white z-30">
         <MessageInput />
       </div>
+
+      {/* Contact Info Modal */}
+      {!activeChat.isGroup && getContactFromActiveChat() && (
+        <ContactInfo
+          isOpen={isContactInfoOpen}
+          onClose={() => setIsContactInfoOpen(false)}
+          contact={getContactFromActiveChat()!}
+          onCall={handleContactInfoCall}
+          onBlock={handleBlockContact}
+          onDeleteContact={handleDeleteContact}
+        />
+      )}
     </div>
   );
 }
