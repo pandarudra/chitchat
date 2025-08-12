@@ -200,7 +200,6 @@ function CallModal() {
 
         // Snap to nearest edge
         const centerX = x + pipWidth / 2;
-        const centerY = y + pipHeight / 2;
 
         // Snap to left or right edge
         if (centerX < containerRect.width / 2) {
@@ -235,7 +234,6 @@ function CallModal() {
 
         // Snap to nearest edge
         const centerX = x + pipWidth / 2;
-        const centerY = y + pipHeight / 2;
 
         // Snap to left or right edge
         if (centerX < containerRect.width / 2) {
