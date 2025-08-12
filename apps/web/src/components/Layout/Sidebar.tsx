@@ -1,19 +1,25 @@
 import { useState } from "react";
-import { Settings, LogOut, MessageCircle } from "lucide-react";
+import { Settings, LogOut, MessageCircle, Phone } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useChat } from "../../context/ChatContext";
 import { getAvatarUrl } from "../../utils/constants";
 import { SearchInput } from "../ui/SearchInput";
 import { ChatList } from "../chat/ChatList";
+import { CallHistory } from "../call/CallHistory";
 import { Settings as SettingsModal } from "../settings/Settings";
 
 export function Sidebar() {
-  const [activeTab, setActiveTab] = useState<"chats" | "contacts">("chats");
+  const [activeTab, setActiveTab] = useState<"chats" | "contacts" | "calls">(
+    "chats"
+  );
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { user, logout } = useAuth();
   const { searchQuery, setSearchQuery } = useChat();
 
-  const tabs = [{ id: "chats", label: "Chats", icon: MessageCircle }];
+  const tabs = [
+    { id: "chats", label: "Chats", icon: MessageCircle },
+    { id: "calls", label: "Calls", icon: Phone },
+  ];
 
   return (
     <div className="w-full lg:w-80 bg-white border-r border-gray-200 flex flex-col">
@@ -70,7 +76,9 @@ export function Sidebar() {
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as "chats" | "contacts")}
+            onClick={() =>
+              setActiveTab(tab.id as "chats" | "contacts" | "calls")
+            }
             className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 transition-colors ${
               activeTab === tab.id
                 ? "bg-green-50 text-green-600 border-b-2 border-green-500"
@@ -94,7 +102,7 @@ export function Sidebar() {
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">
-        <ChatList />
+        {activeTab === "calls" ? <CallHistory /> : <ChatList />}
       </div>
 
       {/* Settings Modal */}

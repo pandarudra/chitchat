@@ -152,3 +152,21 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+// Call History API functions
+export const getCallHistory = async (page = 1, limit = 20) => {
+  const response = await api.get(
+    `/api/calls/history?page=${page}&limit=${limit}`
+  );
+  return response.data;
+};
+
+export const deleteCallHistoryEntry = async (callId: string) => {
+  const response = await api.delete(`/api/calls/history/${callId}`);
+  return response.data;
+};
+
+export const clearCallHistory = async () => {
+  const response = await api.delete("/api/calls/history");
+  return response.data;
+};

@@ -520,7 +520,7 @@ function CallModal() {
 
   return (
     <div
-      className={`fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-[60] ${isFullscreen ? "p-0" : "p-4"}`}
+      className={`fixed inset-0 bg-transparent bg-opacity-95 flex items-center justify-center z-[60] ${isFullscreen ? "p-0" : "p-4"}`}
     >
       <div
         className={`bg-gray-900 text-white rounded-xl shadow-2xl overflow-hidden ${isFullscreen ? "w-full h-full rounded-none" : "w-full max-w-4xl h-auto"}`}

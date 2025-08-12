@@ -36,7 +36,15 @@ export interface Message {
 
 export type CallState = {
   callId: string | null;
-  status: "idle" | "calling" | "ringing" | "connected" | "ended" | "declined" | "missed" | "timeout";
+  status:
+    | "idle"
+    | "calling"
+    | "ringing"
+    | "connected"
+    | "ended"
+    | "declined"
+    | "missed"
+    | "timeout";
   callType: "audio" | "video" | null;
   peerConnection: RTCPeerConnection | null;
   localStream: MediaStream | null;
@@ -81,4 +89,22 @@ export interface TypingIndicator {
   chatId: string;
   userId: string;
   isTyping: boolean;
+}
+
+export interface CallHistory {
+  id: string;
+  callId: string;
+  type: "audio" | "video";
+  status: "completed" | "missed" | "declined" | "failed";
+  direction: "incoming" | "outgoing";
+  duration: number; // in seconds
+  timestamp: Date;
+  startTime: Date;
+  endTime?: Date;
+  user: {
+    id: string;
+    displayName: string;
+    avatarUrl?: string;
+    phoneNumber: string;
+  };
 }
