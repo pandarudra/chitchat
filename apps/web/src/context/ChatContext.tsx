@@ -8,7 +8,14 @@ import React, {
   useCallback,
 } from "react";
 import { io, Socket } from "socket.io-client";
-import type { ChatState, Chat, Message, User, ContactRequest } from "../types";
+import type {
+  ChatState,
+  Chat,
+  Message,
+  User,
+  ContactRequest,
+  CallState,
+} from "../types";
 import { useAuth } from "./AuthContext";
 import api from "../lib/api";
 
@@ -33,6 +40,13 @@ interface ChatContextType extends ChatState {
   isConnected: boolean;
   blockContact: (blockUserId: string) => void;
   unblockContact: (unblockUserId: string) => void;
+  deleteContact: (contactId: string) => void;
+  //calls
+  initiateCall: (callee: User, callType: "audio" | "video") => void;
+  acceptCall: (callId: string) => void;
+  declineCall: (callId: string) => void;
+  endCall: (callId: string) => void;
+  sendIceCandidate: (candidate: RTCIceCandidate) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -76,6 +90,41 @@ type ChatAction =
   | {
       type: "UNBLOCK_CONTACT";
       payload: string;
+    }
+  | {
+      type: "DELETE_CONTACT";
+      payload: string;
+    }
+  | {
+      type: "UPDATE_USER_STATUS";
+      payload: { userId: string; isOnline: boolean; lastSeen: Date };
+    }
+  | { type: "BLOCK_CONTACT"; payload: string }
+  | { type: "UNBLOCK_CONTACT"; payload: string }
+  | {
+      type: "INITIATE_CALL";
+      payload: {
+        callId: string;
+        callee: User;
+        callType: "audio" | "video";
+        user: User;
+      };
+    }
+  | { type: "SET_CALL_STATUS"; payload: CallState["status"] }
+  | { type: "SET_PEER_CONNECTION"; payload: RTCPeerConnection }
+  | { type: "SET_LOCAL_STREAM"; payload: MediaStream }
+  | { type: "SET_REMOTE_STREAM"; payload: MediaStream }
+  | { type: "SET_CALLER"; payload: User }
+  | { type: "SET_CALLEE"; payload: User }
+  | { type: "RESET_CALL" }
+  // | { type: "SET_CALL_HISTORY"; payload: CallHistory[] }
+  | {
+      type: "SET_CALL";
+      payload: {
+        callId: string;
+        callType: "audio" | "video";
+        status: CallState["status"];
+      };
     };
 
 const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
@@ -236,7 +285,11 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
 
     case "UPDATE_USER_STATUS": {
       const { userId, isOnline, lastSeen } = action.payload;
-      console.log("🔄 Updating user status in reducer:", { userId, isOnline, lastSeen });
+      console.log("🔄 Updating user status in reducer:", {
+        userId,
+        isOnline,
+        lastSeen,
+      });
 
       // Update user status in chats
       const updatedChats = state.chats.map((chat) => ({
@@ -315,6 +368,87 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
       };
     }
 
+    case "DELETE_CONTACT": {
+      const deletedContactId = action.payload;
+
+      // Remove contact from contacts list
+      const filteredContacts = state.contacts.filter(
+        (contact) => contact.id !== deletedContactId
+      );
+
+      // Remove chat with this contact
+      const filteredChats = state.chats.filter(
+        (chat) => chat.id !== deletedContactId
+      );
+
+      return {
+        ...state,
+        contacts: filteredContacts,
+        chats: filteredChats,
+      };
+    }
+
+    //call actions
+    case "SET_CALL":
+      return {
+        ...state,
+        call: {
+          ...state.call,
+          callId: action.payload.callId,
+          callType: action.payload.callType,
+          status: action.payload.status,
+        },
+      };
+
+    case "INITIATE_CALL":
+      return {
+        ...state,
+        call: {
+          ...state.call,
+          callId: action.payload.callId,
+          status: "calling",
+          callType: action.payload.callType,
+          callee: action.payload.callee,
+          caller: action.payload.user,
+        },
+      };
+
+    case "SET_CALL_STATUS":
+      return { ...state, call: { ...state.call, status: action.payload } };
+
+    case "SET_PEER_CONNECTION":
+      return {
+        ...state,
+        call: { ...state.call, peerConnection: action.payload },
+      };
+
+    case "SET_LOCAL_STREAM":
+      return { ...state, call: { ...state.call, localStream: action.payload } };
+
+    case "SET_REMOTE_STREAM":
+      return {
+        ...state,
+        call: { ...state.call, remoteStream: action.payload },
+      };
+
+    case "SET_CALLER":
+      return { ...state, call: { ...state.call, caller: action.payload } };
+
+    case "SET_CALLEE":
+      return { ...state, call: { ...state.call, callee: action.payload } };
+
+    case "RESET_CALL":
+      return {
+        ...state,
+        call: {
+          ...initialState.call,
+          peerConnection: null, // Will be closed separately
+        },
+      };
+
+    // case "SET_CALL_HISTORY":
+    //   return { ...state, callHistory: action.payload };
+
     default:
       return state;
   }
@@ -327,6 +461,16 @@ const initialState: ChatState = {
   contactRequests: [],
   isTyping: {},
   searchQuery: "",
+  call: {
+    callId: null,
+    status: "idle",
+    callType: null,
+    peerConnection: null,
+    localStream: null,
+    remoteStream: null,
+    caller: null,
+    callee: null,
+  },
 };
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
@@ -336,6 +480,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const iceCandidateQueueRef = useRef<RTCIceCandidate[]>([]);
 
   // Use refs to store latest state values for socket handlers
   const stateRef = useRef(state);
@@ -349,6 +496,634 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     userRef.current = user;
   }, [user]);
+
+  // WebRTC configuration
+  // const configuration: RTCConfiguration = {
+  //   iceServers: [
+  //     { urls: "stun:stun.l.google.com:19302" },
+  //     { urls: "stun:stun1.l.google.com:19302" }, // Add backup STUN servers
+  //     // Add TURN server if needed for better connectivity
+  //   ],
+  // };
+
+  // Cleanup call resources
+  const cleanupCall = useCallback(() => {
+    console.log("🧹 Cleaning up call resources");
+
+    if (callTimeoutRef.current) {
+      clearTimeout(callTimeoutRef.current);
+      callTimeoutRef.current = null;
+    }
+
+    iceCandidateQueueRef.current = [];
+
+    const currentCall = stateRef.current.call;
+
+    if (currentCall.peerConnection) {
+      currentCall.peerConnection.close();
+    }
+
+    if (currentCall.localStream) {
+      currentCall.localStream.getTracks().forEach((track) => {
+        track.stop();
+        console.log("🛑 Stopped track:", track.kind);
+      });
+    }
+
+    dispatch({ type: "RESET_CALL" });
+  }, []);
+
+  // Helper function to process queued ICE candidates
+  const processQueuedIceCandidates = useCallback(
+    async (peerConnection: RTCPeerConnection) => {
+      console.log(
+        `🧊 Processing ${iceCandidateQueueRef.current.length} queued ICE candidates`
+      );
+
+      for (const candidate of iceCandidateQueueRef.current) {
+        try {
+          await peerConnection.addIceCandidate(candidate);
+          console.log("✅ Added queued ICE candidate");
+        } catch (error) {
+          console.error("❌ Failed to add queued ICE candidate:", error);
+        }
+      }
+
+      // Clear the queue after processing
+      iceCandidateQueueRef.current = [];
+    },
+    []
+  );
+
+  // Initialize peer connection
+  const createPeerConnection = useCallback(() => {
+    console.log("🔗 Creating new peer connection");
+
+    // Enhanced configuration for better audio quality
+    const enhancedConfiguration: RTCConfiguration = {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+      ],
+      iceCandidatePoolSize: 10, // Pre-gather ICE candidates
+    };
+
+    const pc = new RTCPeerConnection(enhancedConfiguration);
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate && socketRef.current) {
+        console.log("🧊 Sending ICE candidate:", event.candidate.candidate);
+        const currentCall = stateRef.current.call;
+        const recipientId =
+          currentCall.caller?.id === userRef.current?.id
+            ? currentCall.callee?.id
+            : currentCall.caller?.id;
+
+        if (recipientId) {
+          socketRef.current.emit("ice-candidate", {
+            to: recipientId,
+            candidate: event.candidate,
+            callId: currentCall.callId,
+          });
+        }
+      }
+    };
+
+    pc.ontrack = (event) => {
+      console.log("📺 Received remote track:", event.track.kind);
+      if (event.streams[0]) {
+        dispatch({ type: "SET_REMOTE_STREAM", payload: event.streams[0] });
+
+        // Log track details for debugging
+        event.streams[0].getTracks().forEach((track) => {
+          console.log(`🎵 Remote ${track.kind} track:`, {
+            enabled: track.enabled,
+            muted: track.muted,
+            readyState: track.readyState,
+          });
+        });
+      }
+    };
+
+    // Enhanced connection state monitoring
+    pc.onconnectionstatechange = () => {
+      console.log("🔗 Peer connection state:", pc.connectionState);
+      if (pc.connectionState === "connected") {
+        console.log("✅ Peer connection established successfully");
+      } else if (
+        pc.connectionState === "failed" ||
+        pc.connectionState === "disconnected"
+      ) {
+        console.log("❌ Peer connection failed/disconnected");
+        cleanupCall();
+      }
+    };
+
+    // Audio-specific monitoring
+    pc.onsignalingstatechange = () => {
+      console.log("📡 Signaling state:", pc.signalingState);
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      console.log("🧊 ICE connection state:", pc.iceConnectionState);
+    };
+
+    return pc;
+  }, [cleanupCall]);
+
+  // Initiate a call
+  const initiateCall = useCallback(
+    async (callee: User, callType: "audio" | "video") => {
+      if (!socketRef.current || !isConnected || !userRef.current) {
+        console.warn("❌ Cannot initiate call: missing requirements", {
+          socket: !!socketRef.current,
+          isConnected,
+          user: !!userRef.current,
+        });
+        return;
+      }
+
+      try {
+        console.log(`📞 Initiating ${callType} call to:`, callee.displayName);
+
+        // Get user media based on call type - FIXED constraints
+        const mediaConstraints = {
+          audio: true, // Always request audio
+          video: callType === "video",
+        };
+
+        const stream =
+          await navigator.mediaDevices.getUserMedia(mediaConstraints);
+        dispatch({ type: "SET_LOCAL_STREAM", payload: stream });
+
+        // Create peer connection
+        const pc = createPeerConnection();
+        dispatch({ type: "SET_PEER_CONNECTION", payload: pc });
+
+        // audio tracks FIRST, then video tracks
+        stream.getAudioTracks().forEach((track) => {
+          pc.addTrack(track, stream);
+          console.log("➕ Added audio track to peer connection");
+        });
+
+        if (callType === "video") {
+          stream.getVideoTracks().forEach((track) => {
+            pc.addTrack(track, stream);
+            console.log("➕ Added video track to peer connection");
+          });
+        }
+
+        // Create offer with proper audio/video constraints
+        const offerOptions: RTCOfferOptions = {
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: callType === "video",
+        };
+
+        const offer = await pc.createOffer(offerOptions);
+        await pc.setLocalDescription(offer);
+        console.log(
+          "📤 Created and set local offer with constraints:",
+          offerOptions
+        );
+
+        await processQueuedIceCandidates(pc);
+
+        const callId = `call_${Date.now()}_${userRef.current.id}_${callee.id}`;
+
+        // Update call state
+        dispatch({
+          type: "INITIATE_CALL",
+          payload: { callId, callee, callType, user: userRef.current },
+        });
+
+        // Emit call with both user ID and phone number for better reliability
+        socketRef.current.emit("call-user", {
+          to: callee.id,
+          toPhone: callee.phoneNumber,
+          callId,
+          offer,
+          callType,
+          from: userRef.current.id,
+          fromName: userRef.current.displayName,
+          fromPhone: userRef.current.phoneNumber,
+        });
+
+        console.log("📤 Emitted call-user event", {
+          to: callee.id,
+          callId,
+          callType,
+        });
+
+        // Set timeout for call
+        callTimeoutRef.current = setTimeout(() => {
+          console.log("⏰ Call timeout reached");
+          if (stateRef.current.call.status === "calling") {
+            dispatch({ type: "SET_CALL_STATUS", payload: "timeout" });
+            socketRef.current?.emit("call-timeout", {
+              callId,
+              to: callee.id,
+            });
+            setTimeout(() => cleanupCall(), 2000);
+          }
+        }, 30000); // 30 seconds timeout
+      } catch (error) {
+        console.error("❌ Failed to initiate call:", error);
+        cleanupCall();
+      }
+    },
+    [isConnected, createPeerConnection, cleanupCall, processQueuedIceCandidates]
+  );
+
+  // Accept a call
+  const acceptCall = useCallback(
+    async (callId: string) => {
+      const currentCall = stateRef.current.call;
+      const currentUser = userRef.current;
+
+      if (
+        !socketRef.current ||
+        !currentCall.peerConnection ||
+        !currentCall.caller ||
+        !currentUser
+      ) {
+        console.warn("❌ Cannot accept call: missing requirements");
+        return;
+      }
+
+      try {
+        console.log(`✅ Accepting ${currentCall.callType} call:`, callId);
+        const pc = currentCall.peerConnection;
+
+        // Check signaling state
+        if (pc.signalingState !== "have-remote-offer") {
+          console.error(
+            "❌ Invalid signaling state for answer:",
+            pc.signalingState
+          );
+          cleanupCall();
+          return;
+        }
+
+        // FIXED: More explicit media constraints with proper fallbacks
+        const mediaConstraints = {
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+          video:
+            currentCall.callType === "video"
+              ? {
+                  width: { ideal: 640 },
+                  height: { ideal: 480 },
+                  frameRate: { ideal: 30 },
+                }
+              : false,
+        };
+
+        const stream =
+          await navigator.mediaDevices.getUserMedia(mediaConstraints);
+
+        dispatch({ type: "SET_LOCAL_STREAM", payload: stream });
+
+        // audio first, then video
+        stream.getAudioTracks().forEach((track) => {
+          pc.addTrack(track, stream);
+          console.log("➕ Added audio track for answer");
+        });
+
+        if (currentCall.callType === "video") {
+          stream.getVideoTracks().forEach((track) => {
+            pc.addTrack(track, stream);
+            console.log("➕ Added video track for answer");
+          });
+        }
+
+        // Create answer with explicit constraints
+        const answerOptions: RTCAnswerOptions = {};
+        const answer = await pc.createAnswer(answerOptions);
+        await pc.setLocalDescription(answer);
+        console.log("📤 Created and set local answer");
+
+        // Send answer with multiple identifiers for reliability
+        socketRef.current.emit("accept-call", {
+          callId,
+          answer,
+          to: currentCall.caller.id,
+          toPhone: currentCall.caller.phoneNumber,
+          from: currentUser.id,
+          fromPhone: currentUser.phoneNumber,
+        });
+
+        dispatch({ type: "SET_CALL_STATUS", payload: "connected" });
+        console.log(`✅ ${currentCall.callType} call accepted and answer sent`);
+      } catch (error) {
+        console.error("❌ Failed to accept call:", error);
+        cleanupCall();
+      }
+    },
+    [cleanupCall]
+  );
+
+  // Decline a call
+  const declineCall = useCallback(
+    (callId: string) => {
+      const currentCall = stateRef.current.call;
+      const currentUser = userRef.current;
+
+      if (socketRef.current && currentCall.caller && currentUser) {
+        console.log("❌ Declining call:", callId);
+
+        socketRef.current.emit("decline-call", {
+          callId,
+          to: currentCall.caller.id,
+          toPhone: currentCall.caller.phoneNumber,
+          from: currentUser.id,
+        });
+
+        dispatch({ type: "SET_CALL_STATUS", payload: "declined" });
+        setTimeout(() => cleanupCall(), 1000);
+      }
+    },
+    [cleanupCall]
+  );
+
+  // End a call
+  const endCall = useCallback(
+    (callId: string) => {
+      const currentCall = stateRef.current.call;
+      const currentUser = userRef.current;
+
+      if (!socketRef.current || !currentUser) {
+        console.warn("❌ Cannot end call: missing requirements");
+        cleanupCall();
+        return;
+      }
+
+      const recipientId =
+        currentCall.caller?.id === currentUser.id
+          ? currentCall.callee?.id
+          : currentCall.caller?.id;
+
+      const recipientPhone =
+        currentCall.caller?.id === currentUser.id
+          ? currentCall.callee?.phoneNumber
+          : currentCall.caller?.phoneNumber;
+
+      if (recipientId) {
+        console.log("🔚 Ending call:", callId);
+
+        socketRef.current.emit("end-call", {
+          callId,
+          to: recipientId,
+          toPhone: recipientPhone,
+          from: currentUser.id,
+        });
+      }
+
+      dispatch({ type: "SET_CALL_STATUS", payload: "ended" });
+      setTimeout(() => cleanupCall(), 2000);
+    },
+    [cleanupCall]
+  );
+
+  // Send ICE candidate (kept as is but improved)
+  const sendIceCandidate = useCallback((candidate: RTCIceCandidate) => {
+    const currentCall = stateRef.current.call;
+    const currentUser = userRef.current;
+
+    if (socketRef.current && currentUser) {
+      const recipientId =
+        currentCall.caller?.id === currentUser.id
+          ? currentCall.callee?.id
+          : currentCall.caller?.id;
+
+      if (recipientId) {
+        socketRef.current.emit("ice-candidate", {
+          to: recipientId,
+          candidate,
+          callId: currentCall.callId,
+        });
+      }
+    }
+  }, []);
+
+  // Socket.IO event handlers for calls
+  useEffect(() => {
+    if (!socketRef.current || !isAuthenticated) return;
+
+    const socket = socketRef.current;
+
+    socket.on("incoming-call", async (data) => {
+      console.log("📞 Received incoming call:", data);
+      const { callId, from, fromName, fromPhone, callType, offer } = data;
+
+      // Find caller in contacts
+      const caller = stateRef.current.contacts.find(
+        (c) => c.id === from || c.phoneNumber === fromPhone
+      );
+
+      try {
+        const pc = createPeerConnection();
+
+        // Store the peer connection immediately
+        dispatch({ type: "SET_PEER_CONNECTION", payload: pc });
+
+        // CRITICAL: Set remote offer first
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        console.log("📥 Set remote offer, signaling state:", pc.signalingState);
+
+        // Log the offer details for debugging
+        console.log("🔍 Offer details:", {
+          type: offer.type,
+          hasAudio: offer.sdp.includes("m=audio"),
+          hasVideo: offer.sdp.includes("m=video"),
+          callType,
+        });
+
+        // Process any ICE candidates received before remote description was set
+        await processQueuedIceCandidates(pc);
+
+        // Store call info
+        dispatch({
+          type: "SET_CALLER",
+          payload: caller || {
+            id: from,
+            displayName: fromName,
+            phoneNumber: fromPhone || from,
+            isOnline: false,
+            lastSeen: new Date(),
+          },
+        });
+
+        dispatch({
+          type: "SET_CALL",
+          payload: { callId, callType, status: "ringing" },
+        });
+
+        console.log("📞 Incoming call processed successfully");
+      } catch (error) {
+        console.error("❌ Failed to handle incoming call:", error);
+        socket.emit("call-error", {
+          callId,
+          to: from,
+          message: "Failed to process incoming call",
+        });
+      }
+    });
+
+    socket.on("call-accepted", async (data) => {
+      console.log("✅ Call accepted:", data);
+      const { callId, answer } = data;
+      const currentCall = stateRef.current.call;
+
+      if (currentCall.peerConnection && currentCall.callId === callId) {
+        try {
+          await currentCall.peerConnection.setRemoteDescription(
+            new RTCSessionDescription(answer)
+          );
+
+          console.log("📥 Set remote answer from callee");
+
+          // Now process queued candidates for the caller
+          await processQueuedIceCandidates(currentCall.peerConnection);
+
+          dispatch({ type: "SET_CALL_STATUS", payload: "connected" });
+          console.log("🔗 Call connected successfully");
+
+          // Clear timeout
+          if (callTimeoutRef.current) {
+            clearTimeout(callTimeoutRef.current);
+            callTimeoutRef.current = null;
+          }
+        } catch (error) {
+          console.error("❌ Failed to set remote answer:", error);
+          cleanupCall();
+        }
+      }
+    });
+
+    socket.on("call-declined", (data) => {
+      console.log("❌ Call declined:", data);
+      const { callId } = data;
+      const currentCall = stateRef.current.call;
+
+      if (currentCall.callId === callId) {
+        dispatch({ type: "SET_CALL_STATUS", payload: "declined" });
+        setTimeout(() => cleanupCall(), 2000);
+      }
+    });
+
+    socket.on("call-ended", (data) => {
+      console.log("🔚 Call ended:", data);
+      const { callId } = data;
+      const currentCall = stateRef.current.call;
+
+      if (currentCall.callId === callId) {
+        dispatch({ type: "SET_CALL_STATUS", payload: "ended" });
+        setTimeout(() => cleanupCall(), 2000);
+      }
+    });
+
+    socket.on("call-timeout", (data) => {
+      console.log("⏰ Call timeout:", data);
+      const { callId } = data;
+      const currentCall = stateRef.current.call;
+
+      if (currentCall.callId === callId) {
+        dispatch({ type: "SET_CALL_STATUS", payload: "timeout" });
+        setTimeout(() => cleanupCall(), 2000);
+      }
+    });
+
+    socket.on("ice-candidate", (data) => {
+      console.log("🧊 Received ICE candidate");
+      const { candidate } = data;
+      const currentCall = stateRef.current.call;
+
+      if (!candidate) return;
+
+      if (
+        currentCall.peerConnection &&
+        currentCall.peerConnection.remoteDescription &&
+        currentCall.peerConnection.remoteDescription.type
+      ) {
+        // Safe to add
+        currentCall.peerConnection
+          .addIceCandidate(new RTCIceCandidate(candidate))
+          .then(() => console.log("✅ ICE candidate added successfully"))
+          .catch((err) =>
+            console.error("❌ Failed to add ICE candidate:", err)
+          );
+      } else {
+        // Queue for later
+        console.log("📥 Queuing ICE candidate until remoteDescription is set");
+        iceCandidateQueueRef.current.push(new RTCIceCandidate(candidate));
+      }
+    });
+
+    socket.on("call-error", (data) => {
+      console.error("❌ Call error:", data);
+      cleanupCall();
+    });
+
+    // socket.on("missed-call", (data) => {
+    //   const { callId, from, callType } = data;
+    //   const caller = state.contacts.find((c) => c.id === from);
+    //   if (caller) {
+    //     dispatch({
+    //       type: "SET_CALLER",
+    //       payload: caller,
+    //     });
+    //     dispatch({
+    //       type: "SET_CALL",
+    //       payload: { callId, callType, status: "missed" },
+    //     });
+    //     cleanupCall();
+    //   }
+    // });
+
+    return () => {
+      socket.off("incoming-call");
+      socket.off("call-accepted");
+      socket.off("call-declined");
+      socket.off("call-ended");
+      socket.off("call-timeout");
+      socket.off("ice-candidate");
+      socket.off("call-error");
+    };
+  }, [
+    isAuthenticated,
+    state.call.peerConnection,
+    state.call.callId,
+    acceptCall,
+    cleanupCall,
+    createPeerConnection,
+    state.contacts,
+  ]);
+
+  //call timeout logic
+  useEffect(() => {
+    if (
+      state.call.status === "ringing" &&
+      state.call.callId &&
+      socketRef.current
+    ) {
+      const timeout = setTimeout(() => {
+        dispatch({
+          type: "SET_CALL",
+          payload: {
+            callId: state.call.callId!,
+            callType: state.call.callType!,
+            status: "missed",
+          },
+        });
+        socketRef.current?.emit("call-timeout", { callId: state.call.callId });
+        cleanupCall();
+      }, 30000); // 30 seconds
+      return () => clearTimeout(timeout);
+    }
+  }, [state.call.status, state.call.callId, state.call.callType, cleanupCall]);
 
   // Memoized socket event handlers to prevent recreation
   const handleSeenMessage = useCallback((data: any) => {
@@ -564,6 +1339,29 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const deleteContact = useCallback(async (contactId: string) => {
+    try {
+      const res = await api.post("/api/user/delete-contact", {
+        contactId: contactId,
+      });
+      console.log("✅ Contact deleted:", res.data);
+
+      // Update local state to remove the contact
+      dispatch({ type: "DELETE_CONTACT", payload: contactId });
+
+      // If the deleted contact was the active chat, close it
+      const currentState = stateRef.current;
+      if (currentState.activeChat?.id === contactId) {
+        dispatch({ type: "SET_ACTIVE_CHAT", payload: null });
+      }
+
+      return res.data;
+    } catch (error) {
+      console.error("Failed to delete contact:", error);
+      throw error;
+    }
+  }, []);
+
   // Socket.IO connection effect - only depends on authentication
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -613,6 +1411,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       socket.on("disconnect", (reason) => {
         console.log("🔌 Socket disconnected:", reason);
         setIsConnected(false);
+        dispatch({ type: "RESET_CALL" });
         if (reason === "io server disconnect") {
           socket.connect();
         }
@@ -693,7 +1492,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       // Transform contacts to chat objects
       const chatsFromContacts: Chat[] = res.data.contacts.map(
-
         (contact: any) => ({
           id: contact.user, // Use contact's user ID as chat ID
           participants: [
@@ -730,12 +1528,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           isPinned: contact.pinned,
           isMuted: false,
         })
-
       );
 
       console.log("Transformed chats from contacts:", chatsFromContacts);
       dispatch({ type: "SET_CHATS", payload: chatsFromContacts });
-      
+
       // Also set contacts separately for status updates
       const contactsList = res.data.contacts.map((contact: any) => ({
         id: contact.user.toString(),
@@ -745,7 +1542,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         isOnline: contact.isOnline || false,
         lastSeen: contact.lastSeen ? new Date(contact.lastSeen) : undefined,
       }));
-      
+
       dispatch({ type: "ADD_CONTACT", payload: contactsList });
     } catch (error) {
       console.error("Failed to fetch chats:", error);
@@ -1085,6 +1882,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         isConnected,
         blockContact,
         unblockContact,
+        deleteContact,
+        initiateCall,
+        acceptCall,
+        declineCall,
+        endCall,
+        sendIceCandidate,
       }}
     >
       {children}

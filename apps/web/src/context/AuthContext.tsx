@@ -9,6 +9,18 @@ import React, {
 import type { AuthState, User } from "../types";
 import api, { addAuthEventListener, removeAuthEventListener } from "../lib/api";
 
+interface UpdateProfileData {
+  _id?: string;
+  phoneNumber?: string;
+  displayName?: string;
+  avatarUrl?: string;
+  status?: string;
+  isOnline?: boolean;
+  lastSeen?: Date | string;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
 interface AuthContextType extends AuthState {
   login: (phone: string) => Promise<void>;
   signup: (name: string, phone: string) => Promise<void>;
@@ -192,18 +204,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateProfile = async (updates: Partial<User>) => {
+  const updateProfile = async (updates: Partial<User> | UpdateProfileData) => {
     dispatch({ type: "SET_LOADING", payload: true });
     try {
-      const res = await api.put(`/api/auth/update-profile`, updates);
-      const user = transformUser(res.data.user);
-      dispatch({ type: "UPDATE_PROFILE", payload: user });
-    } catch (error: any) {
+      // If the updates object has the user data from the server response
+      if ("_id" in updates || "phoneNumber" in updates) {
+        const user = transformUser(updates);
+        dispatch({ type: "UPDATE_PROFILE", payload: user });
+      } else {
+        // Legacy fallback for direct field updates
+        const res = await api.put(`/api/user/profile`, updates);
+        const user = transformUser(res.data.user);
+        dispatch({ type: "UPDATE_PROFILE", payload: user });
+      }
+    } catch (error: unknown) {
+      const errorMessage =
+        error &&
+        typeof error === "object" &&
+        "response" in error &&
+        error.response &&
+        typeof error.response === "object" &&
+        "data" in error.response &&
+        error.response.data &&
+        typeof error.response.data === "object" &&
+        "message" in error.response.data
+          ? (error.response.data as { message: string }).message
+          : "Failed to update profile";
+
       dispatch({
         type: "AUTH_FAILURE",
-        payload: error?.response?.data?.message || "Failed to update profile",
+        payload: errorMessage,
       });
       throw error;
+    } finally {
+      dispatch({ type: "SET_LOADING", payload: false });
     }
   };
 

@@ -7,8 +7,18 @@ import { MessageModel } from "../models/Message";
 import { UserModel } from "../models/User";
 import { pub, sub } from "../utils/redisClient";
 import { socketKey } from "../lib/ext";
+import { CallHistoryModel } from "../models/CallHistory";
 
 dotenv.config();
+
+const CALL_STATES = {
+  CALLING: "calling",
+  RINGING: "ringing",
+  CONNECTED: "connected",
+  ENDED: "ended",
+  DECLINED: "declined",
+  MISSED: "missed",
+} as const;
 
 export class SocketService {
   private _io: SocketIOServer;
@@ -48,6 +58,22 @@ export class SocketService {
     sub.subscribe("CHITCHAT");
   }
 
+  // Helper function to find user by ID or phone number
+  private async findUserByIdOrPhone(identifier: string) {
+    try {
+      // First try to find by ID
+      let user = await UserModel.findById(identifier);
+      if (user) return user;
+
+      // If not found by ID, try by phone number
+      user = await UserModel.findOne({ phoneNumber: identifier });
+      return user;
+    } catch (error) {
+      console.error("Error finding user:", error);
+      return null;
+    }
+  }
+
   public initListeners(): void {
     const io = this._io;
 
@@ -58,6 +84,8 @@ export class SocketService {
         console.error("User ID not found in socket data.");
         return;
       }
+
+      console.log(`New connection: ${userId} with socket ID: ${socket.id}`);
 
       // Update user's lastSeen and set as online
       try {
@@ -77,6 +105,310 @@ export class SocketService {
       socket.emit("connected", { socketId: socket.id });
 
       console.log(`User connected: ${userId} with socket ID: ${socket.id}`);
+
+      // Call-user event - Enhanced to handle both ID and phone number
+      socket.on("call-user", async (data) => {
+        const { to, toPhone, callId, offer, callType, from, fromName, fromPhone } = data;
+        
+        if (!callId || !offer || !callType || !from) {
+          console.error("Invalid call-user data:", data);
+          socket.emit("call-error", { callId, message: "Invalid call data" });
+          return;
+        }
+
+        try {
+          // Try to find recipient by ID first, then by phone number
+          let recipient = null;
+          if (to) {
+            recipient = await this.findUserByIdOrPhone(to);
+          }
+          if (!recipient && toPhone) {
+            recipient = await this.findUserByIdOrPhone(toPhone);
+          }
+
+          if (!recipient) {
+            console.error(`Recipient not found: ${to || toPhone}`);
+            socket.emit("call-error", { callId, message: "User not found" });
+            return;
+          }
+
+          const recipientId = (recipient as any)._id.toString();
+          
+          // Check if caller is blocked by recipient
+          if (recipient.blockedContacts?.includes(from)) {
+            console.log(`Call blocked: ${from} is blocked by ${recipientId}`);
+            socket.emit("call-error", { callId, message: "User has blocked you" });
+            return;
+          }
+
+          const recipientSocketId = await pub.get(socketKey(recipientId));
+          if (!recipientSocketId) {
+            console.log(`User ${recipientId} is not online for call`);
+            socket.emit("call-error", { callId, message: "User is not online" });
+            return;
+          }
+
+          // Store call data in Redis
+          const callData = {
+            callId,
+            caller: from,
+            callee: recipientId,
+            callType,
+            status: CALL_STATES.CALLING,
+            startTime: Date.now(),
+          };
+          await pub.setex(`call:${callId}`, 300, JSON.stringify(callData));
+
+          // Get caller info
+          const caller = await UserModel.findById(from);
+          
+          // Send incoming call with enhanced data
+          io.to(recipientSocketId).emit("incoming-call", {
+            callId,
+            from,
+            fromName: fromName || caller?.displayName || "Unknown",
+            fromPhone: fromPhone || caller?.phoneNumber || "",
+            callType,
+            offer,
+          });
+
+          socket.emit("call-initiated", { callId, to: recipientId });
+          console.log(`📞 Call initiated: ${callId} from ${from} to ${recipientId}`);
+          
+        } catch (error) {
+          console.error("Error initiating call:", error);
+          socket.emit("call-error", { callId, message: "Failed to initiate call" });
+        }
+      });
+
+      // Accept-call event - Enhanced with better user identification
+      socket.on("accept-call", async (data) => {
+        const { callId, answer, to, toPhone, from, fromPhone } = data;
+        
+        if (!callId || !answer) {
+          console.error("Invalid accept-call data:", data);
+          socket.emit("call-error", { callId, message: "Invalid accept data" });
+          return;
+        }
+
+        try {
+          const callDataStr = await pub.get(`call:${callId}`);
+          if (!callDataStr) {
+            console.error(`Call not found: ${callId}`);
+            socket.emit("call-error", { callId, message: "Call not found" });
+            return;
+          }
+
+          const callData = JSON.parse(callDataStr);
+          callData.status = CALL_STATES.CONNECTED;
+          callData.acceptedAt = Date.now();
+          await pub.setex(`call:${callId}`, 300, JSON.stringify(callData));
+
+          // Find caller by multiple methods
+          let callerSocketId = null;
+          if (to) {
+            callerSocketId = await pub.get(socketKey(to));
+          }
+          if (!callerSocketId && callData.caller) {
+            callerSocketId = await pub.get(socketKey(callData.caller));
+          }
+
+          if (callerSocketId) {
+            io.to(callerSocketId).emit("call-accepted", { 
+              callId, 
+              answer,
+              from: userId 
+            });
+            console.log(`✅ Call accepted: ${callId} - notified caller`);
+          } else {
+            console.log(`Caller not online for call: ${callId}`);
+            socket.emit("call-error", { callId, message: "Caller not online" });
+          }
+          
+        } catch (error) {
+          console.error("Error accepting call:", error);
+          socket.emit("call-error", { callId, message: "Failed to accept call" });
+        }
+      });
+
+      // Decline-call event - Enhanced
+      socket.on("decline-call", async (data) => {
+        const { callId, to, toPhone } = data;
+        
+        if (!callId) {
+          console.error("Invalid decline-call data:", data);
+          socket.emit("call-error", { callId, message: "Invalid decline data" });
+          return;
+        }
+
+        try {
+          const callDataStr = await pub.get(`call:${callId}`);
+          if (!callDataStr) {
+            console.error(`Call not found: ${callId}`);
+            return;
+          }
+
+          const callData = JSON.parse(callDataStr);
+          callData.status = CALL_STATES.DECLINED;
+          callData.endTime = Date.now();
+          await pub.setex(`call:${callId}`, 60, JSON.stringify(callData));
+
+          // Find caller socket
+          let callerSocketId = null;
+          if (to) {
+            callerSocketId = await pub.get(socketKey(to));
+          }
+          if (!callerSocketId && callData.caller) {
+            callerSocketId = await pub.get(socketKey(callData.caller));
+          }
+
+          if (callerSocketId) {
+            io.to(callerSocketId).emit("call-declined", { callId });
+          }
+
+          await this.saveCallHistory(callData, "declined");
+          console.log(`❌ Call declined: ${callId}`);
+          
+        } catch (error) {
+          console.error("Error declining call:", error);
+          socket.emit("call-error", { callId, message: "Failed to decline call" });
+        }
+      });
+
+      // End-call event - Enhanced
+      socket.on("end-call", async (data) => {
+        const { callId, to, toPhone } = data;
+        
+        if (!callId) {
+          console.error("Invalid end-call data:", data);
+          socket.emit("call-error", { callId, message: "Invalid end-call data" });
+          return;
+        }
+
+        try {
+          const callDataStr = await pub.get(`call:${callId}`);
+          if (!callDataStr) {
+            console.error(`Call not found: ${callId}`);
+            return;
+          }
+
+          const callData = JSON.parse(callDataStr);
+          callData.status = CALL_STATES.ENDED;
+          callData.endTime = Date.now();
+          
+          // Notify all participants
+          const participants = [callData.caller, callData.callee];
+          for (const participantId of participants) {
+            if (participantId !== userId) { // Don't notify the person who ended the call
+              const participantSocketId = await pub.get(socketKey(participantId));
+              if (participantSocketId) {
+                io.to(participantSocketId).emit("call-ended", { callId });
+                console.log(`🔚 Call ended notification sent to: ${participantId}`);
+              }
+            }
+          }
+
+          // Save call history
+          const duration = callData.acceptedAt ? 
+            Math.floor((callData.endTime - callData.acceptedAt) / 1000) : 0;
+          const status = callData.acceptedAt ? "completed" : "ended";
+          await this.saveCallHistory(callData, status);
+
+          await pub.del(`call:${callId}`);
+          console.log(`🔚 Call ended: ${callId}`);
+          
+        } catch (error) {
+          console.error("Error ending call:", error);
+          socket.emit("call-error", { callId, message: "Failed to end call" });
+        }
+      });
+
+      // ICE-candidate event - Enhanced with callId validation
+      socket.on("ice-candidate", async (data) => {
+        const { to, candidate, callId } = data;
+        
+        if (!to || !candidate) {
+          console.error("Invalid ICE candidate data:", data);
+          return;
+        }
+
+        try {
+          // Validate that the call exists and user is part of it
+          if (callId) {
+            const callDataStr = await pub.get(`call:${callId}`);
+            if (callDataStr) {
+              const callData = JSON.parse(callDataStr);
+              if (callData.caller !== userId && callData.callee !== userId) {
+                console.error(`User ${userId} not part of call ${callId}`);
+                return;
+              }
+            }
+          }
+
+          const toSocketId = await pub.get(socketKey(to));
+          if (toSocketId) {
+            io.to(toSocketId).emit("ice-candidate", { 
+              from: userId, 
+              candidate,
+              callId 
+            });
+            console.log(`🧊 ICE candidate sent from ${userId} to ${to} for call ${callId}`);
+          } else {
+            console.log(`Target user ${to} not online for ICE candidate`);
+          }
+          
+        } catch (error) {
+          console.error("Error handling ICE candidate:", error);
+        }
+      });
+
+      // Call-timeout event - Enhanced
+      socket.on("call-timeout", async (data) => {
+        const { callId, to } = data;
+        
+        if (!callId) {
+          console.error("Invalid call-timeout data:", data);
+          return;
+        }
+
+        try {
+          const callDataStr = await pub.get(`call:${callId}`);
+          if (!callDataStr) {
+            console.error(`Call not found for timeout: ${callId}`);
+            return;
+          }
+
+          const callData = JSON.parse(callDataStr);
+          if (callData.status === CALL_STATES.CALLING || callData.status === CALL_STATES.RINGING) {
+            callData.status = CALL_STATES.MISSED;
+            callData.endTime = Date.now();
+            await pub.setex(`call:${callId}`, 60, JSON.stringify(callData));
+
+            await this.saveCallHistory(callData, "missed");
+
+            // Notify the callee about missed call
+            if (callData.callee !== userId) {
+              const calleeSocketId = await pub.get(socketKey(callData.callee));
+              if (calleeSocketId) {
+                io.to(calleeSocketId).emit("call-timeout", { callId });
+              }
+            }
+
+            // Notify the caller about timeout
+            if (callData.caller !== userId) {
+              const callerSocketId = await pub.get(socketKey(callData.caller));
+              if (callerSocketId) {
+                io.to(callerSocketId).emit("call-timeout", { callId });
+              }
+            }
+
+            console.log(`⏰ Call timeout handled: ${callId}`);
+          }
+          
+        } catch (error) {
+          console.error("Error handling call timeout:", error);
+        }
+      });
 
       socket.on("one_to_one_message", async (data) => {
         const { to, message } = data;
@@ -173,8 +505,38 @@ export class SocketService {
           `User disconnected: ${userId} with socket ID: ${socket.id}`
         );
 
-        // Update user's lastSeen timestamp and set offline when they disconnect
         try {
+          // Handle ongoing calls
+          const keys = await pub.keys("call:*");
+          for (const key of keys) {
+            const callDataStr = await pub.get(key);
+            if (callDataStr) {
+              const callData = JSON.parse(callDataStr);
+              if (
+                (callData.caller === userId || callData.callee === userId) &&
+                (callData.status === CALL_STATES.CALLING || 
+                 callData.status === CALL_STATES.RINGING || 
+                 callData.status === CALL_STATES.CONNECTED)
+              ) {
+                callData.status = CALL_STATES.ENDED;
+                callData.endTime = Date.now();
+                await pub.setex(key, 60, JSON.stringify(callData));
+
+                const otherUserId = callData.caller === userId ? callData.callee : callData.caller;
+                const otherSocketId = await pub.get(socketKey(otherUserId));
+                if (otherSocketId) {
+                  io.to(otherSocketId).emit("call-ended", {
+                    callId: callData.callId,
+                    reason: "user_disconnected",
+                  });
+                }
+
+                const status = callData.acceptedAt ? "completed" : "missed";
+                await this.saveCallHistory(callData, status);
+              }
+            }
+          }
+          // Update user's lastSeen timestamp and set offline when they disconnect
           await UserModel.findByIdAndUpdate(userId, {
             lastSeen: new Date(),
             isOnline: false,
@@ -189,6 +551,7 @@ export class SocketService {
         pub.del(socketKey(userId)); // Remove socket ID from Redis
       });
     });
+
     sub.on("message", async (channel, messages) => {
       if (channel === "CHITCHAT") {
         const data = JSON.parse(messages);
@@ -282,6 +645,29 @@ export class SocketService {
 
   public get io(): SocketIOServer {
     return this._io;
+  }
+
+  private async saveCallHistory(callData: any, status: string): Promise<void> {
+    try {
+      const duration = callData.endTime && callData.acceptedAt
+        ? Math.floor((callData.endTime - callData.acceptedAt) / 1000)
+        : 0;
+
+      await CallHistoryModel.create({
+        callId: callData.callId,
+        caller: callData.caller,
+        callee: callData.callee,
+        callType: callData.callType,
+        status,
+        duration,
+        startTime: new Date(callData.startTime),
+        endTime: callData.endTime ? new Date(callData.endTime) : undefined,
+      });
+
+      console.log(`📝 Call history saved: ${callData.callId} - ${status}`);
+    } catch (error) {
+      console.error("Error saving call history:", error);
+    }
   }
 
   // Method to broadcast user status change to their contacts

@@ -11,6 +11,7 @@ import userRouter from "./routes/user.routes";
 import chatRouter from "./routes/chat.routes";
 import OtpRouter from "./routes/otp.routes";
 import uploadRouter from "./routes/upload.routes";
+import callRouter from "./routes/call.routes";
 
 dotenv.config();
 const app = express();
@@ -26,7 +27,8 @@ async function init() {
         "https://chitchat-web-chi.vercel.app",
       ],
       credentials: true,
-      methods: ["*"],
+      methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
     })
   );
   app.use(express.json());
@@ -56,6 +58,7 @@ async function init() {
   app.use("/api/chats", chatRouter);
   app.use("/api/otp", OtpRouter);
   app.use("/api/upload", uploadRouter);
+  app.use("/api/calls", callRouter);
 
   const httpServer = http.createServer(app);
 
