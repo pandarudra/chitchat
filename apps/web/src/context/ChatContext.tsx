@@ -559,13 +559,39 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const createPeerConnection = useCallback(() => {
     console.log("🔗 Creating new peer connection");
 
-    // Enhanced configuration for better audio quality
+    // Enhanced configuration for better connectivity and audio quality
     const enhancedConfiguration: RTCConfiguration = {
       iceServers: [
+        // Google STUN servers
         { urls: "stun:stun.l.google.com:19302" },
         { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" },
+        { urls: "stun:stun3.l.google.com:19302" },
+        { urls: "stun:stun4.l.google.com:19302" },
+        // Additional reliable STUN servers
+        { urls: "stun:stun.relay.metered.ca:80" },
+        { urls: "stun:stun.cloudflare.com:3478" },
+        // Free TURN servers (for better NAT traversal)
+        {
+          urls: "turn:openrelay.metered.ca:80",
+          username: "openrelayproject",
+          credential: "openrelayproject",
+        },
+        {
+          urls: "turn:openrelay.metered.ca:443",
+          username: "openrelayproject",
+          credential: "openrelayproject",
+        },
+        {
+          urls: "turn:openrelay.metered.ca:443?transport=tcp",
+          username: "openrelayproject",
+          credential: "openrelayproject",
+        },
       ],
       iceCandidatePoolSize: 10, // Pre-gather ICE candidates
+      iceTransportPolicy: "all", // Use both UDP and TCP
+      bundlePolicy: "max-bundle", // Bundle all media streams
+      rtcpMuxPolicy: "require", // Always multiplex RTCP
     };
 
     const pc = new RTCPeerConnection(enhancedConfiguration);
@@ -626,6 +652,44 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     pc.oniceconnectionstatechange = () => {
       console.log("🧊 ICE connection state:", pc.iceConnectionState);
+
+      switch (pc.iceConnectionState) {
+        case "connected":
+        case "completed":
+          console.log("✅ ICE connection established");
+          break;
+        case "failed":
+          console.log("❌ ICE connection failed - attempting restart");
+          // Try to restart ICE
+          if (pc.restartIce) {
+            pc.restartIce();
+          }
+          break;
+        case "disconnected":
+          console.log(
+            "⚠️ ICE connection disconnected - waiting for reconnection"
+          );
+          // Give some time for reconnection before failing
+          setTimeout(() => {
+            if (pc.iceConnectionState === "disconnected") {
+              console.log("❌ ICE reconnection timeout - cleaning up call");
+              cleanupCall();
+            }
+          }, 10000); // 10 second timeout
+          break;
+        case "closed":
+          console.log("🔒 ICE connection closed");
+          cleanupCall();
+          break;
+      }
+    };
+
+    // ICE gathering state monitoring
+    pc.onicegatheringstatechange = () => {
+      console.log("🔍 ICE gathering state:", pc.iceGatheringState);
+      if (pc.iceGatheringState === "complete") {
+        console.log("✅ ICE gathering completed");
+      }
     };
 
     return pc;
