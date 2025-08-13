@@ -7,7 +7,8 @@ import { useVoiceRecording } from "../../hooks/useVoiceRecording";
 import { VoiceRecorder } from "./VoiceRecorder";
 
 export function MessageInput() {
-  const { activeChat, sendMessage, sendAudioMessage } = useChat();
+  const { activeChat, sendMessage, sendAudioMessage, sendMediaMessage } =
+    useChat();
   const [message, setMessage] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -43,16 +44,56 @@ export function MessageInput() {
     }
   };
 
-  const handleEmojiClick = (emojiData: any) => {
+  const handleEmojiClick = (emojiData: { emoji: string }) => {
     setMessage((prev) => prev + emojiData.emoji);
     setShowEmojiPicker(false);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && activeChat) {
-      // Handle file upload logic here
-      console.log("File selected:", file);
+    if (!file || !activeChat) {
+      return;
+    }
+
+    if (isBlocked) {
+      toast.error("Cannot send media to blocked contact");
+      return;
+    }
+
+    try {
+      // Check file type
+      const isImage = file.type.startsWith("image/");
+      const isVideo = file.type.startsWith("video/");
+
+      if (!isImage && !isVideo) {
+        toast.error("Please select an image or video file");
+        return;
+      }
+
+      // Check file size (limit to 50MB)
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      if (file.size > maxSize) {
+        toast.error("File size must be less than 50MB");
+        return;
+      }
+
+      toast.loading("Uploading file...", { id: "upload" });
+
+      if (isImage) {
+        await sendMediaMessage(file, "image");
+        toast.success("Image sent successfully!", { id: "upload" });
+      } else if (isVideo) {
+        await sendMediaMessage(file, "video");
+        toast.success("Video sent successfully!", { id: "upload" });
+      }
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast.error("Failed to send file. Please try again.", { id: "upload" });
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -107,16 +148,16 @@ export function MessageInput() {
   }
 
   return (
-    <div className="border-t border-gray-200 p-4 bg-white">
+    <div className="border-t border-gray-200 p-2 sm:p-4 bg-white">
       <form onSubmit={handleSubmit} className="flex items-end space-x-2">
-        <div className="flex-1 relative">
-          <div className="flex items-center space-x-2 bg-gray-50 rounded-full px-4 py-2">
+        <div className="flex-1 relative min-w-0">
+          <div className="flex items-center space-x-2 bg-gray-50 rounded-full px-3 sm:px-4 py-2">
             <button
               type="button"
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="text-gray-500 hover:text-gray-700 transition-colors"
+              className="text-gray-500 hover:text-gray-700 transition-colors flex-shrink-0"
             >
-              <Smile className="h-5 w-5" />
+              <Smile className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
 
             <input
@@ -125,15 +166,15 @@ export function MessageInput() {
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Type a message..."
-              className="flex-1 bg-transparent border-none outline-none placeholder-gray-500"
+              className="flex-1 bg-transparent border-none outline-none placeholder-gray-500 text-sm sm:text-base min-w-0"
             />
 
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="text-gray-500 hover:text-gray-700 transition-colors"
+              className="text-gray-500 hover:text-gray-700 transition-colors flex-shrink-0"
             >
-              <Paperclip className="h-5 w-5" />
+              <Paperclip className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
 
             <input
@@ -141,7 +182,7 @@ export function MessageInput() {
               type="file"
               onChange={handleFileUpload}
               className="hidden"
-              accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
+              accept="image/*,video/*"
             />
           </div>
 
@@ -149,32 +190,34 @@ export function MessageInput() {
             <div className="absolute bottom-full mb-2 left-0 z-10">
               <EmojiPicker
                 onEmojiClick={handleEmojiClick}
-                width={300}
-                height={400}
+                width={280}
+                height={350}
               />
             </div>
           )}
         </div>
 
-        {message.trim() ? (
-          <button
-            type="submit"
-            className="bg-green-500 text-white p-2 rounded-full hover:bg-green-600 transition-colors"
-          >
-            <Send className="h-5 w-5" />
-          </button>
-        ) : (
-          <VoiceRecorder
-            isRecording={isRecording}
-            recordingTime={recordingTime}
-            onStart={handleVoiceRecord}
-            onStop={handleVoiceRecord}
-            onCancel={handleCancelAudio}
-            onSend={handleSendAudio}
-            hasRecording={!!audioBlob}
-            error={recordingError}
-          />
-        )}
+        <div className="flex-shrink-0">
+          {message.trim() ? (
+            <button
+              type="submit"
+              className="bg-green-500 text-white p-2 rounded-full hover:bg-green-600 transition-colors"
+            >
+              <Send className="h-4 w-4 sm:h-5 sm:w-5" />
+            </button>
+          ) : (
+            <VoiceRecorder
+              isRecording={isRecording}
+              recordingTime={recordingTime}
+              onStart={handleVoiceRecord}
+              onStop={handleVoiceRecord}
+              onCancel={handleCancelAudio}
+              onSend={handleSendAudio}
+              hasRecording={!!audioBlob}
+              error={recordingError}
+            />
+          )}
+        </div>
       </form>
     </div>
   );

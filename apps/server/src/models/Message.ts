@@ -10,10 +10,13 @@ export interface IMessage extends Document {
   timestamp: Date;
   blocked?: boolean;
   path?: string;
-  type: "text" | "audio" | "ai_response";
+  type: "text" | "audio" | "image" | "video" | "file" | "ai_response";
   duration?: number;
   isAIMessage?: boolean; // New field to identify AI messages
   conversationContext?: string; // For maintaining AI conversation context
+  fileName?: string; // File name for media messages
+  fileSize?: number; // File size for media messages
+  mediaUrl?: string; // URL for media files (images, videos, audio)
 }
 
 const messageSchema = new Schema<IMessage>(
@@ -26,15 +29,18 @@ const messageSchema = new Schema<IMessage>(
     seenAt: { type: Date },
     timestamp: { type: Date, default: Date.now },
     blocked: { type: Boolean, default: false }, // Indicates if the message is blocked
-    path: { type: String }, // Optional path for audio files
+    path: { type: String }, // Optional path for audio files (deprecated - use mediaUrl)
     type: {
       type: String,
-      enum: ["text", "audio", "ai_response"],
+      enum: ["text", "audio", "image", "video", "file", "ai_response"],
       default: "text",
     }, // Type of message
     duration: { type: Number, default: 0 }, // Duration in seconds for audio messages
     isAIMessage: { type: Boolean, default: false }, // Flag to identify AI-generated messages
     conversationContext: { type: String }, // Context for AI conversations
+    fileName: { type: String }, // File name for media messages
+    fileSize: { type: Number }, // File size for media messages
+    mediaUrl: { type: String }, // URL for media files (images, videos, audio)
   },
   { timestamps: true }
 );
