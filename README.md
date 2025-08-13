@@ -1,136 +1,471 @@
-# ChitChat
+# ChitChat 💬
 
-ChitChat is a modern, full-stack chat application built with React, TypeScript, Express, MongoDB, and Redis. It supports real-time messaging, OTP-based authentication, contact management, and more.
+ChitChat is a modern, full-stack real-time chat application built with React, TypeScript, Express, MongoDB, and Redis. It features advanced messaging capabilities, WebRTC video/audio calls, media sharing, AI-powered responses, and comprehensive contact management.
 
-## Features
+## 🚀 Features
 
-- **Real-time one-to-one chat** (Socket.io)
-- **OTP-based authentication** (phone number login/signup)
-- **Contact management** (add, view contacts)
-- **Message delivery/read status**
-- **Online status indicator**
-- **Responsive UI** (React + Vite + Tailwind)
-- **Backend with Express, MongoDB, Redis**
-- **SMS integration for OTP** (pluggable)
+### 💬 Core Chat Features
 
-## Project Structure
+- **Real-time messaging** with Socket.io
+- **Message types**: Text, Images, Videos, Audio recordings, Files
+- **Message status**: Sent, Delivered, Read indicators
+- **Voice messages** with waveform recording and playback
+- **Media sharing** with Cloudinary integration (images & videos)
+- **Emoji picker** with comprehensive emoji support
+- **AI-powered responses** using Google Gemini
+- **Typing indicators** in real-time
+- **Message search** and filtering
+
+### 📞 Communication Features
+
+- **Video calls** with WebRTC (peer-to-peer)
+- **Audio calls** with high-quality codecs
+- **Call history** tracking and management
+- **Call notifications** with browser notifications and ringtones
+- **Draggable & resizable** picture-in-picture video during calls
+- **Call controls**: Mute, camera toggle, speaker toggle, screen share
+- **Call status tracking**: Connected, missed, declined, ended
+
+### 🔐 Authentication & Security
+
+- **OTP-based authentication** via SMS (production) / console (development)
+- **JWT token management** with refresh tokens
+- **Phone number verification**
+- **Secure session handling**
+- **Environment-based SMS configuration**
+
+### 👥 Contact Management
+
+- **Add contacts** by phone number
+- **Contact info modal** with detailed user information
+- **Block/unblock contacts** with privacy controls
+- **Delete contacts** with confirmation dialogs
+- **Online status indicators** (green dot for online users)
+- **Last seen timestamps**
+- **Contact search** and organization
+
+### 🎨 User Interface
+
+- **Responsive design** for mobile and desktop
+- **Modern UI** with Tailwind CSS
+- **Real-time typing indicators**
+- **Chat list** with last message previews and timestamps
+- **Search functionality** for chats and contacts
+- **File upload** with drag-and-drop support
+- **Settings panel** with profile customization
+- **Animated video player** with custom controls
+- **Audio waveform** visualization for voice messages
+
+## 🏗️ Project Structure
 
 ```
 chitchat/
 ├── apps/
-│   ├── server/      # Express backend (API, Socket, Redis, MongoDB)
-│   └── web/         # React frontend (Vite, TypeScript, Tailwind)
+│   ├── server/                 # Express backend
+│   │   ├── src/
+│   │   │   ├── controllers/    # API controllers
+│   │   │   │   ├── auth.controller.ts
+│   │   │   │   ├── chat.controller.ts
+│   │   │   │   ├── user.controller.ts
+│   │   │   │   ├── call.controller.ts
+│   │   │   │   ├── media.controller.ts
+│   │   │   │   └── otp.controller.ts
+│   │   │   ├── models/         # MongoDB models
+│   │   │   │   ├── User.ts
+│   │   │   │   ├── Message.ts
+│   │   │   │   ├── CallHistory.ts
+│   │   │   │   ├── Media.ts
+│   │   │   │   └── Gemini.ts
+│   │   │   ├── routes/         # Express routes
+│   │   │   ├── services/       # Business logic
+│   │   │   │   ├── ai.service.ts
+│   │   │   │   ├── gemini.service.ts
+│   │   │   │   └── socket.service.ts
+│   │   │   ├── utils/          # Utilities
+│   │   │   │   ├── multer.ts
+│   │   │   │   ├── mongoDB.ts
+│   │   │   │   ├── redisClient.ts
+│   │   │   │   ├── jwt.ts
+│   │   │   │   └── sms.ts
+│   │   │   └── index.ts        # Server entry point
+│   │   └── uploads/            # File storage
+│   │       ├── audio/
+│   │       ├── images/
+│   │       └── videos/
+│   └── web/                    # React frontend
+│       ├── src/
+│       │   ├── components/     # React components
+│       │   │   ├── auth/       # Authentication components
+│       │   │   ├── chat/       # Chat-related components
+│       │   │   ├── call/       # Video/Audio call components
+│       │   │   ├── Layout/     # Layout components
+│       │   │   └── ui/         # Reusable UI components
+│       │   ├── context/        # React context providers
+│       │   │   ├── AuthContext.tsx
+│       │   │   └── ChatContext.tsx
+│       │   ├── hooks/          # Custom React hooks
+│       │   ├── lib/            # API utilities
+│       │   ├── types/          # TypeScript definitions
+│       │   ├── utils/          # Helper functions
+│       │   └── main.tsx        # App entry point
+│       └── public/             # Static assets
 ├── packages/
-│   ├── ui/          # Shared UI components
-│   ├── eslint-config/ # Shared lint config
-│   └── typescript-config/ # Shared tsconfig
+│   ├── ui/                     # Shared UI components
+│   ├── eslint-config/          # Shared ESLint configuration
+│   └── typescript-config/      # Shared TypeScript configuration
+└── README.md
 ```
 
-## Getting Started
+## 🛠️ Technologies
+
+### Frontend
+
+- **React 18** with TypeScript
+- **Vite** for build tooling and hot reload
+- **Tailwind CSS** for modern styling
+- **Socket.io Client** for real-time communication
+- **WebRTC** for peer-to-peer video/audio calls
+- **Axios** for HTTP requests
+- **React Router** for navigation
+- **Lucide React** for icons
+- **React Hot Toast** for notifications
+
+### Backend
+
+- **Express.js** with TypeScript
+- **MongoDB** with Mongoose ODM
+- **Redis** for caching and session management
+- **Socket.io** for real-time messaging
+- **JWT** for authentication and authorization
+- **Multer** for file upload handling
+- **Cloudinary** for media storage and optimization
+- **Twilio** for SMS (production environment)
+- **Google Gemini AI** for intelligent responses
+
+### DevOps & Tools
+
+- **Turborepo** for monorepo management
+- **ESLint** and **Prettier** for code quality
+- **Docker** for Redis containerization
+- **Vercel** for frontend deployment
+- **Environment-based configuration**
+- **Git** with dev/main branch strategy
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js >= 18
-- MongoDB
-- Redis
+- Node.js >= 18.0.0
+- MongoDB (local installation or MongoDB Atlas)
+- Redis (Docker recommended)
+- Cloudinary account (for media uploads)
+- Twilio account (for SMS in production)
+- Google AI Studio account (for Gemini AI)
 
-### Backend Setup
+### Quick Setup
 
-1. Install dependencies:
+1. **Clone the repository:**
+
+   ```bash
+   git clone https://github.com/pandarudra/chitchat.git
+   cd chitchat
+   ```
+
+2. **Install dependencies:**
+
+   ```bash
+   npm install
+   ```
+
+3. **Start Redis using Docker:**
+   ```bash
+   docker run --name local-redis -d -p 6379:6379 redis
+   docker start local-redis
+   ```
+
+### Backend Configuration
+
+1. **Navigate to server directory:**
+
    ```bash
    cd apps/server
    npm install
    ```
-2. Configure environment variables in `.env`:
-   - `MONGO_URI` (MongoDB connection string)
-   - `REDIS_HOST`, `REDIS_PORT`, `REDIS_USERNAME`, `REDIS_PASSWORD`
-   - `JWT_SECRET`, `REFRESH_SECRET`
-   - `FRONTEND_URL` (your deployed frontend URL for production CORS)
-   - SMS provider keys (if using real SMS)
-3. Start the server:
+
+2. **Create `.env` file in `apps/server/`:**
+
+   ```env
+   # Database Configuration
+   MONGO_URI=mongodb://localhost:27017/chitchat
+
+   # Redis Configuration
+   REDIS_HOST=localhost
+   REDIS_PORT=6379
+   REDIS_USERNAME=
+   REDIS_PASSWORD=
+
+   # JWT Authentication
+   JWT_SECRET=your-super-secret-jwt-key-here
+   REFRESH_SECRET=your-super-secret-refresh-key-here
+
+   # Cloudinary Media Storage
+   CLOUDINARY_CLOUD_NAME=your-cloudinary-cloud-name
+   CLOUDINARY_API_KEY=your-cloudinary-api-key
+   CLOUDINARY_API_SECRET=your-cloudinary-api-secret
+
+   # Twilio SMS (Production)
+   TWILIO_ACCOUNT_SID=your-twilio-account-sid
+   TWILIO_AUTH_TOKEN=your-twilio-auth-token
+   TWILIO_PHONE_NUMBER=your-twilio-phone-number
+
+   # Google Gemini AI
+   GEMINI_API_KEY=your-google-ai-studio-api-key
+
+   # Server Configuration
+   NODE_ENV=development
+   PORT=8000
+   FRONTEND_URL=http://localhost:5173
+   ```
+
+3. **Start the backend server:**
    ```bash
    npm run dev
    ```
 
-### Frontend Setup
+### Frontend Configuration
 
-1. Install dependencies:
+1. **Navigate to web directory:**
+
    ```bash
    cd apps/web
    npm install
    ```
-2. Configure `VITE_BE_URL` in `.env` to point to your backend URL.
-3. Start the frontend:
+
+2. **Create `.env` file in `apps/web/`:**
+
+   ```env
+   VITE_BE_URL=http://localhost:8000
+   ```
+
+3. **Start the frontend development server:**
    ```bash
    npm run dev
    ```
 
-## Usage
+## 📱 Usage Guide
 
-1. **Sign up or log in** with your phone number.
-2. **Receive OTP** via SMS (console log in dev).
-3. **Verify OTP** to access chat features.
-4. **Add contacts** by phone number.
-5. **Start chatting** in real time!
+### Getting Started
 
-## API Endpoints
+1. **Registration**: Sign up with your phone number
+2. **OTP Verification**: Receive and verify OTP (SMS in production, console in development)
+3. **Profile Setup**: Set your display name and upload an avatar
+4. **Start Chatting**: Begin conversations with contacts
+
+### Messaging Features
+
+- **Text Messages**: Send and receive real-time text messages
+- **Voice Messages**: Record and send audio messages with one-tap recording
+- **Media Sharing**: Upload and share images and videos (up to 50MB)
+- **Emoji Support**: Use the built-in emoji picker for expressive messaging
+- **AI Responses**: Get AI-powered responses using Google Gemini
+
+### Video/Audio Calls
+
+- **Initiate Calls**: Start video or audio calls from any chat
+- **Call Management**: Accept, decline, or end calls with intuitive controls
+- **Picture-in-Picture**: Resize and move the video window during calls
+- **Call History**: View and manage your call history
+- **Browser Notifications**: Receive call notifications even when the app isn't focused
+
+### Contact Management
+
+- **Add Contacts**: Search and add contacts by phone number
+- **Contact Info**: View detailed contact information and status
+- **Privacy Controls**: Block or unblock contacts as needed
+- **Contact Organization**: Manage your contact list efficiently
+
+## 🔌 API Documentation
+
+### Authentication Endpoints
 
 - `POST /api/auth/send-otp` — Send OTP to phone number
-- `POST /api/auth/verify-otp` — Verify OTP
-- `POST /api/auth/signup` — Create account
-- `POST /api/auth/login` — Login
-- `GET /api/user/contacts` — Get contacts
-- `POST /api/user/add-contact` — Add contact
-- `GET /api/chats/:userId/messages` — Get chat messages
+- `POST /api/auth/verify-otp` — Verify OTP code
+- `POST /api/auth/signup` — Create new user account
+- `POST /api/auth/login` — Login existing user
+- `POST /api/auth/refresh` — Refresh access token
+- `POST /api/auth/logout` — Logout and invalidate session
 
-## Technologies
+### User Management
 
-- **Frontend:** React, TypeScript, Vite, Tailwind CSS
-- **Backend:** Express, MongoDB, Redis, Socket.io
-- **Auth:** JWT, OTP (SMS)
+- `GET /api/user/profile` — Get current user profile
+- `PUT /api/user/profile` — Update user profile information
+- `GET /api/user/contacts` — Retrieve user's contact list
+- `POST /api/user/add-contact` — Add new contact by phone number
+- `POST /api/user/block-contact` — Block a specific contact
+- `POST /api/user/unblock-contact` — Unblock a contact
+- `DELETE /api/user/delete-contact/:contactId` — Delete contact
 
-## Development
+### Chat & Messaging
 
-- Lint: `npm run lint` (in each app)
-- Format: `npm run format`
-- Build: `npm run build`
+- `GET /api/chats/:userId/messages` — Get chat message history
+- `POST /api/chats/send` — Send text message
+- `POST /api/upload/audio` — Upload and send audio message
+- `POST /api/upload/image` — Upload and send image
+- `POST /api/upload/video` — Upload and send video
 
-## License
+### Call Management
 
-MIT
+- `GET /api/calls/history` — Retrieve call history
+- `POST /api/calls/start` — Initiate a new call
+- `PUT /api/calls/:callId/end` — End an active call
+- `DELETE /api/calls/:callId` — Delete specific call from history
+- `DELETE /api/calls/clear` — Clear entire call history
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+### OTP Management
 
+- `POST /api/otp/send` — Send OTP (environment-aware)
+- `POST /api/otp/verify` — Verify OTP code
+
+## 🧪 Development
+
+### Available Scripts
+
+**Root Level (Turborepo):**
+
+```bash
+npm run dev          # Start all applications in development mode
+npm run build        # Build all applications for production
+npm run lint         # Run ESLint across all applications
+npm run clean        # Clean all build artifacts and node_modules
 ```
-cd my-turborepo
-npx turbo login
+
+**Backend Development:**
+
+```bash
+cd apps/server
+npm run dev          # Start backend with hot reload
+npm run build        # Build backend for production
+npm run start        # Start production backend
+npm run lint         # Lint backend code
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+**Frontend Development:**
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
+```bash
+cd apps/web
+npm run dev          # Start frontend with hot reload
+npm run build        # Build frontend for production
+npm run preview      # Preview production build
+npm run lint         # Lint frontend code
 ```
-npx turbo link
+
+### Git Workflow
+
+**Development Branch:**
+
+```bash
+git checkout -b dev                    # Create and switch to dev branch
+git add .                             # Stage all changes
+git commit -m "feat: your feature"    # Commit with conventional message
+git push -u origin dev                # Push to dev branch
 ```
 
-## Useful Links
+**Production Deployment:**
 
+```bash
+git checkout main                     # Switch to main branch
+git merge dev                         # Merge dev into main
+git push origin main                  # Deploy to production
+```
 
+### Environment Setup
 
-## 🚀 Learn More About Turborepo
+**Development Environment:**
 
-[![Monorepo Overview](https://img.shields.io/badge/Turborepo-Monorepo_Overview-blue?style=for-the-badge)](https://turborepo.com/docs)
-[![Project Structure](https://img.shields.io/badge/Turborepo-Project_Structure-blueviolet?style=for-the-badge)](https://turborepo.com/docs/crafting-your-repository/project-structure)
-[![Tasks](https://img.shields.io/badge/Turborepo-Tasks-green?style=for-the-badge)](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-[![Caching](https://img.shields.io/badge/Turborepo-Caching-ff69b4?style=for-the-badge)](https://turborepo.com/docs/crafting-your-repository/caching)
-[![Remote Caching](https://img.shields.io/badge/Turborepo-Remote_Caching-yellow?style=for-the-badge)](https://turborepo.com/docs/core-concepts/remote-caching)
-[![Filtering](https://img.shields.io/badge/Turborepo-Filtering-orange?style=for-the-badge)](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-[![Configuration](https://img.shields.io/badge/Turborepo-Configuration_Options-red?style=for-the-badge)](https://turborepo.com/docs/reference/configuration)
-[![CLI Usage](https://img.shields.io/badge/Turborepo-CLI_Usage-lightgrey?style=for-the-badge)](https://turborepo.com/docs/reference/command-line-reference)
-[![Pipelines](https://img.shields.io/badge/Turborepo-Custom_Pipelines-blue?style=for-the-badge)](https://turborepo.com/docs/features/pipelines)
-[![Environment](https://img.shields.io/badge/Turborepo-Env_Variables-teal?style=for-the-badge)](https://turborepo.com/docs/features/environment-variables)
-[![Vercel Caching](https://img.shields.io/badge/Turborepo-Vercel_Remote_Cache-9cf?style=for-the-badge)](https://turborepo.com/docs/hosting/vercel-remote-cache)
-[![GitHub Actions](https://img.shields.io/badge/Turborepo-GitHub_Actions-informational?style=for-the-badge)](https://turborepo.com/docs/ci/github-actions)
-[![Next.js Integration](https://img.shields.io/badge/Turborepo-Next.js-blue?style=for-the-badge)](https://turborepo.com/docs/quickstart/with-nextjs)
+- SMS: Console logging (no actual SMS sent)
+- Database: Local MongoDB
+- Redis: Docker container
+- File uploads: Local storage + Cloudinary
 
+**Production Environment:**
+
+- SMS: Twilio integration
+- Database: MongoDB Atlas (recommended)
+- Redis: Managed Redis service
+- File uploads: Cloudinary CDN
+
+## 🌟 Key Features Deep Dive
+
+### Real-time Communication
+
+- **Socket.io Integration**: Bidirectional event-based communication
+- **Message Status Tracking**: Real-time delivery and read receipts
+- **Typing Indicators**: Live typing status updates
+- **Online Presence**: Real-time user status monitoring
+
+### Media Handling
+
+- **Multi-format Support**: Images (JPEG, PNG, GIF), Videos (MP4, WebM), Audio (WebM, MP3)
+- **File Size Limits**: Up to 50MB for media files
+- **Cloud Storage**: Secure Cloudinary integration
+- **Compression**: Automatic media optimization
+
+### AI Integration
+
+- **Google Gemini**: Advanced AI-powered responses
+- **Context Awareness**: Maintains conversation context
+- **Natural Language**: Human-like interaction patterns
+
+### WebRTC Implementation
+
+- **Peer-to-peer Connections**: Direct browser-to-browser communication
+- **STUN/TURN Servers**: NAT traversal and connectivity
+- **Media Streams**: High-quality audio and video transmission
+- **Adaptive Quality**: Automatic quality adjustment based on connection
+
+## 🚀 Deployment
+
+### Frontend (Vercel)
+
+1. Connect your GitHub repository to Vercel
+2. Set build command: `cd apps/web && npm run build`
+3. Set output directory: `apps/web/dist`
+4. Configure environment variables in Vercel dashboard
+
+### Backend (Your Choice)
+
+- **Railway**: Easy deployment with automatic HTTPS
+- **Heroku**: Classic PaaS with add-ons for MongoDB and Redis
+- **DigitalOcean**: App Platform with managed databases
+- **AWS**: EC2 with RDS and ElastiCache
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **Socket.io** for real-time communication
+- **WebRTC** for peer-to-peer video calls
+- **Cloudinary** for media management
+- **MongoDB** for flexible data storage
+- **Redis** for fast caching and sessions
+- **Tailwind CSS** for beautiful UI design
+- **Turborepo** for efficient monorepo management
+
+---
+
+**Built with ❤️ by [pandarudra](https://github.com/pandarudra)**
+
+[![GitHub Stars](https://img.shields.io/github/stars/pandarudra/chitchat?style=social)](https://github.com/pandarudra/chitchat)
+[![GitHub Forks](https://img.shields.io/github/forks/pandarudra/chitchat?style=social)](https://github.com/pandarudra/chitchat/fork)
+[![GitHub Issues](https://img.shields.io/github/issues/pandarudra/chitchat)](https://github.com/pandarudra/chitchat/issues)
+[![GitHub License](https://img.shields.io/github/license/pandarudra/chitchat)](https://github.com/pandarudra/chitchat/blob/main/LICENSE)
