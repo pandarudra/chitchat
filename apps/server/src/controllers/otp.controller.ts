@@ -1,6 +1,9 @@
 import { redisClient } from "../utils/redisClient";
 import { Request, Response } from "express";
 import { sendOtpSms } from "../utils/sms";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export const sendOtp = async (req: Request, res: Response): Promise<any> => {
   const { phoneNumber } = req.body;
@@ -12,6 +15,7 @@ export const sendOtp = async (req: Request, res: Response): Promise<any> => {
   await redisClient.setex(`otp:${phoneNumber}`, 300, otp); // 5 min expiry
 
   if (process.env.NODE_ENV !== "prod") {
+    console.log("prod clicked");
     await sendOtpSms(phoneNumber, otp);
   }
   console.log(`OTP for ${phoneNumber}: ${otp}`); // For testing purposes, remove in production
