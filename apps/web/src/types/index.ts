@@ -23,7 +23,7 @@ export interface Message {
   receiverId: string;
   content: string;
   timestamp: Date;
-  type: "text" | "image" | "file" | "audio";
+  type: "text" | "image" | "file" | "audio" | "video";
   status: "sent" | "delivered" | "read";
   replyTo?: string;
   fileName?: string;

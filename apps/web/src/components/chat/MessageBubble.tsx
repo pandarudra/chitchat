@@ -72,6 +72,16 @@ export function MessageBubble({
                   className="rounded-lg max-w-full h-auto"
                 />
               )}
+              {message.type === "video" && (
+                <video
+                  src={message.mediaUrl}
+                  controls
+                  className="rounded-lg max-w-full h-auto"
+                  style={{ maxHeight: "300px" }}
+                >
+                  Your browser does not support the video tag.
+                </video>
+              )}
               {message.type === "file" && (
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 bg-gray-300 rounded flex items-center justify-center">
@@ -94,7 +104,6 @@ export function MessageBubble({
                   isOwn={isOwn}
                 />
               )}
-              {messageContent && <p className="text-sm">{messageContent}</p>}
             </div>
           )}
 

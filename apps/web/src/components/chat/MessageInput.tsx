@@ -7,7 +7,8 @@ import { useVoiceRecording } from "../../hooks/useVoiceRecording";
 import { VoiceRecorder } from "./VoiceRecorder";
 
 export function MessageInput() {
-  const { activeChat, sendMessage, sendAudioMessage } = useChat();
+  const { activeChat, sendMessage, sendAudioMessage, sendMediaMessage } =
+    useChat();
   const [message, setMessage] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -48,11 +49,51 @@ export function MessageInput() {
     setShowEmojiPicker(false);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && activeChat) {
-      // Handle file upload logic here
-      console.log("File selected:", file);
+    if (!file || !activeChat) {
+      return;
+    }
+
+    if (isBlocked) {
+      toast.error("Cannot send media to blocked contact");
+      return;
+    }
+
+    try {
+      // Check file type
+      const isImage = file.type.startsWith("image/");
+      const isVideo = file.type.startsWith("video/");
+
+      if (!isImage && !isVideo) {
+        toast.error("Please select an image or video file");
+        return;
+      }
+
+      // Check file size (limit to 50MB)
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      if (file.size > maxSize) {
+        toast.error("File size must be less than 50MB");
+        return;
+      }
+
+      toast.loading("Uploading file...", { id: "upload" });
+
+      if (isImage) {
+        await sendMediaMessage(file, "image");
+        toast.success("Image sent successfully!", { id: "upload" });
+      } else if (isVideo) {
+        await sendMediaMessage(file, "video");
+        toast.success("Video sent successfully!", { id: "upload" });
+      }
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast.error("Failed to send file. Please try again.", { id: "upload" });
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -141,7 +182,7 @@ export function MessageInput() {
               type="file"
               onChange={handleFileUpload}
               className="hidden"
-              accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
+              accept="image/*,video/*"
             />
           </div>
 

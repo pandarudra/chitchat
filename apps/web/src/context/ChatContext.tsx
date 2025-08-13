@@ -23,6 +23,7 @@ interface ChatContextType extends ChatState {
   setActiveChat: (chat: Chat | null) => void;
   sendMessage: (content: string, type?: Message["type"]) => void;
   sendAudioMessage: (audioBlob: Blob, duration: number) => Promise<void>;
+  sendMediaMessage: (file: File, mediaType: "image" | "video") => Promise<void>;
   markAsRead: (chatId: string) => void;
   addContact: (phoneNumber: string) => void;
   setSearchQuery: (query: string) => void;
@@ -1271,13 +1272,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       receiverId,
       content: actualContent,
       timestamp: isValidTimestamp ? timestamp : new Date(),
-      type: msgData.type || "text", // Default to text if type is missing
+      type: data.type || msgData.type || "text", // Check data.type first, then msgData.type
       status: msgData.seen ? "read" : msgData.delivered ? "delivered" : "sent",
-      mediaUrl: msgData.path || data.mediaUrl,
-      fileName: msgData.fileName || data.fileName,
-      fileSize: msgData.fileSize || data.fileSize,
-      duration: msgData.duration || data.duration,
+      mediaUrl: data.mediaUrl || msgData.path || msgData.mediaUrl,
+      fileName: data.fileName || msgData.fileName,
+      fileSize: data.fileSize || msgData.fileSize,
+      duration: data.duration || msgData.duration,
     };
+
+    console.log("Incoming message:", message);
 
     // Always match chat by the other user's user id
     const contactId = senderId === currentUser.id ? receiverId : senderId;
@@ -1853,6 +1856,95 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     [isConnected]
   );
 
+  const sendMediaMessage = useCallback(
+    async (file: File, mediaType: "image" | "video") => {
+      const currentState = stateRef.current;
+      const currentUser = userRef.current;
+
+      if (
+        !currentState.activeChat ||
+        !currentUser ||
+        !socketRef.current ||
+        !isConnected
+      ) {
+        console.warn("Cannot send media message: missing requirements");
+        return;
+      }
+
+      try {
+        // Create FormData for file upload
+        const formData = new FormData();
+        formData.append(mediaType, file);
+        formData.append("receiverId", currentState.activeChat.id);
+
+        // Upload media file to server
+        const uploadEndpoint = `/api/upload/${mediaType}`;
+        const uploadResponse = await api.post(uploadEndpoint, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+
+        console.log("Media upload response:", uploadResponse.data);
+
+        const { imageUrl, videoUrl, fileName, fileSize } = uploadResponse.data;
+
+        const mediaUrl = imageUrl || videoUrl;
+
+        // Create message with media metadata
+        const message: Message = {
+          id: Date.now().toString(),
+          senderId: currentUser.id,
+          receiverId: currentState.activeChat.id,
+          content: mediaType === "image" ? "📷 Image" : "🎥 Video",
+          timestamp: new Date(),
+          type: mediaType,
+          status: "sent",
+          mediaUrl,
+          fileName,
+          fileSize,
+        };
+
+        console.log("Media message created:", message);
+
+        // Add message to local state immediately
+        dispatch({ type: "SEND_MESSAGE", payload: message });
+
+        // Send via socket
+        const recipientPhone = currentState.activeChat.participants.find(
+          (p) => p.id !== currentUser.id
+        )?.phoneNumber;
+
+        if (recipientPhone) {
+          console.log(`📤 Sending ${mediaType} message to:`, recipientPhone);
+          socketRef.current.emit("one_to_one_message", {
+            to: recipientPhone,
+            message: message.content,
+            timestamp: message.timestamp.toISOString(),
+            type: mediaType,
+            mediaUrl,
+            fileName,
+            fileSize,
+          });
+
+          // Update status to delivered after a delay
+          setTimeout(() => {
+            dispatch({
+              type: "UPDATE_MESSAGE_STATUS",
+              payload: { messageId: message.id, status: "delivered" },
+            });
+          }, 1000);
+        } else {
+          console.warn("No recipient phone number found for active chat");
+        }
+      } catch (error) {
+        console.error(`Failed to send ${mediaType} message:`, error);
+        throw error;
+      }
+    },
+    [isConnected]
+  );
+
   const markAsRead = useCallback((chatId: string) => {
     dispatch({ type: "MARK_AS_READ", payload: chatId });
 
@@ -1975,6 +2067,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setActiveChat,
         sendMessage,
         sendAudioMessage,
+        sendMediaMessage,
         markAsRead,
         addContact,
         setSearchQuery,

@@ -84,6 +84,8 @@ export function ChatList() {
     switch (type) {
       case "image":
         return `${prefix}📷 Image`;
+      case "video":
+        return `${prefix}🎥 Video`;
       case "file":
         return `${prefix}📄 File`;
       case "audio":
