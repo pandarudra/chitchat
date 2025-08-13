@@ -1,5 +1,6 @@
+import React, { useRef, useState } from "react";
 import { format, isValid } from "date-fns";
-import { Check, CheckCheck } from "lucide-react";
+import { Check, CheckCheck, Play, Pause } from "lucide-react";
 import type { Message } from "../../types";
 import { AudioPlayer } from "./AudioPlayer";
 
@@ -18,6 +19,25 @@ export function MessageBubble({
   senderName,
   ifblocked,
 }: MessageBubbleProps) {
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [showVideoControls, setShowVideoControls] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handleVideoPlayPause = () => {
+    if (videoRef.current) {
+      if (isVideoPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsVideoPlaying(!isVideoPlaying);
+    }
+  };
+
+  const handleVideoEnded = () => {
+    setIsVideoPlaying(false);
+  };
+
   const getStatusIcon = () => {
     if (!isOwn) return null;
 
@@ -73,14 +93,78 @@ export function MessageBubble({
                 />
               )}
               {message.type === "video" && (
-                <video
-                  src={message.mediaUrl}
-                  controls
-                  className="rounded-lg max-w-full h-auto"
+                <div
+                  className="relative rounded-lg overflow-hidden bg-black group cursor-pointer"
                   style={{ maxHeight: "300px" }}
+                  onMouseEnter={() => setShowVideoControls(true)}
+                  onMouseLeave={() => setShowVideoControls(false)}
+                  onClick={handleVideoPlayPause}
                 >
-                  Your browser does not support the video tag.
-                </video>
+                  <video
+                    ref={videoRef}
+                    src={message.mediaUrl}
+                    className="w-full h-auto rounded-lg"
+                    style={{ maxHeight: "300px" }}
+                    onEnded={handleVideoEnded}
+                    onPlay={() => setIsVideoPlaying(true)}
+                    onPause={() => setIsVideoPlaying(false)}
+                  />
+
+                  {/* Custom Play/Pause Button with Animation */}
+                  <div
+                    className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${
+                      showVideoControls || !isVideoPlaying
+                        ? "bg-transparent bg-opacity-30 opacity-100"
+                        : "opacity-0"
+                    }`}
+                  >
+                    <button
+                      className={`
+                        bg-white bg-opacity-90 hover:bg-opacity-100 
+                        rounded-full p-3 shadow-lg 
+                        transform transition-all duration-300 ease-in-out
+                        ${
+                          showVideoControls || !isVideoPlaying
+                            ? "scale-100 translate-y-0"
+                            : "scale-75 translate-y-2 opacity-50"
+                        }
+                        hover:scale-110 active:scale-95
+                      `}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleVideoPlayPause();
+                      }}
+                    >
+                      {isVideoPlaying ? (
+                        <Pause className="h-6 w-6 text-gray-800 transition-transform duration-200" />
+                      ) : (
+                        <Play className="h-6 w-6 text-gray-800 ml-0.5 transition-transform duration-200" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Video Loading/Buffering Indicator */}
+                  <div className="absolute top-2 right-2">
+                    <div
+                      className={`
+                      w-2 h-2 bg-green-500 rounded-full 
+                      ${isVideoPlaying ? "animate-pulse" : "opacity-50"}
+                      transition-opacity duration-300
+                    `}
+                    />
+                  </div>
+
+                  {/* File Info Overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3">
+                    <div className="text-white text-xs opacity-75">
+                      {message.fileSize && (
+                        <p>
+                          {(message.fileSize / (1024 * 1024)).toFixed(1)} MB
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
               {message.type === "file" && (
                 <div className="flex items-center space-x-2">
