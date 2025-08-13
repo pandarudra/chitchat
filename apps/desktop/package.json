@@ -1,0 +1,20 @@
+{
+  "scripts": {
+    "dev": "concurrently \"cd ../web && npm run dev\" \"wait-on http://localhost:5173 && electron .\" --names \"web,electron\" --prefix-colors \"blue,green\"",
+    "build:web": "cd ../web && npm run build",
+    "package": "npm run build:web && electron-builder"
+  },
+  "name": "desktop",
+  "version": "1.0.0",
+  "main": "main.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12",
+    "wait-on": "^8.0.4"
+  }
+}
