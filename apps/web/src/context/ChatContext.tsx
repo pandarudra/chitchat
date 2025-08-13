@@ -1616,14 +1616,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
             if (messages.length > 0) {
               const lastMessage = messages[messages.length - 1];
-              const mappedLastMessage = {
+              const mappedLastMessage: Message = {
                 id: lastMessage._id,
                 senderId: lastMessage.from,
                 receiverId: lastMessage.to,
                 content: lastMessage.content,
                 timestamp: new Date(lastMessage.timestamp),
                 type: lastMessage.type || "text",
-                status: lastMessage.delivered ? "delivered" : "sent",
+                status: (lastMessage.delivered ? "delivered" : "sent") as
+                  | "sent"
+                  | "delivered"
+                  | "read",
                 mediaUrl: lastMessage.mediaUrl,
                 fileName: lastMessage.fileName,
                 fileSize: lastMessage.fileSize,

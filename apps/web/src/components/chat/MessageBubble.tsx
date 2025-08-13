@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { format, isValid } from "date-fns";
 import { Check, CheckCheck, Play, Pause } from "lucide-react";
 import type { Message } from "../../types";

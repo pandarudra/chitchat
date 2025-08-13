@@ -1,6 +1,5 @@
 import { format, isValid } from "date-fns";
 import { Pin, VolumeX, MessageCircle, Users } from "lucide-react";
-import { useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import type { Chat } from "../../types";
 import { useChat } from "../../context/ChatContext";
@@ -9,13 +8,6 @@ import { isUserOnline } from "../../utils/userUtils";
 export function ChatList() {
   const { chats, activeChat, setActiveChat, searchQuery } = useChat();
   const { user } = useAuth();
-
-  // Force re-render when messages change by creating a dependency on message counts
-  const messageCountKey = useMemo(
-    () =>
-      chats.map((chat) => `${chat.id}-${chat.messages?.length || 0}`).join(","),
-    [chats]
-  );
 
   const filteredChats = chats.filter((chat) => {
     if (!searchQuery) return true;
