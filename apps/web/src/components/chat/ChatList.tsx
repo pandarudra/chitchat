@@ -1,5 +1,6 @@
 import { format, isValid } from "date-fns";
 import { Pin, VolumeX, MessageCircle, Users } from "lucide-react";
+import { useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import type { Chat } from "../../types";
 import { useChat } from "../../context/ChatContext";
@@ -8,6 +9,13 @@ import { isUserOnline } from "../../utils/userUtils";
 export function ChatList() {
   const { chats, activeChat, setActiveChat, searchQuery } = useChat();
   const { user } = useAuth();
+
+  // Force re-render when messages change by creating a dependency on message counts
+  const messageCountKey = useMemo(
+    () =>
+      chats.map((chat) => `${chat.id}-${chat.messages?.length || 0}`).join(","),
+    [chats]
+  );
 
   const filteredChats = chats.filter((chat) => {
     if (!searchQuery) return true;
@@ -51,9 +59,17 @@ export function ChatList() {
   };
 
   const getLastMessagePreview = (chat: Chat) => {
-    if (!chat.lastMessage) return "No messages yet";
+    // Get the last message either from lastMessage or from messages array
+    let lastMessage = chat.lastMessage;
+    if (!lastMessage && chat.messages && chat.messages.length > 0) {
+      lastMessage = chat.messages[chat.messages.length - 1];
+    }
 
-    const { content, type, senderId } = chat.lastMessage;
+    if (!lastMessage) {
+      return "No messages yet";
+    }
+
+    const { content, type, senderId } = lastMessage;
     const sender =
       senderId === user?.id
         ? "You"
@@ -140,11 +156,20 @@ export function ChatList() {
                         <VolumeX className="h-4 w-4 text-gray-500" />
                       )}
                     </div>
-                    {chat.lastMessage && (
-                      <span className="text-xs text-gray-500">
-                        {formatMessageTime(chat.lastMessage.timestamp)}
-                      </span>
-                    )}
+                    {(() => {
+                      const lastMsg =
+                        chat.lastMessage ||
+                        (chat.messages && chat.messages.length > 0
+                          ? chat.messages[chat.messages.length - 1]
+                          : null);
+                      return (
+                        lastMsg && (
+                          <span className="text-xs text-gray-500">
+                            {formatMessageTime(lastMsg.timestamp)}
+                          </span>
+                        )
+                      );
+                    })()}
                   </div>
 
                   <div className="flex items-center justify-between mt-1">

@@ -29,68 +29,72 @@ export function VoiceRecorder({
 
   if (error) {
     return (
-      <div className="flex items-center space-x-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
-        <MicOff className="h-4 w-4 text-red-500" />
-        <span className="text-sm text-red-600">{error}</span>
-      </div>
+      <button
+        onClick={onStart}
+        className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+        title={error}
+      >
+        <MicOff className="h-5 w-5" />
+      </button>
     );
   }
 
   if (isRecording) {
     return (
-      <div className="flex items-center space-x-3 px-4 py-2 bg-red-50 border border-red-200 rounded-lg">
-        <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-          <Mic className="h-4 w-4 text-red-500" />
-        </div>
-        <span className="text-sm font-mono text-red-600">
+      <div className="flex items-center space-x-2">
+        {/* Timer display */}
+        <span className="text-xs font-mono text-red-600 bg-red-50 px-2 py-1 rounded-full">
           {formatTime(recordingTime)}
         </span>
-        <div className="flex items-center space-x-1">
-          <button
-            onClick={onCancel}
-            className="p-1 text-gray-500 hover:text-red-600 transition-colors"
-            title="Cancel recording"
-          >
-            <X className="h-4 w-4" />
-          </button>
-          <button
-            onClick={onStop}
-            className="p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-            title="Stop recording"
-          >
-            <MicOff className="h-4 w-4" />
-          </button>
-        </div>
+
+        {/* Recording button with animation */}
+        <button
+          onClick={onStop}
+          className="relative p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors animate-pulse"
+          title="Stop recording"
+        >
+          <Mic className="h-5 w-5" />
+          {/* Pulsing ring animation */}
+          <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-20"></div>
+        </button>
+
+        {/* Cancel button */}
+        <button
+          onClick={onCancel}
+          className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+          title="Cancel"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
     );
   }
 
   if (hasRecording) {
     return (
-      <div className="flex items-center space-x-3 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
-        <div className="flex items-center space-x-2">
-          <Mic className="h-4 w-4 text-green-600" />
-          <span className="text-sm text-green-700">
-            Voice message ({formatTime(recordingTime)})
-          </span>
-        </div>
-        <div className="flex items-center space-x-1">
-          <button
-            onClick={onCancel}
-            className="p-1 text-gray-500 hover:text-red-600 transition-colors"
-            title="Delete recording"
-          >
-            <X className="h-4 w-4" />
-          </button>
-          <button
-            onClick={onSend}
-            className="p-1 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors"
-            title="Send voice message"
-          >
-            <Send className="h-4 w-4" />
-          </button>
-        </div>
+      <div className="flex items-center space-x-2">
+        {/* Duration display */}
+        <span className="text-xs font-mono text-green-600 bg-green-50 px-2 py-1 rounded-full">
+          {formatTime(recordingTime)}
+        </span>
+
+        {/* Send button */}
+        <button
+          onClick={onSend}
+          className="p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors"
+          title="Send voice message"
+        >
+          <Send className="h-5 w-5" />
+        </button>
+
+        {/* Cancel button */}
+        <button
+          onClick={onCancel}
+          className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+          title="Delete"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
     );
   }

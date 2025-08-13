@@ -1597,6 +1597,52 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       console.log("Transformed chats from contacts:", chatsFromContacts);
       dispatch({ type: "SET_CHATS", payload: chatsFromContacts });
 
+      // Fetch last message for each chat to populate previews
+      const chatsWithLastMessages = await Promise.all(
+        chatsFromContacts.map(async (chat) => {
+          try {
+            const otherUser = chat.participants.find(
+              (p) => p.id !== userRef.current?.id
+            );
+            if (!otherUser) return chat;
+
+            const response = await api.get(
+              `/api/chats/${otherUser.id}/messages`
+            );
+            const messages = response.data.messages || [];
+
+            if (messages.length > 0) {
+              const lastMessage = messages[messages.length - 1];
+              const mappedLastMessage = {
+                id: lastMessage._id,
+                senderId: lastMessage.from,
+                receiverId: lastMessage.to,
+                content: lastMessage.content,
+                timestamp: new Date(lastMessage.timestamp),
+                type: lastMessage.type || "text",
+                status: lastMessage.delivered ? "delivered" : "sent",
+                mediaUrl: lastMessage.mediaUrl,
+                fileName: lastMessage.fileName,
+                fileSize: lastMessage.fileSize,
+                duration: lastMessage.duration || 0,
+              };
+
+              return { ...chat, lastMessage: mappedLastMessage };
+            }
+            return chat;
+          } catch (error) {
+            console.error(
+              `Failed to fetch last message for chat ${chat.id}:`,
+              error
+            );
+            return chat;
+          }
+        })
+      );
+
+      console.log("Chats with last messages:", chatsWithLastMessages);
+      dispatch({ type: "SET_CHATS", payload: chatsWithLastMessages });
+
       // Also set contacts separately for status updates
       const contactsList = res.data.contacts.map((contact: any) => ({
         id: contact.user.toString(),

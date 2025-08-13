@@ -83,16 +83,10 @@ export function useVoiceRecording(): UseVoiceRecordingReturn {
   }, [isRecording]);
 
   const cancelRecording = useCallback(() => {
+    // Stop recording if currently recording
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      setAudioBlob(null);
-      setRecordingTime(0);
-
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
 
       // Stop all tracks to release microphone
       if (mediaRecorderRef.current.stream) {
@@ -100,6 +94,17 @@ export function useVoiceRecording(): UseVoiceRecordingReturn {
           .getTracks()
           .forEach((track) => track.stop());
       }
+    }
+
+    // Clear recording data regardless of recording state
+    setAudioBlob(null);
+    setRecordingTime(0);
+    setError(null);
+
+    // Clear timer if running
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
   }, [isRecording]);
 
