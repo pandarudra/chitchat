@@ -37,6 +37,8 @@ function CallModal() {
   const [initialSize, setInitialSize] = useState({ width: 0, height: 0 });
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const localAudioRef = useRef<HTMLAudioElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const callStartTimeRef = useRef<number | null>(null);
 
   // Call duration timer
@@ -70,6 +72,14 @@ function CallModal() {
     if (remoteVideoRef.current && call.remoteStream) {
       remoteVideoRef.current.srcObject = call.remoteStream;
     }
+    if (localAudioRef.current && call.localStream) {
+    localAudioRef.current.srcObject = call.localStream;
+  }
+  if (remoteAudioRef.current && call.remoteStream) {
+    remoteAudioRef.current.srcObject = call.remoteStream;
+    // audio plays automatically
+    remoteAudioRef.current.play().catch(console.error);
+  }
   }, [call.localStream, call.remoteStream]);
 
   // Sync track states with component state
@@ -818,6 +828,14 @@ function CallModal() {
               <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
                 <div className="text-center">
                   <div className="w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden bg-gray-700 flex items-center justify-center">
+                      {call.callType === "audio" && call.remoteStream && (
+                          <audio
+                            ref={remoteAudioRef} 
+                            autoPlay
+                            playsInline
+                            className="hidden"
+                          />
+                      )}
                     {otherUser?.avatarUrl ? (
                       <img
                         src={getAvatarUrl(otherUser.avatarUrl)}
