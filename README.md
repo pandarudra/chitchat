@@ -447,7 +447,59 @@ git push origin main                  # Deploy to production
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## � Contributors
+
+We thank the following people for their contributions to ChitChat:
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/pandarudra">
+        <img src="https://github.com/pandarudra.png" width="100px;" alt="pandarudra"/>
+        <br />
+        <sub><b>Rudra Panda</b></sub>
+      </a>
+      <br />
+      <a href="#code-pandarudra" title="Code">💻</a>
+      <a href="#design-pandarudra" title="Design">🎨</a>
+      <a href="#doc-pandarudra" title="Documentation">📖</a>
+      <a href="#ideas-pandarudra" title="Ideas & Planning">🤔</a>
+      <a href="#infra-pandarudra" title="Infrastructure">🚇</a>
+      <a href="#maintenance-pandarudra" title="Maintenance">🚧</a>
+    </td>
+  </tr>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+### How to Add Yourself
+
+If you've contributed to this project, feel free to add yourself to the contributors list:
+
+1. **Fork the repository**
+2. **Add your entry** to the contributors table above
+3. **Include appropriate contribution types** using the [emoji key](https://allcontributors.org/docs/en/emoji-key):
+   - 💻 Code
+   - 🎨 Design
+   - 📖 Documentation
+   - 🐛 Bug reports
+   - 💡 Ideas & Planning
+   - 🤔 Mentoring
+   - 📋 Project Management
+   - 👀 Reviewed Pull Requests
+   - 🚇 Infrastructure
+   - ⚠️ Tests
+   - 🚧 Maintenance
+4. **Submit a pull request**
+
+Want to contribute but don't know where to start? Check out our [good first issues](https://github.com/pandarudra/chitchat/labels/good%20first%20issue) or reach out to the maintainers!
+
+## �📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
