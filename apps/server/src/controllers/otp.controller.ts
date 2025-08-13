@@ -5,16 +5,20 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+const env = process.env.NODE_ENV;
+
 export const sendOtp = async (req: Request, res: Response): Promise<any> => {
   const { phoneNumber } = req.body;
   if (!phoneNumber)
     return res.status(400).json({ error: "Phone number required" });
 
+  console.log("env : ", env);
+
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   console.log(`Generated OTP for ${phoneNumber}: ${otp}`);
   await redisClient.setex(`otp:${phoneNumber}`, 300, otp); // 5 min expiry
 
-  if (process.env.NODE_ENV !== "prod") {
+  if (env === "prod") {
     console.log("prod clicked");
     await sendOtpSms(phoneNumber, otp);
   }
