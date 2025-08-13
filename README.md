@@ -454,24 +454,9 @@ We thank the following people for their contributions to ChitChat:
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
-<table>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/pandarudra">
-        <img src="https://github.com/pandarudra.png" width="100px;" alt="pandarudra"/>
-        <br />
-        <sub><b>Rudra Panda</b></sub>
-      </a>
-      <br />
-      <a href="#code-pandarudra" title="Code">💻</a>
-      <a href="#design-pandarudra" title="Design">🎨</a>
-      <a href="#doc-pandarudra" title="Documentation">📖</a>
-      <a href="#ideas-pandarudra" title="Ideas & Planning">🤔</a>
-      <a href="#infra-pandarudra" title="Infrastructure">🚇</a>
-      <a href="#maintenance-pandarudra" title="Maintenance">🚧</a>
-    </td>
-  </tr>
-</table>
+<a href="https://github.com/pandarudra/chitchat/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=pandarudra/chitchat" />
+</a>
 
 <!-- markdownlint-restore -->
 <!-- prettier-ignore-end -->
