@@ -16,5 +16,36 @@
     "electron": "^37.2.6",
     "electron-builder": "^26.0.12",
     "wait-on": "^8.0.4"
+  },
+  "build": {
+    "appId": "com.yourcompany.yourapp",
+    "productName": "YourApp",
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json",
+      "web/dist/**/*"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "true"
+    },
+    "portable": {
+      "artifactName": "${productName}-portable.exe"
+    },
+    "icon": "build/icon.ico"
   }
 }
