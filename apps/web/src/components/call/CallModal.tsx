@@ -28,8 +28,8 @@ function CallModal() {
   const [videoLayout, setVideoLayout] = useState<"remote-main" | "local-main">(
     "remote-main"
   );
-  const [pipPosition, setPipPosition] = useState({ x: 16, y: 64 }); // Default: top-16 right-4 (16px from right, 64px from top)
-  const [pipSize, setPipSize] = useState({ width: 128, height: 96 }); // Default: w-32 h-24 (128px x 96px)
+  const [pipPosition, setPipPosition] = useState({ x: 16, y: 64 });
+  const [pipSize, setPipSize] = useState({ width: 128, height: 96 });
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -39,6 +39,8 @@ function CallModal() {
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const localAudioRef = useRef<HTMLAudioElement>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
+  // Add separate refs for audio-only calls
+  const hiddenRemoteAudioRef = useRef<HTMLAudioElement>(null);
   const callStartTimeRef = useRef<number | null>(null);
 
   // Call duration timer
@@ -64,23 +66,115 @@ function CallModal() {
     };
   }, [call.status]);
 
-  // Set up video streams
+  // Enhanced stream setup with better error handling
   useEffect(() => {
-    if (localVideoRef.current && call.localStream) {
-      localVideoRef.current.srcObject = call.localStream;
+    const setupStreams = async () => {
+      try {
+        // Set up local video stream
+        if (localVideoRef.current && call.localStream) {
+          localVideoRef.current.srcObject = call.localStream;
+          // Ensure video plays
+          try {
+            await localVideoRef.current.play();
+          } catch (playError) {
+            console.warn("Local video autoplay failed:", playError);
+          }
+        }
+
+        // Set up remote video stream
+        if (remoteVideoRef.current && call.remoteStream) {
+          remoteVideoRef.current.srcObject = call.remoteStream;
+          // Ensure video plays
+          try {
+            await remoteVideoRef.current.play();
+          } catch (playError) {
+            console.warn("Remote video autoplay failed:", playError);
+          }
+        }
+
+        // Set up local audio (for monitoring, usually muted)
+        if (localAudioRef.current && call.localStream) {
+          localAudioRef.current.srcObject = call.localStream;
+          localAudioRef.current.muted = true; // Local audio should be muted to prevent echo
+        }
+
+        // Set up remote audio - CRITICAL: This handles audio for both video and audio calls
+        if (call.remoteStream) {
+          // For video calls, use the video element's audio
+          if (remoteVideoRef.current && call.callType === "video") {
+            remoteVideoRef.current.srcObject = call.remoteStream;
+            remoteVideoRef.current.muted = false;
+            try {
+              await remoteVideoRef.current.play();
+            } catch (playError) {
+              console.warn("Remote video play failed:", playError);
+            }
+          }
+
+          // For audio calls OR as backup, use dedicated audio element
+          if (hiddenRemoteAudioRef.current) {
+            hiddenRemoteAudioRef.current.srcObject = call.remoteStream;
+            hiddenRemoteAudioRef.current.muted = false;
+            try {
+              await hiddenRemoteAudioRef.current.play();
+            } catch (playError) {
+              console.warn("Remote audio play failed:", playError);
+              // Try user interaction to unlock audio
+              setError("Click anywhere to enable audio");
+            }
+          }
+
+          // Fallback: also set up the remoteAudioRef if it exists
+          if (remoteAudioRef.current) {
+            remoteAudioRef.current.srcObject = call.remoteStream;
+            remoteAudioRef.current.muted = false;
+            try {
+              await remoteAudioRef.current.play();
+            } catch (playError) {
+              console.warn("Fallback remote audio play failed:", playError);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error setting up streams:", error);
+        setError("Failed to set up media streams");
+      }
+    };
+
+    if (call.status === "connected") {
+      setupStreams();
     }
-    if (remoteVideoRef.current && call.remoteStream) {
-      remoteVideoRef.current.srcObject = call.remoteStream;
+  }, [call.localStream, call.remoteStream, call.status, call.callType]);
+
+  // Handle user interaction to unlock audio (for browsers that require it)
+  useEffect(() => {
+    const handleUserInteraction = async () => {
+      if (call.remoteStream && call.status === "connected") {
+        // Try to play all audio elements
+        const audioElements = [
+          remoteVideoRef.current,
+          hiddenRemoteAudioRef.current,
+          remoteAudioRef.current
+        ].filter(Boolean);
+
+        for (const element of audioElements) {
+          try {
+            await element!.play();
+          } catch (error) {
+            console.warn("Audio play failed on user interaction:", error);
+          }
+        }
+        setError(null);
+      }
+    };
+
+    if (error && error.includes("enable audio")) {
+      document.addEventListener("click", handleUserInteraction, { once: true });
+      return () => {
+        document.removeEventListener("click", handleUserInteraction);
+      };
     }
-    if (localAudioRef.current && call.localStream) {
-    localAudioRef.current.srcObject = call.localStream;
-  }
-  if (remoteAudioRef.current && call.remoteStream) {
-    remoteAudioRef.current.srcObject = call.remoteStream;
-    // audio plays automatically
-    remoteAudioRef.current.play().catch(console.error);
-  }
-  }, [call.localStream, call.remoteStream]);
+  }, [error, call.remoteStream, call.status]);
 
   // Sync track states with component state
   useEffect(() => {
@@ -155,7 +249,7 @@ function CallModal() {
   // Drag handlers for picture-in-picture video
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    e.stopPropagation(); // Prevent triggering layout toggle
+    e.stopPropagation();
     setIsDragging(true);
 
     const rect = (e.target as HTMLElement)
@@ -175,7 +269,6 @@ function CallModal() {
 
       e.preventDefault();
 
-      // Get container bounds to keep PiP within viewport
       const container = document.querySelector(".call-container");
       if (!container) return;
 
@@ -183,11 +276,9 @@ function CallModal() {
       const pipWidth = pipSize.width;
       const pipHeight = pipSize.height;
 
-      // Calculate new position
       let newX = e.clientX - containerRect.left - dragOffset.x;
       let newY = e.clientY - containerRect.top - dragOffset.y;
 
-      // Keep within bounds
       newX = Math.max(0, Math.min(newX, containerRect.width - pipWidth));
       newY = Math.max(0, Math.min(newY, containerRect.height - pipHeight));
 
@@ -198,7 +289,6 @@ function CallModal() {
 
   const handleMouseUp = useCallback(() => {
     if (isDragging) {
-      // Snap to edges for better UX
       const container = document.querySelector(".call-container");
       if (container) {
         const containerRect = container.getBoundingClientRect();
@@ -207,18 +297,14 @@ function CallModal() {
         const margin = 16;
 
         let { x, y } = pipPosition;
-
-        // Snap to nearest edge
         const centerX = x + pipWidth / 2;
 
-        // Snap to left or right edge
         if (centerX < containerRect.width / 2) {
-          x = margin; // Snap to left
+          x = margin;
         } else {
-          x = containerRect.width - pipWidth - margin; // Snap to right
+          x = containerRect.width - pipWidth - margin;
         }
 
-        // Keep Y position but ensure it's within bounds
         y = Math.max(
           margin,
           Math.min(y, containerRect.height - pipHeight - margin)
@@ -232,7 +318,6 @@ function CallModal() {
 
   const handleTouchEnd = useCallback(() => {
     if (isDragging) {
-      // Snap to edges for better UX
       const container = document.querySelector(".call-container");
       if (container) {
         const containerRect = container.getBoundingClientRect();
@@ -241,18 +326,14 @@ function CallModal() {
         const margin = 16;
 
         let { x, y } = pipPosition;
-
-        // Snap to nearest edge
         const centerX = x + pipWidth / 2;
 
-        // Snap to left or right edge
         if (centerX < containerRect.width / 2) {
-          x = margin; // Snap to left
+          x = margin;
         } else {
-          x = containerRect.width - pipWidth - margin; // Snap to right
+          x = containerRect.width - pipWidth - margin;
         }
 
-        // Keep Y position but ensure it's within bounds
         y = Math.max(
           margin,
           Math.min(y, containerRect.height - pipHeight - margin)
@@ -291,7 +372,6 @@ function CallModal() {
       const touch = e.touches[0];
       if (!touch) return;
 
-      // Get container bounds to keep PiP within viewport
       const container = document.querySelector(".call-container");
       if (!container) return;
 
@@ -299,11 +379,9 @@ function CallModal() {
       const pipWidth = pipSize.width;
       const pipHeight = pipSize.height;
 
-      // Calculate new position
       let newX = touch.clientX - containerRect.left - dragOffset.x;
       let newY = touch.clientY - containerRect.top - dragOffset.y;
 
-      // Keep within bounds
       newX = Math.max(0, Math.min(newX, containerRect.width - pipWidth));
       newY = Math.max(0, Math.min(newY, containerRect.height - pipHeight));
 
@@ -330,23 +408,16 @@ function CallModal() {
 
       e.preventDefault();
 
-      // Calculate size change based on mouse movement
       const deltaX = e.clientX - resizeStartPoint.x;
       const deltaY = e.clientY - resizeStartPoint.y;
-
-      // Use the larger delta to maintain aspect ratio (16:12 or 4:3)
       const delta = Math.max(deltaX, deltaY);
 
-      // Calculate new size (minimum 80x60, maximum 320x240)
       const newWidth = Math.max(80, Math.min(320, initialSize.width + delta));
-      const newHeight = Math.max(60, Math.min(240, (newWidth * 3) / 4)); // Maintain 4:3 aspect ratio
+      const newHeight = Math.max(60, Math.min(240, (newWidth * 3) / 4));
 
-      // Ensure the resized PiP stays within container bounds
       const container = document.querySelector(".call-container");
       if (container) {
         const containerRect = container.getBoundingClientRect();
-
-        // Adjust position if needed to keep within bounds
         const currentPosition = pipPosition;
         const maxX = containerRect.width - newWidth;
         const maxY = containerRect.height - newHeight;
@@ -417,10 +488,8 @@ function CallModal() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      // Only handle shortcuts when call is active
       if (call.status !== "connected") return;
 
-      // Prevent shortcuts when typing in input fields
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement
@@ -496,7 +565,7 @@ function CallModal() {
         }
         controlsTimeoutRef.current = setTimeout(() => {
           setShowControls(false);
-        }, 3000); // Hide after 3 seconds of inactivity
+        }, 3000);
       };
 
       const handleMouseMove = () => resetControlsTimer();
@@ -522,14 +591,21 @@ function CallModal() {
   // Get other user info
   const otherUser = call.caller?.id === user?.id ? call.callee : call.caller;
 
-  // Don't show CallModal for incoming calls (ringing) - let CallNotification handle it
-  // Show for all active call states including incoming calls
   if (call.status === "idle") return null;
 
   return (
     <div
       className={`fixed inset-0 bg-transparent bg-opacity-95 flex items-center justify-center z-[60] ${isFullscreen ? "p-0" : "p-4"}`}
     >
+      {/* Hidden audio element for all calls - this ensures audio works in all cases */}
+      <audio
+        ref={hiddenRemoteAudioRef}
+        autoPlay
+        playsInline
+        style={{ display: 'none' }}
+        muted={false}
+      />
+      
       <div
         className={`bg-gray-900 text-white rounded-xl shadow-2xl overflow-hidden ${isFullscreen ? "w-full h-full rounded-none" : "w-full max-w-4xl h-auto"}`}
       >
@@ -601,7 +677,6 @@ function CallModal() {
               </p>
             </div>
 
-            {/* Answer/Decline buttons */}
             <div className="flex items-center justify-center space-x-12">
               <button
                 onClick={() => {
@@ -696,31 +771,32 @@ function CallModal() {
                   title="Click to switch videos (T)"
                 >
                   {videoLayout === "remote-main" ? (
-                    /* Remote video as main */
                     <video
                       ref={remoteVideoRef}
                       autoPlay
                       playsInline
-                      className="w-full h-full object-cover bg-gray-800"
-                    />
-                  ) : /* Local video as main */
-                  isVideoEnabled && call.localStream ? (
-                    <video
-                      ref={localVideoRef}
-                      autoPlay
-                      muted
-                      playsInline
+                      muted={false}
                       className="w-full h-full object-cover bg-gray-800"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gray-700 flex items-center justify-center">
-                      <VideoOff className="w-12 h-12 text-gray-400" />
-                      <p className="ml-3 text-gray-400">Camera is off</p>
-                    </div>
+                    isVideoEnabled && call.localStream ? (
+                      <video
+                        ref={localVideoRef}
+                        autoPlay
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover bg-gray-800"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+                        <VideoOff className="w-12 h-12 text-gray-400" />
+                        <p className="ml-3 text-gray-400">Camera is off</p>
+                      </div>
+                    )
                   )}
                 </div>
 
-                {/* Picture-in-picture video (changes based on layout) */}
+                {/* Picture-in-picture video */}
                 <div
                   className="pip-container absolute rounded-lg overflow-hidden bg-gray-800 border-2 border-white/20 cursor-grab hover:border-white/40 transition-colors z-10"
                   style={{
@@ -737,7 +813,6 @@ function CallModal() {
                   onMouseDown={handleMouseDown}
                   onTouchStart={handleTouchStart}
                   onClick={(e) => {
-                    // Only toggle layout if not dragging or resizing
                     if (!isDragging && !isResizing) {
                       e.stopPropagation();
                       toggleVideoLayout();
@@ -751,7 +826,6 @@ function CallModal() {
                         : "Drag to move, resize from corner, or click to switch videos (T)"
                   }
                 >
-                  {/* Drag indicator */}
                   <div className="absolute top-1 left-1 right-1 h-1 bg-white/20 rounded-full flex justify-center z-20">
                     <div className="w-6 h-1 bg-white/40 rounded-full"></div>
                   </div>
@@ -771,18 +845,21 @@ function CallModal() {
                         <VideoOff className="w-4 h-4 text-gray-400" />
                       </div>
                     )
-                  ) : /* Remote video as PiP */
-                  call.remoteStream ? (
-                    <video
-                      ref={remoteVideoRef}
-                      autoPlay
-                      playsInline
-                      className="w-full h-full object-cover"
-                    />
                   ) : (
-                    <div className="w-full h-full bg-gray-700 flex items-center justify-center">
-                      <User className="w-4 h-4 text-gray-400" />
-                    </div>
+                    /* Remote video as PiP */
+                    call.remoteStream ? (
+                      <video
+                        ref={remoteVideoRef}
+                        autoPlay
+                        playsInline
+                        muted={false}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+                        <User className="w-4 h-4 text-gray-400" />
+                      </div>
+                    )
                   )}
 
                   {/* Resize handle */}
@@ -828,14 +905,6 @@ function CallModal() {
               <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
                 <div className="text-center">
                   <div className="w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden bg-gray-700 flex items-center justify-center">
-                      {call.callType === "audio" && call.remoteStream && (
-                          <audio
-                            ref={remoteAudioRef} 
-                            autoPlay
-                            playsInline
-                            className="hidden"
-                          />
-                      )}
                     {otherUser?.avatarUrl ? (
                       <img
                         src={getAvatarUrl(otherUser.avatarUrl)}
