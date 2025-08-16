@@ -18,7 +18,7 @@ export const sendOtp = async (req: Request, res: Response): Promise<any> => {
   console.log(`Generated OTP for ${phoneNumber}: ${otp}`);
   await redisClient.setex(`otp:${phoneNumber}`, 300, otp); // 5 min expiry
 
-  if (env !== "prod") {
+  if (env === "prod") {
     console.log("prod clicked");
     await sendOtpSms(phoneNumber, otp);
   }
