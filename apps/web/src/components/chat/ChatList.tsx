@@ -110,7 +110,7 @@ export function ChatList() {
                 onClick={() => setActiveChat(chat)}
                 className={`flex items-center space-x-3 p-3 hover:bg-gray-50 cursor-pointer transition-colors ${
                   activeChat?.id === chat.id
-                    ? "bg-green-50 border-r-4 border-green-500"
+                    ? "bg-green-50 border-r-4 border-[#588157]"
                     : ""
                 }`}
               >
@@ -132,7 +132,7 @@ export function ChatList() {
                         (p) => p.id !== user?.id
                       );
                       return otherUser && isUserOnline(otherUser) ? (
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#588157] rounded-full border-2 border-white"></div>
                       ) : null;
                     })()}
                 </div>
