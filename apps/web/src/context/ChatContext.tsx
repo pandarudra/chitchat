@@ -22,6 +22,7 @@ import api from "../lib/api";
 interface ChatContextType extends ChatState {
   setActiveChat: (chat: Chat | null) => void;
   sendMessage: (content: string, type?: Message["type"]) => void;
+  sendAIMessage: (content: string) => Promise<void>;
   sendAudioMessage: (audioBlob: Blob, duration: number) => Promise<void>;
   sendMediaMessage: (file: File, mediaType: "image" | "video") => Promise<void>;
   markAsRead: (chatId: string) => void;
@@ -1573,6 +1574,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 : undefined,
               isBlocked: contact.blocked, // Include isBlocked status
               isPinned: contact.pinned, // Include isPinned status
+              isAI: contact.isAI || false, // Include isAI flag
             },
             // Add current user to participants
             ...(userRef.current
@@ -1585,12 +1587,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     isOnline: userRef.current.isOnline || false,
                     isBlocked: contact.blocked,
                     isPinned: contact.pinned,
+                    isAI: false, // Current user is never AI
                   },
                 ]
               : []),
           ],
           messages: [], // Start with empty messages
           isGroup: false,
+          isAI: contact.isAI || false, // Mark chat as AI if contact is AI
           unreadCount: 0,
           isPinned: contact.pinned,
           isMuted: false,
@@ -1769,6 +1773,91 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     },
     [isConnected]
   );
+
+  const sendAIMessage = useCallback(async (content: string) => {
+    const currentState = stateRef.current;
+    const currentUser = userRef.current;
+
+    if (!currentState.activeChat || !currentUser) {
+      console.warn("Cannot send AI message: missing requirements");
+      return;
+    }
+
+    // Check if current chat is an AI chat
+    const isAIChat =
+      currentState.activeChat.isAI ||
+      currentState.activeChat.participants.some((p) => p.isAI);
+
+    if (!isAIChat) {
+      console.warn("Cannot send AI message: not an AI chat");
+      return;
+    }
+
+    try {
+      // Create user message locally first
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        senderId: currentUser.id,
+        receiverId: currentState.activeChat.id,
+        content,
+        timestamp: new Date(),
+        type: "text",
+        status: "sent",
+        isAIMessage: false,
+      };
+
+      // Add user message to local state
+      dispatch({ type: "SEND_MESSAGE", payload: userMessage });
+
+      // Send to AI service
+      const response = await api.post("/api/ai/chat", {
+        message: content,
+        botId: currentState.activeChat.id,
+      });
+
+      if (response.data.success) {
+        // Create AI response message
+        const aiMessage: Message = {
+          id: response.data.data.aiResponse.id,
+          senderId: response.data.data.aiResponse.from,
+          receiverId: currentUser.id,
+          content: response.data.data.aiResponse.content,
+          timestamp: new Date(response.data.data.aiResponse.timestamp),
+          type: "text",
+          status: "delivered",
+          isAIMessage: true,
+        };
+
+        // Add AI response to local state
+        dispatch({ type: "RECEIVE_MESSAGE", payload: aiMessage });
+
+        // Mark user's message as delivered
+        setTimeout(() => {
+          dispatch({
+            type: "UPDATE_MESSAGE_STATUS",
+            payload: { messageId: userMessage.id, status: "delivered" },
+          });
+        }, 500);
+      }
+    } catch (error) {
+      console.error("Failed to send AI message:", error);
+
+      // Show error message from AI
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        senderId: currentState.activeChat.id,
+        receiverId: currentUser.id,
+        content:
+          "I'm sorry, I'm experiencing some technical difficulties. Please try again in a moment.",
+        timestamp: new Date(),
+        type: "text",
+        status: "delivered",
+        isAIMessage: true,
+      };
+
+      dispatch({ type: "RECEIVE_MESSAGE", payload: errorMessage });
+    }
+  }, []);
 
   const sendAudioMessage = useCallback(
     async (audioBlob: Blob, duration: number) => {
@@ -2069,6 +2158,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         ...state,
         setActiveChat,
         sendMessage,
+        sendAIMessage,
         sendAudioMessage,
         sendMediaMessage,
         markAsRead,

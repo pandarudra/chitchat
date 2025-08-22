@@ -9,6 +9,7 @@ export interface User {
   createdAt?: Date;
   updatedAt?: Date;
   isBlocked?: boolean; // Indicates if the user has blocked the current user
+  isAI?: boolean; // Indicates if this is an AI bot
 }
 export interface AuthState {
   user: User | null;
@@ -32,6 +33,7 @@ export interface Message {
   duration?: number; // Duration in seconds for audio messages
   isBlocked?: boolean; // Indicates if the message is from a blocked contact
   isPinned?: boolean; // Indicates if the message is pinned in the chat
+  isAIMessage?: boolean; // Indicates if this is an AI-generated message
 }
 
 export type CallState = {
@@ -65,6 +67,7 @@ export interface Chat {
   isPinned: boolean;
   isMuted: boolean;
   isBlocked?: boolean;
+  isAI?: boolean; // Indicates if this is an AI chat
 }
 export interface ChatState {
   chats: Chat[];
@@ -107,4 +110,14 @@ export interface CallHistory {
     avatarUrl?: string;
     phoneNumber: string;
   };
+}
+
+export interface AIBot {
+  botId: string;
+  name: string;
+  avatarUrl?: string;
+  status: string;
+  provider: "gemini";
+  isActive: boolean;
+  systemPrompt?: string;
 }

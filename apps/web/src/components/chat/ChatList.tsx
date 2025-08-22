@@ -143,6 +143,14 @@ export function ChatList() {
                       <h3 className="font-medium text-gray-900 truncate">
                         {getChatName(chat)}
                       </h3>
+                      {chat.isAI && (
+                        <div
+                          title="Susi - Your AI companion"
+                          className="flex items-center"
+                        >
+                          <span className="text-sm">🤖✨</span>
+                        </div>
+                      )}
                       {chat.isPinned && (
                         <Pin className="h-4 w-4 text-gray-500" />
                       )}

@@ -7,8 +7,13 @@ import { useVoiceRecording } from "../../hooks/useVoiceRecording";
 import { VoiceRecorder } from "./VoiceRecorder";
 
 export function MessageInput() {
-  const { activeChat, sendMessage, sendAudioMessage, sendMediaMessage } =
-    useChat();
+  const {
+    activeChat,
+    sendMessage,
+    sendAIMessage,
+    sendAudioMessage,
+    sendMediaMessage,
+  } = useChat();
   const [message, setMessage] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -29,6 +34,17 @@ export function MessageInput() {
     activeChat?.isBlocked ||
     activeChat?.participants.find((p) => p.id === activeChat?.id)?.isBlocked;
 
+  // Check if this is an AI chat
+  const isAIChat =
+    activeChat?.isAI || activeChat?.participants.some((p) => p.isAI);
+
+  const getPlaceholderText = () => {
+    if (isAIChat) {
+      return "Chat with Susi... 🤖✨";
+    }
+    return "Type a message...";
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -39,7 +55,12 @@ export function MessageInput() {
     }
 
     if (message.trim()) {
-      sendMessage(message.trim());
+      if (isAIChat) {
+        sendAIMessage(message.trim());
+      } else {
+        sendMessage(message.trim());
+      }
+
       setMessage("");
     }
   };
@@ -165,7 +186,7 @@ export function MessageInput() {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Type a message..."
+              placeholder={getPlaceholderText()}
               className="flex-1 bg-transparent border-none outline-none placeholder-gray-500 text-sm sm:text-base min-w-0"
             />
 
