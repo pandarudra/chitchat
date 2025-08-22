@@ -1,6 +1,6 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
-export interface IAIBot extends Document {
+export interface IAI extends Document {
   botId: string;
   name: string;
   avatarUrl?: string;
@@ -10,21 +10,17 @@ export interface IAIBot extends Document {
   systemPrompt?: string;
 }
 
-const aiBotSchema = new Schema<IAIBot>(
+const AISchema = new Schema<IAI>(
   {
     botId: { type: String, required: true, unique: true },
     name: { type: String, required: true },
     avatarUrl: { type: String },
-    status: { type: String, default: "AI Assistant - Always available" },
-    provider: {
-      type: String,
-      enum: ["gemini"],
-      required: true,
-    },
+    status: { type: String, default: "available" },
+    provider: { type: String, enum: ["gemini"], required: true },
     isActive: { type: Boolean, default: true },
     systemPrompt: { type: String },
   },
   { timestamps: true }
 );
 
-export const Gemini = mongoose.model<IAIBot>("Gemini", aiBotSchema);
+export const AIModel = mongoose.model<IAI>("AI", AISchema);
