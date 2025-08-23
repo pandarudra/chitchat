@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import { useState, useRef } from "react";
 import { Send, Paperclip, Smile } from "lucide-react";
 import toast from "react-hot-toast";
 import EmojiPicker from "emoji-picker-react";
@@ -49,8 +49,6 @@ export function MessageInput() {
     e.preventDefault();
 
     if (isBlocked) {
-      // Show error message or toast
-      console.warn("Cannot send message to blocked contact");
       return;
     }
 
@@ -107,8 +105,7 @@ export function MessageInput() {
         await sendMediaMessage(file, "video");
         toast.success("Video sent successfully!", { id: "upload" });
       }
-    } catch (error) {
-      console.error("Error uploading file:", error);
+    } catch {
       toast.error("Failed to send file. Please try again.", { id: "upload" });
     }
 
@@ -124,8 +121,7 @@ export function MessageInput() {
     } else {
       try {
         await startRecording();
-      } catch (error) {
-        console.log("Error starting recording:", error);
+      } catch {
         toast.error(
           "Failed to start recording. Please check microphone permissions."
         );
@@ -139,9 +135,8 @@ export function MessageInput() {
         await sendAudioMessage(audioBlob, recordingTime);
         cancelRecording(); // Clear the recording
         toast.success("Voice message sent!");
-      } catch (error) {
+      } catch {
         toast.error("Failed to send voice message");
-        console.error("Error sending voice message:", error);
       }
     }
   };

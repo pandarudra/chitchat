@@ -119,7 +119,6 @@ type ChatAction =
   | { type: "SET_CALLER"; payload: User }
   | { type: "SET_CALLEE"; payload: User }
   | { type: "RESET_CALL" }
-  // | { type: "SET_CALL_HISTORY"; payload: CallHistory[] }
   | {
       type: "SET_CALL";
       payload: {
@@ -448,9 +447,6 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
         },
       };
 
-    // case "SET_CALL_HISTORY":
-    //   return { ...state, callHistory: action.payload };
-
     default:
       return state;
   }
@@ -498,15 +494,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     userRef.current = user;
   }, [user]);
-
-  // WebRTC configuration
-  // const configuration: RTCConfiguration = {
-  //   iceServers: [
-  //     { urls: "stun:stun.l.google.com:19302" },
-  //     { urls: "stun:stun1.l.google.com:19302" }, // Add backup STUN servers
-  //     // Add TURN server if needed for better connectivity
-  //   ],
-  // };
 
   // Cleanup call resources
   const cleanupCall = useCallback(() => {
@@ -2140,7 +2127,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const sendContactRequest = useCallback((userId: string) => {
-    // TODO: Implement actual API call
     console.log("Sending contact request to:", userId);
   }, []);
 

@@ -79,13 +79,10 @@ export class SocketService {
 
     io.on("connection", async (socket) => {
       const userId = socket.data.userId;
-      console.log(`New connection: ${userId} with socket ID: ${socket.id}`);
       if (!userId) {
         console.error("User ID not found in socket data.");
         return;
       }
-
-      console.log(`New connection: ${userId} with socket ID: ${socket.id}`);
 
       // Update user's lastSeen and set as online
       try {
