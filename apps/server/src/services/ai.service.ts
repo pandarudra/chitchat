@@ -8,16 +8,16 @@ export class AIService {
     try {
       // Check if AI bot already exists as a user
       const existingUser = await UserModel.findOne({
-        phoneNumber: "AI_ASSISTANT",
+        phoneNumber: "AI_ASSISTANT_SUSI",
       });
 
       if (!existingUser) {
         // Create AI bot as a User
         const aiUser = new UserModel({
-          phoneNumber: "AI_ASSISTANT",
+          phoneNumber: "AI_ASSISTANT_SUSI",
           displayName: "Susi",
           avatarUrl:
-            "https://api.dicebear.com/9.x/bottts/svg?seed=susi&backgroundColor=ffdfbf&primaryColor=ff6b6b",
+            "https://res.cloudinary.com/chitchat99/image/upload/v1755927525/ai_whkw7p.png",
           status: "Your friendly AI companion 🤖✨",
           isOnline: true, // AI is always online
           lastSeen: new Date(),
@@ -29,8 +29,7 @@ export class AIService {
         const aiBot = new AIModel({
           botId: (aiUser._id as any).toString(),
           name: "Susi",
-          avatarUrl:
-            "https://api.dicebear.com/9.x/bottts/svg?seed=susi&backgroundColor=ffdfbf&primaryColor=ff6b6b",
+          avatarUrl: "/uploads/avatars/ai.png",
           status: "Your friendly AI companion 🤖✨",
           provider: "gemini",
           isActive: true,
@@ -77,8 +76,7 @@ export class AIService {
       // Update User model
       await UserModel.findByIdAndUpdate(existingBot._id, {
         displayName: "Susi",
-        avatarUrl:
-          "https://api.dicebear.com/9.x/bottts/svg?seed=susi&backgroundColor=ffdfbf&primaryColor=ff6b6b",
+        avatarUrl: "/uploads/avatars/ai.png",
         status: "Your friendly AI companion 🤖✨",
       });
 
@@ -87,8 +85,7 @@ export class AIService {
         { botId: existingBot._id.toString() },
         {
           name: "Susi",
-          avatarUrl:
-            "https://api.dicebear.com/9.x/bottts/svg?seed=susi&backgroundColor=ffdfbf&primaryColor=ff6b6b",
+          avatarUrl: "/uploads/avatars/ai.png",
           status: "Your friendly AI companion 🤖✨",
           systemPrompt:
             "You are Susi, a friendly AI assistant integrated into ChitChat messaging app. Be cheerful, helpful, and conversational. Keep responses concise but informative. Use a warm and approachable tone.",

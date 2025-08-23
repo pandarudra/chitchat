@@ -132,7 +132,7 @@ export function ChatList() {
                         (p) => p.id !== user?.id
                       );
                       return otherUser && isUserOnline(otherUser) ? (
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#588157] rounded-full border-2 border-white"></div>
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-600 rounded-full border-2 border-white"></div>
                       ) : null;
                     })()}
                 </div>

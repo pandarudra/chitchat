@@ -24,7 +24,7 @@ export function Sidebar() {
   return (
     <div className="w-full lg:w-80 bg-white border-r border-gray-200 flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 bg-[#588157] text-white">
+      <div className="p-4 border-b border-gray-200 bg-green-600 text-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             {user?.avatarUrl ? (
@@ -55,14 +55,14 @@ export function Sidebar() {
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className="p-2 hover:bg-[#588157] rounded-full transition-colors"
+              className="p-2 hover:bg-green-600 rounded-full transition-colors"
               title="Settings"
             >
               <Settings className="h-5 w-5" />
             </button>
             <button
               onClick={logout}
-              className="p-2 hover:bg-[#588157] rounded-full transition-colors"
+              className="p-2 hover:bg-green-600 rounded-full transition-colors"
               title="Logout"
             >
               <LogOut className="h-5 w-5" />

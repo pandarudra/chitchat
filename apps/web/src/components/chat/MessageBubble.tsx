@@ -75,7 +75,7 @@ export function MessageBubble({
         <div
           className={`px-4 py-2 rounded-lg ${
             isOwn
-              ? "bg-[#588157] text-white"
+              ? "bg-green-600 text-white"
               : ifblocked
                 ? "hidden"
                 : "bg-white text-gray-800"
@@ -147,7 +147,7 @@ export function MessageBubble({
                   <div className="absolute top-2 right-2">
                     <div
                       className={`
-                      w-2 h-2 bg-[#588157] rounded-full 
+                      w-2 h-2 bg-green-600 rounded-full 
                       ${isVideoPlaying ? "animate-pulse" : "opacity-50"}
                       transition-opacity duration-300
                     `}
