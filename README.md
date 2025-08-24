@@ -98,8 +98,7 @@ chitchat/
 │   │   │   │   ├── User.ts
 │   │   │   │   ├── Message.ts
 │   │   │   │   ├── CallHistory.ts
-│   │   │   │   ├── Media.ts
-│   │   │   │   └── Gemini.ts
+│   │   │   │   └── Ai.ts
 │   │   │   ├── routes/         # Express routes
 │   │   │   ├── services/       # Business logic
 │   │   │   │   ├── ai.service.ts
@@ -169,19 +168,29 @@ chitchat/
 ### DevOps & Tools
 
 - **Turborepo** for monorepo management
+- **Docker & Docker Compose** for containerized development and deployment
 - **ESLint** and **Prettier** for code quality
-- **Docker** for Redis containerization
+- **MongoDB & Redis** containerization with persistent volumes
 - **Vercel** for frontend deployment
-- **Environment-based configuration**
+- **Environment-based configuration** for development/production
 - **Git** with dev/main branch strategy
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
+**Option 1: Manual Setup**
+
 - Node.js >= 18.0.0
 - MongoDB (local installation or MongoDB Atlas)
-- Redis (Docker recommended)
+- Redis (local installation or Docker)
+- Cloudinary account (for media uploads)
+- Twilio account (for SMS in production)
+- Google AI Studio account (for Gemini AI)
+
+**Option 2: Docker Setup (Recommended)**
+
+- Docker and Docker Compose
 - Cloudinary account (for media uploads)
 - Twilio account (for SMS in production)
 - Google AI Studio account (for Gemini AI)
@@ -276,7 +285,246 @@ chitchat/
    npm run dev
    ```
 
-## 📱 Usage Guide
+## � Docker Setup (Recommended)
+
+For the easiest setup experience, use Docker to run the entire application stack with all dependencies.
+
+### Prerequisites for Docker
+
+- **Docker** and **Docker Compose** installed on your system
+- **Git** for cloning the repository
+
+### Quick Docker Start
+
+1. **Clone and navigate to project:**
+
+   ```bash
+   git clone https://github.com/pandarudra/chitchat.git
+   cd chitchat
+   ```
+
+2. **Create environment files:**
+
+   **Backend `.env` file** (`apps/server/.env`):
+
+   ```env
+   # Database Configuration
+   MONGO_URI=mongodb://mongodb:27017/chitchat
+
+   # Redis Configuration
+   REDIS_HOST=redis
+   REDIS_PORT=6379
+   REDIS_USERNAME=
+   REDIS_PASSWORD=
+
+   # JWT Authentication
+   JWT_SECRET=your-super-secret-jwt-key-here
+   REFRESH_SECRET=your-super-secret-refresh-key-here
+
+   # Cloudinary Media Storage
+   CLOUDINARY_CLOUD_NAME=your-cloudinary-cloud-name
+   CLOUDINARY_API_KEY=your-cloudinary-api-key
+   CLOUDINARY_API_SECRET=your-cloudinary-api-secret
+
+   # Twilio SMS (Production)
+   TWILIO_ACCOUNT_SID=your-twilio-account-sid
+   TWILIO_AUTH_TOKEN=your-twilio-auth-token
+   TWILIO_PHONE_NUMBER=your-twilio-phone-number
+
+   # Google Gemini AI
+   GEMINI_API_KEY=your-google-ai-studio-api-key
+
+   # Server Configuration
+   NODE_ENV=development
+   PORT=8000
+   FRONTEND_URL=http://localhost:5173
+   ```
+
+3. **Start all services with Docker Compose:**
+
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **View running containers:**
+
+   ```bash
+   docker-compose ps
+   ```
+
+5. **Access the application:**
+   - **Frontend**: http://localhost:5173
+   - **Backend API**: http://localhost:8000
+   - **MongoDB**: localhost:27018
+   - **Redis**: localhost:6380
+
+### Docker Services Overview
+
+| Service      | Container Name     | Port        | Description                      |
+| ------------ | ------------------ | ----------- | -------------------------------- |
+| **MongoDB**  | `chitchat-mongodb` | 27018:27017 | Database with persistent storage |
+| **Redis**    | `chitchat-redis`   | 6380:6379   | Cache and session store          |
+| **Backend**  | `chitchat-server`  | 8000:8000   | Express.js API server            |
+| **Frontend** | `chitchat-web`     | 5173:5173   | React development server         |
+
+### Docker Management Commands
+
+**Start services:**
+
+```bash
+docker-compose up -d          # Run in background
+docker-compose up             # Run with logs visible
+```
+
+**Stop services:**
+
+```bash
+docker-compose down           # Stop and remove containers
+docker-compose stop           # Stop containers (keep them)
+```
+
+**View logs:**
+
+```bash
+docker-compose logs           # All services
+docker-compose logs server    # Backend only
+docker-compose logs web       # Frontend only
+```
+
+**Rebuild services:**
+
+```bash
+docker-compose up --build     # Rebuild and start
+docker-compose build server   # Rebuild backend only
+```
+
+**Access container shell:**
+
+```bash
+docker exec -it chitchat-server sh    # Backend container
+docker exec -it chitchat-mongodb sh   # MongoDB container
+```
+
+### Production Docker Setup
+
+For production deployment, create a `docker-compose.prod.yml`:
+
+```yaml
+services:
+  mongodb:
+    image: mongo:7
+    container_name: chitchat-mongodb-prod
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=chitchat
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=secure-password
+    volumes:
+      - mongodb_prod_data:/data/db
+    restart: always
+    networks:
+      - chitchat-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: chitchat-redis-prod
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass your-redis-password
+    volumes:
+      - redis_prod_data:/data
+    restart: always
+    networks:
+      - chitchat-network
+
+  server:
+    build:
+      context: ./apps/server
+      target: production
+    container_name: chitchat-server-prod
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./apps/server/.env.production
+    depends_on:
+      - mongodb
+      - redis
+    restart: always
+    networks:
+      - chitchat-network
+
+  web:
+    build:
+      context: ./apps/web
+      target: production
+    container_name: chitchat-web-prod
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    restart: always
+    networks:
+      - chitchat-network
+
+volumes:
+  mongodb_prod_data:
+  redis_prod_data:
+
+networks:
+  chitchat-network:
+    driver: bridge
+```
+
+**Deploy to production:**
+
+```bash
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### Docker Troubleshooting
+
+**Common Issues:**
+
+1. **Port conflicts:**
+
+   ```bash
+   # Check what's using the port
+   netstat -an | findstr :5173
+
+   # Kill process using port (Windows)
+   netstat -ano | findstr :5173
+   taskkill /PID <PID> /F
+   ```
+
+2. **Container won't start:**
+
+   ```bash
+   # Check container logs
+   docker-compose logs service-name
+
+   # Check container status
+   docker ps -a
+   ```
+
+3. **Database connection issues:**
+
+   ```bash
+   # Test MongoDB connection
+   docker exec -it chitchat-mongodb mongosh
+
+   # Test Redis connection
+   docker exec -it chitchat-redis redis-cli ping
+   ```
+
+4. **Clean reset:**
+   ```bash
+   # Remove all containers and volumes
+   docker-compose down -v
+   docker system prune -a
+   ```
+
+## �📱 Usage Guide
 
 ### Getting Started
 
@@ -447,31 +695,305 @@ git push origin main                  # Deploy to production
 - **Media Streams**: High-quality audio and video transmission
 - **Adaptive Quality**: Automatic quality adjustment based on connection
 
-## 🚀 Deployment
+## � Performance & Optimization
 
-### Frontend (Vercel)
+### Frontend Performance
 
-1. Connect your GitHub repository to Vercel
-2. Set build command: `cd apps/web && npm run build`
-3. Set output directory: `apps/web/dist`
-4. Configure environment variables in Vercel dashboard
+- **Code Splitting**: Dynamic imports for optimal bundle sizes
+- **Lazy Loading**: Components loaded on demand
+- **Image Optimization**: Cloudinary automatic format optimization
+- **Caching Strategy**: Redis-powered backend caching
+- **WebSocket Efficiency**: Optimized real-time communication
 
-### Backend (Your Choice)
+### Backend Performance
 
-- **Railway**: Easy deployment with automatic HTTPS
-- **Heroku**: Classic PaaS with add-ons for MongoDB and Redis
-- **DigitalOcean**: App Platform with managed databases
-- **AWS**: EC2 with RDS and ElastiCache
+- **Database Indexing**: Optimized MongoDB queries
+- **Redis Caching**: Fast session and data retrieval
+- **Connection Pooling**: Efficient database connections
+- **File Upload Streaming**: Large file handling without memory issues
+- **Rate Limiting**: API protection against abuse
+
+## 🔒 Security Features
+
+### Data Protection
+
+- **JWT Authentication**: Secure token-based authentication
+- **Password-less Auth**: OTP-based verification system
+- **Data Encryption**: Sensitive data encryption at rest
+- **Input Validation**: Comprehensive request validation
+- **CORS Protection**: Cross-origin request security
+
+### Privacy Controls
+
+- **Contact Blocking**: User-controlled contact management
+- **Media Privacy**: Secure file upload and access
+- **Session Management**: Automatic token refresh and logout
+- **Environment Isolation**: Development/production separation
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**1. Redis Connection Error**
+
+```bash
+# Check if Redis is running
+docker ps | grep redis
+
+# Start Redis if stopped
+docker start local-redis
+
+# Or run a new Redis container
+docker run --name local-redis -d -p 6379:6379 redis
+```
+
+**2. MongoDB Connection Issues**
+
+```bash
+# Check MongoDB status (if running locally)
+mongosh --eval "db.adminCommand('ismaster')"
+
+# For MongoDB Atlas, verify connection string in .env
+```
+
+**3. OTP Not Received**
+
+- **Development**: Check console logs for OTP
+- **Production**: Verify Twilio credentials and phone number format
+
+**4. File Upload Errors**
+
+- Check Cloudinary credentials in `.env`
+- Verify file size limits (max 50MB)
+- Ensure proper file formats (images: JPG, PNG, GIF; videos: MP4, WebM)
+
+**5. Video Call Issues**
+
+- Allow camera/microphone permissions in browser
+- Check for browser compatibility (WebRTC support)
+- Verify STUN/TURN server configuration
+
+### Debug Mode
+
+Enable detailed logging:
+
+**Backend (.env):**
+
+```env
+NODE_ENV=development
+DEBUG=socket.io*,express:*
+```
+
+**Frontend (browser console):**
+
+```javascript
+localStorage.setItem("debug", "socket.io-client:*");
+```
+
+## �🚀 Deployment
+
+### Frontend (Vercel - Recommended)
+
+1. **Connect Repository**: Link your GitHub repo to Vercel
+2. **Build Settings**:
+   - Build Command: `cd apps/web && npm run build`
+   - Output Directory: `apps/web/dist`
+   - Install Command: `npm install`
+3. **Environment Variables**:
+   ```env
+   VITE_BE_URL=https://your-backend-url.com
+   ```
+4. **Deploy**: Automatic deployment on push to main branch
+
+### Backend Deployment Options
+
+**Option 1: Railway (Recommended)**
+
+1. Connect GitHub repository
+2. Select `apps/server` as root directory
+3. Add environment variables
+4. Deploy with automatic HTTPS
+
+**Option 2: Render**
+
+1. Create new Web Service
+2. Connect repository
+3. Set build command: `cd apps/server && npm install && npm run build`
+4. Set start command: `cd apps/server && npm start`
+
+**Option 3: DigitalOcean App Platform**
+
+1. Create new app from GitHub
+2. Configure build and run commands
+3. Add managed database and Redis
+
+### Production Environment Variables
+
+**Backend (.env.production):**
+
+```env
+# Database (MongoDB Atlas recommended)
+MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/chitchat
+
+# Redis (Upstash or Redis Labs)
+REDIS_HOST=your-redis-host.com
+REDIS_PORT=6379
+REDIS_PASSWORD=your-redis-password
+
+# JWT Secrets (generate strong secrets)
+JWT_SECRET=your-super-secure-jwt-secret-min-32-chars
+REFRESH_SECRET=your-super-secure-refresh-secret-min-32-chars
+
+# Cloudinary (required for media)
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+
+# Twilio (required for SMS)
+TWILIO_ACCOUNT_SID=your-account-sid
+TWILIO_AUTH_TOKEN=your-auth-token
+TWILIO_PHONE_NUMBER=your-twilio-number
+
+# Google Gemini AI
+GEMINI_API_KEY=your-gemini-api-key
+
+# Production settings
+NODE_ENV=production
+PORT=8000
+FRONTEND_URL=https://your-frontend-domain.com
+```
+
+### Database Setup (MongoDB Atlas)
+
+1. **Create Cluster**: Sign up at MongoDB Atlas
+2. **Create Database**: Name it `chitchat`
+3. **Network Access**: Add your server IP or 0.0.0.0/0 for development
+4. **Database User**: Create user with read/write permissions
+5. **Connection String**: Copy and update MONGO_URI in .env
+
+### Redis Setup (Upstash)
+
+1. **Create Database**: Sign up at Upstash
+2. **Copy Credentials**: Get host, port, and password
+3. **Update Environment**: Add Redis credentials to .env
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+We welcome contributions from developers of all skill levels! Here's how you can help make ChitChat better:
 
-## � Contributors
+### Ways to Contribute
+
+- 🐛 **Bug Reports**: Found a bug? Open an issue with detailed reproduction steps
+- ✨ **Feature Requests**: Have an idea? We'd love to hear it!
+- 📝 **Documentation**: Help improve our docs, add examples, or fix typos
+- 💻 **Code Contributions**: Submit bug fixes, features, or improvements
+- 🎨 **Design**: UI/UX improvements and accessibility enhancements
+- 🧪 **Testing**: Add tests, improve coverage, or test new features
+
+### Development Process
+
+1. **Fork & Clone**:
+
+   ```bash
+   git clone https://github.com/your-username/chitchat.git
+   cd chitchat
+   ```
+
+2. **Create Feature Branch**:
+
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+
+3. **Install Dependencies**:
+
+   ```bash
+   npm install
+   ```
+
+4. **Make Changes**: Follow our coding standards and test your changes
+
+5. **Commit with Convention**:
+
+   ```bash
+   git commit -m "feat: add amazing feature"
+   ```
+
+   **Commit Types:**
+
+   - `feat:` New features
+   - `fix:` Bug fixes
+   - `docs:` Documentation changes
+   - `style:` Code style changes
+   - `refactor:` Code refactoring
+   - `test:` Test additions/changes
+   - `chore:` Maintenance tasks
+
+6. **Push & Create PR**:
+   ```bash
+   git push origin feature/amazing-feature
+   ```
+
+### Code Standards
+
+- **TypeScript**: Write type-safe code with proper interfaces
+- **ESLint**: Follow the configured linting rules
+- **Prettier**: Code is automatically formatted
+- **Testing**: Add tests for new features when possible
+- **Documentation**: Update README and add inline comments
+
+### Good First Issues
+
+New to the project? Look for issues labeled [`good first issue`](https://github.com/pandarudra/chitchat/labels/good%20first%20issue):
+
+- Documentation improvements
+- UI/UX enhancements
+- Bug fixes
+- Feature implementations
+- Test coverage improvements
+
+## 🚀 Roadmap
+
+### Version 2.0 (Coming Soon)
+
+- [ ] **Group Chats**: Multi-user conversations with admin controls
+- [ ] **Message Reactions**: Emoji reactions to messages
+- [ ] **File Sharing**: Send documents, PDFs, and other file types
+- [ ] **Voice Calls**: Audio-only calling with improved quality
+- [ ] **Screen Sharing**: Share your screen during video calls
+- [ ] **Message Threads**: Reply to specific messages
+- [ ] **Dark Mode**: Full dark theme support
+- [ ] **Push Notifications**: Native mobile notifications
+- [ ] **Message Encryption**: End-to-end encryption for messages
+
+### Version 2.1 (Future)
+
+- [ ] **Mobile App**: React Native mobile application
+- [ ] **Desktop App**: Electron desktop application
+- [ ] **Message Scheduling**: Send messages at specific times
+- [ ] **Auto-translate**: Real-time message translation
+- [ ] **Advanced AI**: More sophisticated AI responses and features
+- [ ] **Video Filters**: Fun filters and effects for video calls
+- [ ] **Chatbots**: Integrate custom chatbots
+- [ ] **API for Developers**: Public API for third-party integrations
+
+### Long-term Vision
+
+- [ ] **Enterprise Features**: Team management, admin panels
+- [ ] **Workspace Integration**: Slack/Discord-like features
+- [ ] **Advanced Analytics**: Usage statistics and insights
+- [ ] **Custom Themes**: User-customizable UI themes
+- [ ] **Plugin System**: Extensible architecture for community plugins
+
+## 📊 Project Stats
+
+![GitHub repo size](https://img.shields.io/github/repo-size/pandarudra/chitchat)
+![GitHub code size](https://img.shields.io/github/languages/code-size/pandarudra/chitchat)
+![GitHub top language](https://img.shields.io/github/languages/top/pandarudra/chitchat)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/pandarudra/chitchat)
+![GitHub last commit](https://img.shields.io/github/last-commit/pandarudra/chitchat)
+
+## 👨‍💻 Contributors
 
 We thank the following people for their contributions to ChitChat:
 
@@ -524,9 +1046,23 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
+<div align="center">
+
+**🌟 Star this project if you found it helpful! 🌟**
+
 **Built with ❤️ by [pandarudra](https://github.com/pandarudra)**
 
 [![GitHub Stars](https://img.shields.io/github/stars/pandarudra/chitchat?style=social)](https://github.com/pandarudra/chitchat)
 [![GitHub Forks](https://img.shields.io/github/forks/pandarudra/chitchat?style=social)](https://github.com/pandarudra/chitchat/fork)
 [![GitHub Issues](https://img.shields.io/github/issues/pandarudra/chitchat)](https://github.com/pandarudra/chitchat/issues)
 [![GitHub License](https://img.shields.io/github/license/pandarudra/chitchat)](https://github.com/pandarudra/chitchat/blob/main/LICENSE)
+
+### 📬 Connect with the Author
+
+[![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/pandarudra)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/pandarudra)
+[![Twitter](https://img.shields.io/badge/Twitter-1DA1F2?style=for-the-badge&logo=twitter&logoColor=white)](https://twitter.com/pandarudra)
+
+_Made with TypeScript, React, and lots of coffee ☕_
+
+</div>
