@@ -43,6 +43,7 @@
     "@types/express": "^5.0.2",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.15.27",
-    "@types/nodemailer": "^6.4.17"
+    "@types/nodemailer": "^6.4.17",
+    "typescript": "5.8.2"
   }
 }
