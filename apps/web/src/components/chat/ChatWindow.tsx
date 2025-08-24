@@ -20,7 +20,6 @@ export function ChatWindow() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    console.log(activeChat);
   }, [activeChat]);
 
   const handleBackClick = () => {
@@ -41,7 +40,6 @@ export function ChatWindow() {
   };
 
   const handleBlockContact = () => {
-    // TODO: Implement block contact functionality
     console.log("Block contact");
     setIsContactInfoOpen(false);
   };

@@ -24,7 +24,7 @@ export function Sidebar() {
   return (
     <div className="w-full lg:w-80 bg-white border-r border-gray-200 flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 bg-green-500 text-white">
+      <div className="p-4 border-b border-gray-200 bg-green-600 text-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             {user?.avatarUrl ? (
@@ -81,7 +81,7 @@ export function Sidebar() {
             }
             className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 transition-colors ${
               activeTab === tab.id
-                ? "bg-green-50 text-green-600 border-b-2 border-green-500"
+                ? "bg-green-50 text-[#588157] border-b-2 border-green-500"
                 : "text-gray-600 hover:bg-gray-50"
             }`}
           >

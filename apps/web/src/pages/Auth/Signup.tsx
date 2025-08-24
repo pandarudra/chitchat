@@ -88,7 +88,7 @@ export function Signup() {
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <div className="mx-auto h-20 w-20 bg-green-500 rounded-full flex items-center justify-center">
+          <div className="mx-auto h-20 w-20 bg-[#344e41] rounded-full flex items-center justify-center">
             <User className="h-10 w-10 text-white" />
           </div>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
