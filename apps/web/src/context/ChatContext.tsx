@@ -1420,7 +1420,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // Socket.IO connection effect - only depends on authentication
   useEffect(() => {
     if (isAuthenticated && user) {
-      console.log("Connecting to socket.io...", user);
       const be_url = import.meta.env.VITE_BE_URL;
 
       // Clean up existing connection
@@ -1442,8 +1441,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       // Connection events
       socket.on("connect", () => {
-        console.log("✅ Socket connected successfully with ID:", socket.id);
-
         setIsConnected(true);
         setConnectionError(null);
       });
@@ -1543,7 +1540,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const fetchChats = useCallback(async () => {
     try {
       const res = await api.get("/api/user/contacts");
-      console.log("📞 Fetching contacts:", res.data.contacts);
 
       // Transform contacts to chat objects
       const chatsFromContacts: Chat[] = res.data.contacts.map(
@@ -1588,7 +1584,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         })
       );
 
-      console.log("Transformed chats from contacts:", chatsFromContacts);
       dispatch({ type: "SET_CHATS", payload: chatsFromContacts });
 
       // Fetch last message for each chat to populate previews
@@ -1637,7 +1632,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         })
       );
 
-      console.log("Chats with last messages:", chatsWithLastMessages);
       dispatch({ type: "SET_CHATS", payload: chatsWithLastMessages });
 
       // Also set contacts separately for status updates
@@ -1666,8 +1660,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     try {
       // Fetch previous messages for this chat
       const res = await api.get(`/api/chats/${chat.id}/messages`);
-      console.log("📜 Fetched chat history:", res.data.messages);
-
       // Map backend messages to frontend Message type
       const mappedMessages: Message[] = res.data.messages.map((msg: any) => ({
         id: msg._id,
@@ -1683,13 +1675,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         duration: msg.duration || 0, // Add duration field if available
       }));
 
-      console.log("Mapped messages:", mappedMessages);
-
       // Update the chat's messages in state and set activeChat to the updated chat object
       const updatedChats = stateRef.current.chats.map((c) =>
         c.id === chat.id ? { ...c, messages: mappedMessages } : c
       );
-      console.log("Updated chats:", updatedChats);
+
       const updatedActiveChat =
         updatedChats.find((c) => c.id === chat.id) || chat;
 
