@@ -11,9 +11,22 @@ import {
   Play,
 } from "lucide-react";
 import { Button } from "../../components/ui/Button";
+import { useEffect } from "react";
+import { useAuth } from "../../context/AuthContext";
 
 export const Landing = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate("/chat");
+    }
+  }, [navigate]);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   const features = [
     {
