@@ -16,6 +16,7 @@ import callRouter from "./routes/call.routes";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 8000;
+const FE = process.env.FE_URL as string;
 
 async function init() {
   app.use(
@@ -25,6 +26,7 @@ async function init() {
         "http://localhost:5173",
         "http://localhost:5174",
         "https://chitchat-web-chi.vercel.app",
+        FE,
       ],
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
