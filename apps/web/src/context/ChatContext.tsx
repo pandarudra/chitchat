@@ -22,6 +22,7 @@ import api from "../lib/api";
 interface ChatContextType extends ChatState {
   setActiveChat: (chat: Chat | null) => void;
   sendMessage: (content: string, type?: Message["type"]) => void;
+  sendAIMessage: (content: string) => Promise<void>;
   sendAudioMessage: (audioBlob: Blob, duration: number) => Promise<void>;
   sendMediaMessage: (file: File, mediaType: "image" | "video") => Promise<void>;
   markAsRead: (chatId: string) => void;
@@ -118,7 +119,6 @@ type ChatAction =
   | { type: "SET_CALLER"; payload: User }
   | { type: "SET_CALLEE"; payload: User }
   | { type: "RESET_CALL" }
-  // | { type: "SET_CALL_HISTORY"; payload: CallHistory[] }
   | {
       type: "SET_CALL";
       payload: {
@@ -447,9 +447,6 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
         },
       };
 
-    // case "SET_CALL_HISTORY":
-    //   return { ...state, callHistory: action.payload };
-
     default:
       return state;
   }
@@ -497,15 +494,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     userRef.current = user;
   }, [user]);
-
-  // WebRTC configuration
-  // const configuration: RTCConfiguration = {
-  //   iceServers: [
-  //     { urls: "stun:stun.l.google.com:19302" },
-  //     { urls: "stun:stun1.l.google.com:19302" }, // Add backup STUN servers
-  //     // Add TURN server if needed for better connectivity
-  //   ],
-  // };
 
   // Cleanup call resources
   const cleanupCall = useCallback(() => {
@@ -1432,7 +1420,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // Socket.IO connection effect - only depends on authentication
   useEffect(() => {
     if (isAuthenticated && user) {
-      console.log("Connecting to socket.io...", user);
       const be_url = import.meta.env.VITE_BE_URL;
 
       // Clean up existing connection
@@ -1454,8 +1441,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       // Connection events
       socket.on("connect", () => {
-        console.log("✅ Socket connected successfully with ID:", socket.id);
-
         setIsConnected(true);
         setConnectionError(null);
       });
@@ -1555,7 +1540,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const fetchChats = useCallback(async () => {
     try {
       const res = await api.get("/api/user/contacts");
-      console.log("📞 Fetching contacts:", res.data.contacts);
 
       // Transform contacts to chat objects
       const chatsFromContacts: Chat[] = res.data.contacts.map(
@@ -1573,6 +1557,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 : undefined,
               isBlocked: contact.blocked, // Include isBlocked status
               isPinned: contact.pinned, // Include isPinned status
+              isAI: contact.isAI || false, // Include isAI flag
             },
             // Add current user to participants
             ...(userRef.current
@@ -1585,19 +1570,20 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     isOnline: userRef.current.isOnline || false,
                     isBlocked: contact.blocked,
                     isPinned: contact.pinned,
+                    isAI: false, // Current user is never AI
                   },
                 ]
               : []),
           ],
           messages: [], // Start with empty messages
           isGroup: false,
+          isAI: contact.isAI || false, // Mark chat as AI if contact is AI
           unreadCount: 0,
           isPinned: contact.pinned,
           isMuted: false,
         })
       );
 
-      console.log("Transformed chats from contacts:", chatsFromContacts);
       dispatch({ type: "SET_CHATS", payload: chatsFromContacts });
 
       // Fetch last message for each chat to populate previews
@@ -1646,7 +1632,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         })
       );
 
-      console.log("Chats with last messages:", chatsWithLastMessages);
       dispatch({ type: "SET_CHATS", payload: chatsWithLastMessages });
 
       // Also set contacts separately for status updates
@@ -1675,8 +1660,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     try {
       // Fetch previous messages for this chat
       const res = await api.get(`/api/chats/${chat.id}/messages`);
-      console.log("📜 Fetched chat history:", res.data.messages);
-
       // Map backend messages to frontend Message type
       const mappedMessages: Message[] = res.data.messages.map((msg: any) => ({
         id: msg._id,
@@ -1692,13 +1675,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         duration: msg.duration || 0, // Add duration field if available
       }));
 
-      console.log("Mapped messages:", mappedMessages);
-
       // Update the chat's messages in state and set activeChat to the updated chat object
       const updatedChats = stateRef.current.chats.map((c) =>
         c.id === chat.id ? { ...c, messages: mappedMessages } : c
       );
-      console.log("Updated chats:", updatedChats);
+
       const updatedActiveChat =
         updatedChats.find((c) => c.id === chat.id) || chat;
 
@@ -1769,6 +1750,91 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     },
     [isConnected]
   );
+
+  const sendAIMessage = useCallback(async (content: string) => {
+    const currentState = stateRef.current;
+    const currentUser = userRef.current;
+
+    if (!currentState.activeChat || !currentUser) {
+      console.warn("Cannot send AI message: missing requirements");
+      return;
+    }
+
+    // Check if current chat is an AI chat
+    const isAIChat =
+      currentState.activeChat.isAI ||
+      currentState.activeChat.participants.some((p) => p.isAI);
+
+    if (!isAIChat) {
+      console.warn("Cannot send AI message: not an AI chat");
+      return;
+    }
+
+    try {
+      // Create user message locally first
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        senderId: currentUser.id,
+        receiverId: currentState.activeChat.id,
+        content,
+        timestamp: new Date(),
+        type: "text",
+        status: "sent",
+        isAIMessage: false,
+      };
+
+      // Add user message to local state
+      dispatch({ type: "SEND_MESSAGE", payload: userMessage });
+
+      // Send to AI service
+      const response = await api.post("/api/ai/chat", {
+        message: content,
+        botId: currentState.activeChat.id,
+      });
+
+      if (response.data.success) {
+        // Create AI response message
+        const aiMessage: Message = {
+          id: response.data.data.aiResponse.id,
+          senderId: response.data.data.aiResponse.from,
+          receiverId: currentUser.id,
+          content: response.data.data.aiResponse.content,
+          timestamp: new Date(response.data.data.aiResponse.timestamp),
+          type: "text",
+          status: "delivered",
+          isAIMessage: true,
+        };
+
+        // Add AI response to local state
+        dispatch({ type: "RECEIVE_MESSAGE", payload: aiMessage });
+
+        // Mark user's message as delivered
+        setTimeout(() => {
+          dispatch({
+            type: "UPDATE_MESSAGE_STATUS",
+            payload: { messageId: userMessage.id, status: "delivered" },
+          });
+        }, 500);
+      }
+    } catch (error) {
+      console.error("Failed to send AI message:", error);
+
+      // Show error message from AI
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        senderId: currentState.activeChat.id,
+        receiverId: currentUser.id,
+        content:
+          "I'm sorry, I'm experiencing some technical difficulties. Please try again in a moment.",
+        timestamp: new Date(),
+        type: "text",
+        status: "delivered",
+        isAIMessage: true,
+      };
+
+      dispatch({ type: "RECEIVE_MESSAGE", payload: errorMessage });
+    }
+  }, []);
 
   const sendAudioMessage = useCallback(
     async (audioBlob: Blob, duration: number) => {
@@ -2051,7 +2117,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const sendContactRequest = useCallback((userId: string) => {
-    // TODO: Implement actual API call
     console.log("Sending contact request to:", userId);
   }, []);
 
@@ -2069,6 +2134,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         ...state,
         setActiveChat,
         sendMessage,
+        sendAIMessage,
         sendAudioMessage,
         sendMediaMessage,
         markAsRead,

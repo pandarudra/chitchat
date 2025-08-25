@@ -154,7 +154,7 @@ function CallModal() {
         const audioElements = [
           remoteVideoRef.current,
           hiddenRemoteAudioRef.current,
-          remoteAudioRef.current
+          remoteAudioRef.current,
         ].filter(Boolean);
 
         for (const element of audioElements) {
@@ -602,10 +602,10 @@ function CallModal() {
         ref={hiddenRemoteAudioRef}
         autoPlay
         playsInline
-        style={{ display: 'none' }}
+        style={{ display: "none" }}
         muted={false}
       />
-      
+
       <div
         className={`bg-gray-900 text-white rounded-xl shadow-2xl overflow-hidden ${isFullscreen ? "w-full h-full rounded-none" : "w-full max-w-4xl h-auto"}`}
       >
@@ -778,21 +778,19 @@ function CallModal() {
                       muted={false}
                       className="w-full h-full object-cover bg-gray-800"
                     />
+                  ) : isVideoEnabled && call.localStream ? (
+                    <video
+                      ref={localVideoRef}
+                      autoPlay
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover bg-gray-800"
+                    />
                   ) : (
-                    isVideoEnabled && call.localStream ? (
-                      <video
-                        ref={localVideoRef}
-                        autoPlay
-                        muted
-                        playsInline
-                        className="w-full h-full object-cover bg-gray-800"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-700 flex items-center justify-center">
-                        <VideoOff className="w-12 h-12 text-gray-400" />
-                        <p className="ml-3 text-gray-400">Camera is off</p>
-                      </div>
-                    )
+                    <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+                      <VideoOff className="w-12 h-12 text-gray-400" />
+                      <p className="ml-3 text-gray-400">Camera is off</p>
+                    </div>
                   )}
                 </div>
 
@@ -845,21 +843,19 @@ function CallModal() {
                         <VideoOff className="w-4 h-4 text-gray-400" />
                       </div>
                     )
+                  ) : /* Remote video as PiP */
+                  call.remoteStream ? (
+                    <video
+                      ref={remoteVideoRef}
+                      autoPlay
+                      playsInline
+                      muted={false}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
-                    /* Remote video as PiP */
-                    call.remoteStream ? (
-                      <video
-                        ref={remoteVideoRef}
-                        autoPlay
-                        playsInline
-                        muted={false}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-700 flex items-center justify-center">
-                        <User className="w-4 h-4 text-gray-400" />
-                      </div>
-                    )
+                    <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+                      <User className="w-4 h-4 text-gray-400" />
+                    </div>
                   )}
 
                   {/* Resize handle */}

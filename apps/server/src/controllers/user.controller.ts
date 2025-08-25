@@ -6,6 +6,7 @@ import path from "path";
 import fs from "fs";
 import { v2 as cloudinary } from "cloudinary";
 import dotenv from "dotenv";
+import { AIService } from "../services/ai.service";
 
 dotenv.config();
 
@@ -103,13 +104,10 @@ export const onGetContacts = async (
       return res.status(404).json({ error: "User not found." });
     }
 
-    if (user.contacts.length === 0) {
-      return res.status(200).json({
-        message: "No contacts found.",
-        contacts: [],
-      });
-    }
+    // Get the default AI bot
+    const aiBot = await AIService.getDefaultAIBot();
 
+    // Process regular contacts
     const contact_obj = await Promise.all(
       user.contacts.map(async (contact) => {
         const contactUser = await UserModel.findById(contact.user);
@@ -121,15 +119,35 @@ export const onGetContacts = async (
           isOnline: contactUser?.isOnline || false,
           lastSeen: contactUser?.lastSeen,
           displayName: contactUser?.displayName,
+          status: contactUser?.status,
           blocked: user.blockedContacts?.includes(contactUser?._id as any),
           pinned: user.pinnedContacts?.includes(contactUser?._id as any),
+          isAI: false,
         };
       })
     );
 
+    // Add AI bot as the first contact (default chat)
+    const aiContact = {
+      user: (aiBot._id as any).toString(), // Use the AI bot user's ObjectId
+      name: aiBot.displayName,
+      phonenumber: aiBot.phoneNumber,
+      avatarUrl: aiBot.avatarUrl,
+      isOnline: true, // AI is always online
+      lastSeen: new Date(),
+      displayName: aiBot.displayName,
+      status: aiBot.status,
+      blocked: false,
+      pinned: true, // Pin AI bot by default
+      isAI: true,
+    };
+
+    // Combine AI bot with regular contacts, AI bot first
+    const allContacts = [aiContact, ...contact_obj];
+
     return res.status(200).json({
       message: "Contacts retrieved successfully.",
-      contacts: contact_obj,
+      contacts: allContacts,
     });
   } catch (error) {
     console.error("Error getting contacts:", error);

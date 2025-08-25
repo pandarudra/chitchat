@@ -12,6 +12,9 @@ import chatRouter from "./routes/chat.routes";
 import OtpRouter from "./routes/otp.routes";
 import uploadRouter from "./routes/upload.routes";
 import callRouter from "./routes/call.routes";
+import aiRouter from "./routes/ai.routes";
+import { AIService } from "./services/ai.service";
+import { GeminiService } from "./services/gemini.service";
 
 dotenv.config();
 const app = express();
@@ -54,6 +57,14 @@ async function init() {
     })
   );
 
+  // Initialize database connection
+  await connectMongo();
+
+  // Initialize AI services
+  console.log("🤖 Initializing AI services...");
+  GeminiService.initialize();
+  await AIService.createDefaultAIBot();
+
   // Initialize routes
   app.use("/api/auth", authRouter);
   app.use("/api/user", userRouter);
@@ -61,6 +72,7 @@ async function init() {
   app.use("/api/otp", OtpRouter);
   app.use("/api/upload", uploadRouter);
   app.use("/api/calls", callRouter);
+  app.use("/api/ai", aiRouter);
 
   const httpServer = http.createServer(app);
 
@@ -70,7 +82,7 @@ async function init() {
   httpServer.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
   });
-  connectMongo();
+
   socketIOservice.initListeners();
 }
 
