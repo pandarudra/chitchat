@@ -45,9 +45,9 @@ export function MessageBubble({
       case "sent":
         return <Check className="h-4 w-4 text-gray-400" />;
       case "delivered":
-        return <CheckCheck className="h-4 w-4 text-gray-400" />;
+        return <CheckCheck className="h-4 w-4 text-primary-foreground/50" />;
       case "read":
-        return <CheckCheck className="h-4 w-4 text-blue-500" />;
+        return <CheckCheck className="h-4 w-4 text-sky-300" />;
       default:
         return null;
     }
@@ -73,12 +73,12 @@ export function MessageBubble({
         )}
 
         <div
-          className={`px-4 py-2 rounded-lg ${
+          className={`px-4 py-2 rounded-2xl ${
             isOwn
-              ? "bg-green-600 text-white"
+              ? "bg-primary text-primary-foreground shadow-sm rounded-tr-none"
               : ifblocked
                 ? "hidden"
-                : "bg-white text-gray-800"
+                : "bg-secondary text-secondary-foreground border border-border/40 shadow-xs rounded-tl-none"
           }`}
         >
           {message.type === "text" ? (
@@ -193,10 +193,10 @@ export function MessageBubble({
 
           <div
             className={`flex items-center justify-end space-x-1 mt-1 ${
-              isOwn ? "text-green-100" : "text-gray-500"
+              isOwn ? "text-primary-foreground/70" : "text-muted-foreground/80"
             }`}
           >
-            <span className="text-xs">{messageTime}</span>
+            <span className="text-[10px] font-medium">{messageTime}</span>
             {getStatusIcon()}
           </div>
         </div>

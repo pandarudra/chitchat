@@ -154,9 +154,9 @@ export function MessageInput() {
 
   if (isBlocked) {
     return (
-      <div className="border-t border-gray-200 p-4 bg-gray-50">
-        <div className="text-center text-gray-500">
-          <p className="text-sm">You cannot send messages to this contact.</p>
+      <div className="border-t border-border p-4 bg-muted/30 rounded-2xl">
+        <div className="text-center text-muted-foreground">
+          <p className="text-sm font-semibold">You cannot send messages to this contact.</p>
           <p className="text-xs">This contact has been blocked.</p>
         </div>
       </div>
@@ -164,14 +164,14 @@ export function MessageInput() {
   }
 
   return (
-    <div className="border-t border-gray-200 p-2 sm:p-4 bg-white">
+    <div className="bg-transparent">
       <form onSubmit={handleSubmit} className="flex items-end space-x-2">
         <div className="flex-1 relative min-w-0">
-          <div className="flex items-center space-x-2 bg-gray-50 rounded-full px-3 sm:px-4 py-2">
+          <div className="flex items-center space-x-2 bg-muted border border-border/50 rounded-2xl px-3 sm:px-4 py-2.5 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
             <button
               type="button"
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="text-gray-500 hover:text-gray-700 transition-colors flex-shrink-0"
+              className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 cursor-pointer"
             >
               <Smile className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
@@ -182,13 +182,13 @@ export function MessageInput() {
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder={getPlaceholderText()}
-              className="flex-1 bg-transparent border-none outline-none placeholder-gray-500 text-sm sm:text-base min-w-0"
+              className="flex-1 bg-transparent border-none outline-none placeholder-muted-foreground text-foreground text-sm sm:text-base min-w-0"
             />
 
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="text-gray-500 hover:text-gray-700 transition-colors flex-shrink-0"
+              className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 cursor-pointer"
             >
               <Paperclip className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
@@ -217,7 +217,7 @@ export function MessageInput() {
           {message.trim() ? (
             <button
               type="submit"
-              className="bg-green-500 text-white p-2 rounded-full hover:bg-green-600 transition-colors"
+              className="bg-primary text-primary-foreground p-3 rounded-2xl hover:bg-primary-600 hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer flex items-center justify-center"
             >
               <Send className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>

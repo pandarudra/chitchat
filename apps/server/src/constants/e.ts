@@ -1,0 +1,23 @@
+import dotenv from "dotenv";
+dotenv.config();
+
+export const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
+export const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/chitchat";
+export const REDIS_HOST = process.env.REDIS_HOST || "127.0.0.1";
+export const REDIS_PORT = process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6379;
+export const REDIS_USERNAME = process.env.REDIS_USERNAME || "";
+export const REDIS_PASSWORD = process.env.REDIS_PASSWORD || "";
+export const JWT_SECRET = process.env.JWT_SECRET || "jwtsecret";
+export const REFRESH_SECRET = process.env.REFRESH_SECRET || "refreshsecret";
+export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+export const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || "";
+export const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || "";
+export const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || "";
+export const FE_URL = process.env.FE_URL || "http://localhost:5173";
+export const NODE_ENV = process.env.NODE_ENV || "development";
+export const IS_PRODUCTION = NODE_ENV === "production";
+export const IS_DEV = NODE_ENV !== "production";
+export const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+export const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || "";
+export const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || "";
+export const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER || "";

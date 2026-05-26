@@ -7,49 +7,53 @@ import { PublicRoute } from "./components/auth/Public";
 import { ChatBoard } from "./pages/chat/ChatBoard";
 import { PrivateRoute } from "./components/auth/Private";
 import { ChatProvider } from "./context/ChatContext";
+import { ThemeProvider } from "./context/ThemeProvider";
 
 export const App = () => {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <PublicRoute>
-                <Landing />
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/signup"
-            element={
-              <PublicRoute restricted>
-                <Signup />
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/login"
-            element={
-              <PublicRoute restricted>
-                <Login />
-              </PublicRoute>
-            }
-          />
+    <ThemeProvider defaultTheme="system" storageKey="chitchat-theme">
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <PublicRoute>
+                  <Landing />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/signup"
+              element={
+                <PublicRoute restricted>
+                  <Signup />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/login"
+              element={
+                <PublicRoute restricted>
+                  <Login />
+                </PublicRoute>
+              }
+            />
 
-          <Route
-            path="/chat"
-            element={
-              <PrivateRoute>
-                <ChatProvider>
-                  <ChatBoard />
-                </ChatProvider>
-              </PrivateRoute>
-            }
-          />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+            <Route
+              path="/chat"
+              element={
+                <PrivateRoute>
+                  <ChatProvider>
+                    <ChatBoard />
+                  </ChatProvider>
+                </PrivateRoute>
+              }
+            />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </ThemeProvider>
   );
 };
+

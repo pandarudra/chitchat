@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from "mongoose";
 
 export interface IUser extends Document {
-  phoneNumber: string;
+  email: string;
   displayName: string;
   avatarUrl?: string;
   status?: string;
@@ -10,7 +10,7 @@ export interface IUser extends Document {
   contacts: {
     user: mongoose.Types.ObjectId;
     name: string;
-    phonenumber: string;
+    email: string;
   }[];
   blockedContacts?: mongoose.Types.ObjectId[];
   pinnedContacts?: mongoose.Types.ObjectId[];
@@ -18,7 +18,7 @@ export interface IUser extends Document {
 
 const userSchema = new Schema<IUser>(
   {
-    phoneNumber: { type: String, required: true, unique: true },
+    email: { type: String, required: true, unique: true },
     displayName: { type: String, required: true },
     avatarUrl: { type: String },
     status: { type: String, default: "Hey there! I am using ChitChat." },
@@ -35,7 +35,7 @@ const userSchema = new Schema<IUser>(
           type: String,
           required: true,
         },
-        phonenumber: {
+        email: {
           type: String,
           required: true,
         },

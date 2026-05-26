@@ -15,9 +15,10 @@ export const COUNTRY_CODES = [
   { name: "Bangladesh", dial_code: "+880", code: "BD", flag: "🇧🇩" },
 ];
 
+import { VITE_BE_URL } from "../constants/e";
+
 // Get the backend URL from environment variables
-export const API_BASE_URL =
-  import.meta.env.VITE_BE_URL || "http://localhost:8000";
+export const API_BASE_URL = VITE_BE_URL;
 
 // Utility function to get full avatar URL
 export const getAvatarUrl = (avatarPath?: string): string => {

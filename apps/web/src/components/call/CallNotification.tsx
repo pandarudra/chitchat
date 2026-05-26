@@ -1,55 +1,15 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Phone, PhoneOff, Video, User } from "lucide-react";
 import { useChat } from "../../context/ChatContext";
 import { useAuth } from "../../context/AuthContext";
 import { getAvatarUrl } from "../../utils/constants";
+import { useRingtone } from "../../hooks/useRingtone";
 
 function CallNotification() {
   const { call, declineCall, acceptCall } = useChat();
   const { user } = useAuth();
   const [isVisible, setIsVisible] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  // Initialize audio on first user interaction
-  useEffect(() => {
-    const initializeAudio = () => {
-      const audio = audioRef.current;
-      if (audio) {
-        // Load the audio file
-        audio.load();
-        // Try a silent play/pause to initialize
-        audio.volume = 0;
-        audio
-          .play()
-          .then(() => {
-            audio.pause();
-            audio.volume = 0.8;
-            audio.currentTime = 0;
-          })
-          .catch(() => {
-            // Silent fail for initialization
-          });
-      }
-    };
-
-    // Initialize on user interaction
-    const handleUserInteraction = () => {
-      initializeAudio();
-      document.removeEventListener("click", handleUserInteraction);
-      document.removeEventListener("keydown", handleUserInteraction);
-      document.removeEventListener("touchstart", handleUserInteraction);
-    };
-
-    document.addEventListener("click", handleUserInteraction);
-    document.addEventListener("keydown", handleUserInteraction);
-    document.addEventListener("touchstart", handleUserInteraction);
-
-    return () => {
-      document.removeEventListener("click", handleUserInteraction);
-      document.removeEventListener("keydown", handleUserInteraction);
-      document.removeEventListener("touchstart", handleUserInteraction);
-    };
-  }, []);
+  const { audioRef, stopRingtone } = useRingtone(call.status === "ringing");
 
   // Request notification permission on component mount
   useEffect(() => {
@@ -63,7 +23,6 @@ function CallNotification() {
     if (call.status === "ringing") {
       setIsVisible(true);
 
-      // Get other user info for notifications
       const otherUser =
         call.caller?.id === user?.id ? call.callee : call.caller;
       const callerName = otherUser?.displayName || "Unknown";
@@ -82,96 +41,31 @@ function CallNotification() {
           }
         );
 
-        // Handle notification clicks
         notification.onclick = () => {
           window.focus();
           notification.close();
-          if (call.callId) {
-            acceptCall(call.callId);
-          }
+          if (call.callId) acceptCall(call.callId);
         };
 
-        // Clean up notification when call ends
-        const cleanupNotification = () => {
-          notification.close();
-        };
-
-        // Store for cleanup
-        notification.onclose = cleanupNotification;
-      }
-
-      // Store audio reference for cleanup
-      const audio = audioRef.current;
-
-      // Play ringing sound with multiple attempts
-      if (audio) {
-        audio.loop = true;
-        audio.volume = 0.8; // Increase volume to 80%
-
-        // Reset audio to beginning
-        audio.currentTime = 0;
-
-        // Multiple attempts to play audio
-        const attemptPlay = async () => {
-          try {
-            await audio.play();
-            console.log("Ringtone started successfully");
-          } catch (error: unknown) {
-            console.log("Could not play ring sound:", error);
-
-            // Try playing after user interaction
-            const playOnInteraction = () => {
-              audio.play().catch(console.log);
-              document.removeEventListener("click", playOnInteraction);
-              document.removeEventListener("keydown", playOnInteraction);
-            };
-
-            document.addEventListener("click", playOnInteraction);
-            document.addEventListener("keydown", playOnInteraction);
-          }
-        };
-
-        attemptPlay();
+        notification.onclose = () => notification.close();
       }
 
       // Auto-hide after 30 seconds if not answered
       const timeout = setTimeout(() => {
         setIsVisible(false);
-        if (audio) {
-          audio.pause();
-          audio.currentTime = 0;
-        }
+        stopRingtone();
       }, 30000);
 
       return () => {
         clearTimeout(timeout);
-        if (audio) {
-          audio.pause();
-          audio.currentTime = 0;
-        }
       };
     } else {
       setIsVisible(false);
-      const audio = audioRef.current;
-      if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
-      }
     }
-  }, [
-    call.status,
-    call.caller,
-    call.callee,
-    call.callType,
-    call.callId,
-    acceptCall,
-    user?.id,
-  ]);
+  }, [call.status, call.caller, call.callee, call.callType, call.callId, acceptCall, user?.id, stopRingtone]);
 
-  // Get other user info
   const otherUser = call.caller?.id === user?.id ? call.callee : call.caller;
 
-  // Don't render if not an incoming call or if call is idle
   if (call.status !== "ringing" || !isVisible) return null;
 
   return (
@@ -237,19 +131,9 @@ function CallNotification() {
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-
-              // Stop ringing sound
-              const audio = audioRef.current;
-              if (audio) {
-                audio.pause();
-                audio.currentTime = 0;
-              }
-
+              stopRingtone();
               setIsVisible(false);
-
-              if (call.callId) {
-                declineCall(call.callId);
-              }
+              if (call.callId) declineCall(call.callId);
             }}
             className="flex-1 flex items-center justify-center space-x-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
           >
@@ -262,19 +146,9 @@ function CallNotification() {
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-
-              // Stop ringing sound
-              const audio = audioRef.current;
-              if (audio) {
-                audio.pause();
-                audio.currentTime = 0;
-              }
-
+              stopRingtone();
               setIsVisible(false);
-
-              if (call.callId) {
-                acceptCall(call.callId);
-              }
+              if (call.callId) acceptCall(call.callId);
             }}
             disabled={!call.callId}
             className="flex-1 flex items-center justify-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

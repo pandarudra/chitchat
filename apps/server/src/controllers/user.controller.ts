@@ -1,261 +1,268 @@
 import { Request, Response } from "express";
-import { UserModel } from "../models/User";
-import mongoose from "mongoose";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { v2 as cloudinary } from "cloudinary";
-import dotenv from "dotenv";
+import { UserModel } from "../models/User";
 import { AIService } from "../services/ai.service";
+import { deleteCloudinaryAsset, uploadToCloudinary } from "../utils/cloudinary";
+import { Logger } from "../utils/logger";
 
-dotenv.config();
+// ---------------------------------------------------------------------------
+// Multer — avatar upload (disk → Cloudinary)
+// ---------------------------------------------------------------------------
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
-  api_key: process.env.CLOUDINARY_API_KEY!,
-  api_secret: process.env.CLOUDINARY_API_SECRET!,
+const avatarStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const uploadPath = path.join(__dirname, "../../uploads/avatars");
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    cb(null, `avatar-${uniqueSuffix}${path.extname(file.originalname)}`);
+  },
 });
 
-export const onAddContact = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
-  const userId = req.user?._id;
-  const contactNo = req.body.contactNumber;
+const avatarUpload = multer({
+  storage: avatarStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed."));
+    }
+  },
+});
 
-  if (!userId || !contactNo) {
-    return res
-      .status(400)
-      .json({ error: "User ID and contact number are required." });
+/** Express middleware that accepts a single `avatar` file field. */
+export const uploadMiddleware = avatarUpload.single("avatar");
+
+// ---------------------------------------------------------------------------
+// Contacts
+// ---------------------------------------------------------------------------
+
+export const onAddContact = async (req: Request, res: Response): Promise<void> => {
+  const userId = req.user?._id;
+  const contactEmail = req.body.contactEmail;
+
+  if (!userId || !contactEmail) {
+    res.status(400).json({ error: "User ID and contact email are required." });
+    return;
   }
 
   try {
-    const existingUser = await UserModel.findById(userId);
+    const [existingUser, existingContact] = await Promise.all([
+      UserModel.findById(userId),
+      UserModel.findOne({ email: contactEmail }),
+    ]);
+
     if (!existingUser) {
-      return res.status(404).json({ error: "User not found." });
+      res.status(404).json({ error: "User not found." });
+      return;
     }
-
-    const existingContact = await UserModel.findOne({
-      phoneNumber: contactNo,
-    });
     if (!existingContact) {
-      return res.status(404).json({ error: "Contact not found." });
+      res.status(404).json({ error: "Contact not found." });
+      return;
     }
 
-    // Check if contact already exists
-    const contactExists = existingUser.contacts.some(
-      (contact) =>
-        contact.user.toString() ===
-        (existingContact._id as mongoose.Types.ObjectId).toString()
+    const existingContactId = (existingContact._id as any).toString();
+    const currentUserId = (existingUser._id as any).toString();
+
+    if (currentUserId === existingContactId) {
+      res.status(400).json({ error: "Cannot add yourself as a contact." });
+      return;
+    }
+
+    const alreadyAdded = existingUser.contacts.some(
+      (c) => c.user.toString() === existingContactId
     );
-
-    if (contactExists) {
-      return res.status(400).json({ error: "Contact already exists." });
+    if (alreadyAdded) {
+      res.status(400).json({ error: "Contact already exists." });
+      return;
     }
 
-    // Don't allow adding yourself as a contact
-    if (
-      (existingUser._id as mongoose.Types.ObjectId).toString() ===
-      (existingContact._id as mongoose.Types.ObjectId).toString()
-    ) {
-      return res
-        .status(400)
-        .json({ error: "Cannot add yourself as a contact." });
-    }
-
+    // Add the contact bidirectionally
     existingUser.contacts.push({
-      user: existingContact._id as mongoose.Types.ObjectId,
+      user: existingContact._id as any,
       name: existingContact.displayName,
-      phonenumber: existingContact.phoneNumber,
+      email: existingContact.email,
     });
-    await existingUser.save();
 
     existingContact.contacts.push({
-      user: existingUser._id as mongoose.Types.ObjectId,
+      user: existingUser._id as any,
       name: existingUser.displayName,
-      phonenumber: existingUser.phoneNumber,
+      email: existingUser.email,
     });
-    await existingContact.save();
 
-    return res.status(200).json({
+    await Promise.all([existingUser.save(), existingContact.save()]);
+
+    res.status(200).json({
       message: "Contact added successfully.",
       contact: existingContact,
     });
   } catch (error) {
-    console.error("Error adding contact:", error);
-    return res.status(500).json({ error: "Internal server error." });
+    Logger.error("Error adding contact", error);
+    res.status(500).json({ error: "Internal server error." });
   }
 };
 
-export const onGetContacts = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
+export const onGetContacts = async (req: Request, res: Response): Promise<void> => {
   const userId = req.user?._id;
 
   if (!userId) {
-    return res.status(400).json({ error: "User ID is required." });
+    res.status(400).json({ error: "User ID is required." });
+    return;
   }
 
   try {
-    const user = await UserModel.findById(userId);
+    const [user, aiBot] = await Promise.all([
+      UserModel.findById(userId),
+      AIService.getDefaultAIBot(),
+    ]);
+
     if (!user) {
-      return res.status(404).json({ error: "User not found." });
+      res.status(404).json({ error: "User not found." });
+      return;
     }
 
-    // Get the default AI bot
-    const aiBot = await AIService.getDefaultAIBot();
-
-    // Process regular contacts
+    // Fetch contact details in parallel
     const contact_obj = await Promise.all(
       user.contacts.map(async (contact) => {
         const contactUser = await UserModel.findById(contact.user);
         return {
-          user: contact.user.toString(), // Convert ObjectId to string
+          user: contact.user.toString(),
           name: contact.name,
-          phonenumber: contact.phonenumber,
+          email: contact.email,
           avatarUrl: contactUser?.avatarUrl,
-          isOnline: contactUser?.isOnline || false,
+          isOnline: contactUser?.isOnline ?? false,
           lastSeen: contactUser?.lastSeen,
           displayName: contactUser?.displayName,
           status: contactUser?.status,
-          blocked: user.blockedContacts?.includes(contactUser?._id as any),
-          pinned: user.pinnedContacts?.includes(contactUser?._id as any),
+          blocked: user.blockedContacts?.some(
+            (b) => b.toString() === contactUser?._id?.toString()
+          ) ?? false,
+          pinned: user.pinnedContacts?.some(
+            (p) => p.toString() === contactUser?._id?.toString()
+          ) ?? false,
           isAI: false,
         };
       })
     );
 
-    // Add AI bot as the first contact (default chat)
+    // AI bot is always first in the list (pinned by default)
     const aiContact = {
-      user: (aiBot._id as any).toString(), // Use the AI bot user's ObjectId
+      user: (aiBot._id as any).toString(),
       name: aiBot.displayName,
-      phonenumber: aiBot.phoneNumber,
+      email: aiBot.email,
       avatarUrl: aiBot.avatarUrl,
-      isOnline: true, // AI is always online
+      isOnline: true,
       lastSeen: new Date(),
       displayName: aiBot.displayName,
       status: aiBot.status,
       blocked: false,
-      pinned: true, // Pin AI bot by default
+      pinned: true,
       isAI: true,
     };
 
-    // Combine AI bot with regular contacts, AI bot first
-    const allContacts = [aiContact, ...contact_obj];
-
-    return res.status(200).json({
+    res.status(200).json({
       message: "Contacts retrieved successfully.",
-      contacts: allContacts,
+      contacts: [aiContact, ...contact_obj],
     });
   } catch (error) {
-    console.error("Error getting contacts:", error);
-    return res.status(500).json({ error: "Internal server error." });
+    Logger.error("Error getting contacts", error);
+    res.status(500).json({ error: "Internal server error." });
   }
 };
 
-const getAvatarUrl = async (userId: any): Promise<string | undefined> => {
-  const user = await UserModel.findById(userId);
-  return user?.avatarUrl;
-};
+export const onDeleteContact = async (req: Request, res: Response): Promise<void> => {
+  const userId = req.user?._id;
+  const { contactId } = req.body;
 
-export const isUserExists = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
-  const phoneNumber = req.body.phoneNumber;
-  const user = await UserModel.findOne({ phoneNumber });
-  return res.status(200).json({
-    exists: !!user,
-  });
-};
-
-export const getUserOnlineStatus = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
-  const { userId } = req.params;
-
-  if (!userId) {
-    return res.status(400).json({ error: "User ID is required." });
+  if (!userId || !contactId) {
+    res.status(400).json({ error: "User ID and contact ID are required." });
+    return;
   }
 
   try {
     const user = await UserModel.findById(userId);
     if (!user) {
-      return res.status(404).json({ error: "User not found." });
+      res.status(404).json({ error: "User not found." });
+      return;
     }
 
-    // Consider user online if lastSeen is within the last 5 minutes
-    const isOnline = user.lastSeen
-      ? new Date().getTime() - new Date(user.lastSeen).getTime() < 5 * 60 * 1000
-      : false;
+    const contactIndex = user.contacts.findIndex(
+      (c) => c.user.toString() === contactId
+    );
+    if (contactIndex === -1) {
+      res.status(404).json({ error: "Contact not found." });
+      return;
+    }
 
-    return res.json({
-      isOnline,
-      lastSeen: user.lastSeen,
-      status: user.status,
-    });
+    user.contacts.splice(contactIndex, 1);
+
+    // Also unpin the contact if it was pinned
+    if (user.pinnedContacts) {
+      user.pinnedContacts = user.pinnedContacts.filter(
+        (id) => id.toString() !== contactId
+      );
+    }
+
+    await user.save();
+    res.status(200).json({ success: true, message: "Contact deleted successfully." });
   } catch (error) {
-    console.error("Error checking user online status:", error);
-    return res.status(500).json({ error: "Internal server error." });
+    Logger.error("Error deleting contact", error);
+    res.status(500).json({ error: "Failed to delete contact." });
   }
 };
 
-// block and unblock contacts
-export const onBlockContact = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
+// ---------------------------------------------------------------------------
+// Block / Unblock
+// ---------------------------------------------------------------------------
+
+export const onBlockContact = async (req: Request, res: Response): Promise<void> => {
   const userId = req.user?._id;
-  const blockUserId = req.body.blockUserId;
+  const { blockUserId } = req.body;
 
   if (!userId || !blockUserId) {
-    return res
-      .status(400)
-      .json({ error: "User ID and block user ID are required." });
+    res.status(400).json({ error: "User ID and block user ID are required." });
+    return;
   }
 
   try {
     const user = await UserModel.findById(userId);
     if (!user) {
-      return res.status(404).json({ error: "User not found." });
+      res.status(404).json({ error: "User not found." });
+      return;
     }
 
-    // Check if the user is already blocked
-    if (user.blockedContacts?.includes(blockUserId)) {
-      return res.status(400).json({ error: "User is already blocked." });
+    if (user.blockedContacts?.some((id) => id.toString() === blockUserId)) {
+      res.status(400).json({ error: "User is already blocked." });
+      return;
     }
 
-    // Add to blocked contacts
-    user.blockedContacts = [...(user.blockedContacts || []), blockUserId];
+    user.blockedContacts = [...(user.blockedContacts ?? []), blockUserId];
     await user.save();
 
-    return res.status(200).json({
-      message: "User blocked successfully.",
-      blockedUserId: blockUserId,
-    });
+    res.status(200).json({ message: "User blocked successfully.", blockedUserId: blockUserId });
   } catch (error) {
-    console.error("Error blocking user:", error);
-    return res.status(500).json({ error: "Internal server error." });
+    Logger.error("Error blocking user", error);
+    res.status(500).json({ error: "Internal server error." });
   }
 };
 
-export const onUnblockContact = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
+export const onUnblockContact = async (req: Request, res: Response): Promise<void> => {
+  const userId = req.user?._id;
+  const { unblockUserId } = req.body;
+
+  if (!userId || !unblockUserId) {
+    res.status(400).json({ error: "User ID and unblock user ID are required." });
+    return;
+  }
+
   try {
-    const userId = req.user?._id;
-    const unblockUserId = req.body.unblockUserId;
-
-    if (!userId || !unblockUserId) {
-      return res
-        .status(400)
-        .json({ error: "User ID and unblock user ID are required." });
-    }
-
     const updatedUser = await UserModel.findByIdAndUpdate(
       userId,
       { $pull: { blockedContacts: unblockUserId } },
@@ -263,262 +270,202 @@ export const onUnblockContact = async (
     );
 
     if (!updatedUser) {
-      return res.status(404).json({ error: "User not found." });
+      res.status(404).json({ error: "User not found." });
+      return;
     }
-    return res.status(200).json({
+
+    res.status(200).json({
       message: "User unblocked successfully.",
       updatedBlockedContacts: updatedUser.blockedContacts,
     });
   } catch (error) {
-    console.error("Error unblocking user:", error);
-    return res.status(500).json({ error: "Internal server error." });
+    Logger.error("Error unblocking user", error);
+    res.status(500).json({ error: "Internal server error." });
   }
 };
 
-export const onPinContact = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
+// ---------------------------------------------------------------------------
+// Pin / Unpin
+// ---------------------------------------------------------------------------
+
+export const onPinContact = async (req: Request, res: Response): Promise<void> => {
   const userId = req.user?._id;
-  const contactId = req.body.contactId;
+  const { contactId } = req.body;
+
   if (!userId || !contactId) {
-    return res
-      .status(400)
-      .json({ error: "User ID and contact ID are required." });
+    res.status(400).json({ error: "User ID and contact ID are required." });
+    return;
   }
+
   try {
     const user = await UserModel.findById(userId);
     if (!user) {
-      return res.status(404).json({ error: "User not found." });
+      res.status(404).json({ error: "User not found." });
+      return;
     }
 
-    // Check if the contact is already pinned
-    if (user.pinnedContacts?.includes(contactId)) {
-      return res.status(400).json({ error: "Contact is already pinned." });
+    if (user.pinnedContacts?.some((id) => id.toString() === contactId)) {
+      res.status(400).json({ error: "Contact is already pinned." });
+      return;
     }
 
-    // Add to pinned contacts
-    user.pinnedContacts = [...(user.pinnedContacts || []), contactId];
+    user.pinnedContacts = [...(user.pinnedContacts ?? []), contactId];
     await user.save();
 
-    return res.status(200).json({
-      message: "Contact pinned successfully.",
-      pinnedContactId: user.pinnedContacts,
-    });
+    res.status(200).json({ message: "Contact pinned successfully.", pinnedContactId: contactId });
   } catch (error) {
-    console.error("Error pinning contact:", error);
-    return res.status(500).json({ error: "Internal server error." });
+    Logger.error("Error pinning contact", error);
+    res.status(500).json({ error: "Internal server error." });
   }
 };
 
-export const onUnpinContact = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
+export const onUnpinContact = async (req: Request, res: Response): Promise<void> => {
   const userId = req.user?._id;
-  const contactId = req.body.contactId;
+  const { contactId } = req.body;
 
   if (!userId || !contactId) {
-    return res
-      .status(400)
-      .json({ error: "User ID and contact ID are required." });
+    res.status(400).json({ error: "User ID and contact ID are required." });
+    return;
   }
 
   try {
     const user = await UserModel.findById(userId);
     if (!user) {
-      return res.status(404).json({ error: "User not found." });
+      res.status(404).json({ error: "User not found." });
+      return;
     }
 
-    // Check if the contact is pinned
-    if (!user.pinnedContacts?.includes(contactId)) {
-      return res.status(400).json({ error: "Contact is not pinned." });
+    if (!user.pinnedContacts?.some((id) => id.toString() === contactId)) {
+      res.status(400).json({ error: "Contact is not pinned." });
+      return;
     }
 
-    // Remove from pinned contacts
     user.pinnedContacts = user.pinnedContacts.filter(
-      (id) => id.toString() !== contactId.toString()
+      (id) => id.toString() !== contactId
     );
     await user.save();
 
-    return res.status(200).json({
-      message: "Contact unpinned successfully.",
-      unpinnedContactId: user.pinnedContacts,
-    });
+    res.status(200).json({ message: "Contact unpinned successfully." });
   } catch (error) {
-    console.error("Error unpinning contact:", error);
-    return res.status(500).json({ error: "Internal server error." });
+    Logger.error("Error unpinning contact", error);
+    res.status(500).json({ error: "Internal server error." });
   }
 };
 
-// Multer configuration for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, "../../uploads/avatars");
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, `avatar-${uniqueSuffix}${path.extname(file.originalname)}`);
-  },
-});
+// ---------------------------------------------------------------------------
+// User lookup helpers
+// ---------------------------------------------------------------------------
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only image files are allowed"));
-    }
-  },
-});
+export const isUserExists = async (req: Request, res: Response): Promise<void> => {
+  const { email } = req.body;
+  const user = await UserModel.findOne({ email });
+  res.status(200).json({ exists: !!user });
+};
 
-// Helper function to delete old Cloudinary image
-const deleteOldCloudinaryImage = async (imageUrl: string): Promise<void> => {
+export const getUserOnlineStatus = async (req: Request, res: Response): Promise<void> => {
+  const { userId } = req.params;
+
+  if (!userId) {
+    res.status(400).json({ error: "User ID is required." });
+    return;
+  }
+
   try {
-    // Check if it's a Cloudinary URL
-    if (!imageUrl.includes("cloudinary.com")) {
-      console.log("Not a Cloudinary URL, skipping deletion:", imageUrl);
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      res.status(404).json({ error: "User not found." });
       return;
     }
 
-    // Extract public_id from Cloudinary URL
-    // URL formats:
-    // https://res.cloudinary.com/[cloud_name]/image/upload/v[version]/[folder]/[public_id].[format]
-    // https://res.cloudinary.com/[cloud_name]/image/upload/[folder]/[public_id].[format]
-    // https://res.cloudinary.com/[cloud_name]/image/upload/[public_id].[format]
+    // Treat user as online if lastSeen is within the past 5 minutes
+    const ONLINE_THRESHOLD_MS = 5 * 60 * 1000;
+    const isOnline = user.lastSeen
+      ? Date.now() - new Date(user.lastSeen).getTime() < ONLINE_THRESHOLD_MS
+      : false;
 
-    const urlMatch = imageUrl.match(/\/upload\/(?:v\d+\/)?(.+)$/);
-    if (!urlMatch) {
-      console.error("Could not extract public_id from URL:", imageUrl);
-      return;
-    }
-
-    // Get the path after /upload/ (and optional version)
-    const pathAfterUpload = urlMatch[1];
-
-    // Remove file extension (.jpg, .png, etc.)
-    const publicId = pathAfterUpload.replace(/\.[^/.]+$/, "");
-
-    console.log(
-      `Attempting to delete Cloudinary image with public_id: ${publicId}`
-    );
-
-    const result = await cloudinary.uploader.destroy(publicId);
-
-    if (result.result === "ok") {
-      console.log(`Successfully deleted old Cloudinary image: ${publicId}`);
-    } else if (result.result === "not found") {
-      console.log(
-        `Cloudinary image not found (may have been already deleted): ${publicId}`
-      );
-    } else {
-      console.warn(
-        `Unexpected result when deleting Cloudinary image: ${result.result}`
-      );
-    }
+    res.json({ isOnline, lastSeen: user.lastSeen, status: user.status });
   } catch (error) {
-    console.error("Error deleting old Cloudinary image:", error);
+    Logger.error("Error checking user online status", error);
+    res.status(500).json({ error: "Internal server error." });
   }
 };
 
-export const updateProfile = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
+// ---------------------------------------------------------------------------
+// Profile update
+// ---------------------------------------------------------------------------
+
+export const updateProfile = async (req: Request, res: Response): Promise<void> => {
   const userId = req.user?._id;
   const { displayName, status } = req.body;
   const avatarFile = req.file;
 
   if (!userId) {
-    return res.status(400).json({ error: "User ID is required." });
+    res.status(400).json({ error: "User ID is required." });
+    return;
   }
 
   if (!displayName?.trim()) {
-    return res.status(400).json({ error: "Display name is required." });
+    res.status(400).json({ error: "Display name is required." });
+    return;
   }
 
   try {
     const user = await UserModel.findById(userId);
     if (!user) {
-      return res.status(404).json({ error: "User not found." });
+      res.status(404).json({ error: "User not found." });
+      return;
     }
 
-    // Update basic fields
     user.displayName = displayName.trim();
     if (status !== undefined) {
       user.status = status.trim() || "Hey there! I am using ChitChat.";
     }
 
-    // Handle avatar upload with Cloudinary
     if (avatarFile) {
-      const localFilePath = path.resolve(avatarFile.path);
-      const oldAvatarUrl = user.avatarUrl; // Store old URL before updating
+      const localFilePath = avatarFile.path;
+      const oldAvatarUrl = user.avatarUrl;
 
       try {
-        // 1. Upload local file to Cloudinary
-        const result = await cloudinary.uploader.upload(localFilePath, {
+        const secureUrl = await uploadToCloudinary(localFilePath, {
           folder: "chat-avatars",
-          public_id: `avatar_${userId}_${Date.now()}`,
-          overwrite: true,
-          resource_type: "image",
+          publicId: `avatar_${userId}_${Date.now()}`,
         });
 
-        // 2. Update user with new avatar URL
-        user.avatarUrl = result.secure_url;
+        user.avatarUrl = secureUrl;
 
-        // 3. Delete the local file
+        // Clean up local temp file
         fs.unlink(localFilePath, (err) => {
-          if (err) console.error("Error deleting local file:", err);
+          if (err) Logger.warn(`Could not delete temp file: ${localFilePath}`);
         });
 
-        // 4. Delete old avatar from Cloudinary if it exists (do this after successful upload)
-        if (oldAvatarUrl && oldAvatarUrl !== result.secure_url) {
-          // Run deletion in background to not block the response
-          deleteOldCloudinaryImage(oldAvatarUrl).catch((error) => {
-            console.error("Background deletion of old avatar failed:", error);
-          });
+        // Delete the old Cloudinary image in the background
+        if (oldAvatarUrl && oldAvatarUrl !== secureUrl) {
+          deleteCloudinaryAsset(oldAvatarUrl).catch((err) =>
+            Logger.error("Background deletion of old avatar failed", err)
+          );
         }
-      } catch (cloudinaryError) {
-        console.error("Error uploading to Cloudinary:", cloudinaryError);
-
-        // Clean up local file if Cloudinary upload fails
-        fs.unlink(localFilePath, (err) => {
-          if (err)
-            console.error(
-              "Error deleting local file after failed upload:",
-              err
-            );
-        });
-
-        return res
-          .status(500)
-          .json({ error: "Failed to upload avatar image." });
+      } catch (uploadError) {
+        // Clean up local temp file before responding
+        fs.unlink(localFilePath, () => {});
+        Logger.error("Cloudinary upload failed", uploadError);
+        res.status(500).json({ error: "Failed to upload avatar image." });
+        return;
       }
     }
 
     await user.save();
 
-    // Update contacts in other users who have this user as contact
+    // Propagate display name changes to other users' contact lists
     await UserModel.updateMany(
       { "contacts.user": userId },
-      {
-        $set: {
-          "contacts.$.name": user.displayName,
-        },
-      }
+      { $set: { "contacts.$.name": user.displayName } }
     );
 
-    return res.status(200).json({
+    res.status(200).json({
       message: "Profile updated successfully.",
       user: {
         _id: user._id,
-        phoneNumber: user.phoneNumber,
+        email: user.email,
         displayName: user.displayName,
         avatarUrl: user.avatarUrl,
         status: user.status,
@@ -527,82 +474,7 @@ export const updateProfile = async (
       },
     });
   } catch (error) {
-    console.error("Error updating profile:", error);
-    return res.status(500).json({ error: "Internal server error." });
-  }
-};
-
-export const uploadMiddleware = upload.single("avatar");
-
-// Optional: Function to manually delete a Cloudinary image (for testing/cleanup)
-export const deleteCloudinaryImage = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
-  const { imageUrl } = req.body;
-
-  if (!imageUrl) {
-    return res.status(400).json({ error: "Image URL is required." });
-  }
-
-  try {
-    await deleteOldCloudinaryImage(imageUrl);
-    return res.status(200).json({
-      message: "Image deletion attempted.",
-      imageUrl,
-    });
-  } catch (error) {
-    console.error("Error in manual image deletion:", error);
-    return res.status(500).json({ error: "Failed to delete image." });
-  }
-};
-
-export const onDeleteContact = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
-  const userId = req.user?._id;
-  const { contactId } = req.body;
-
-  if (!userId || !contactId) {
-    return res
-      .status(400)
-      .json({ error: "User ID and contact ID are required." });
-  }
-
-  try {
-    const user = await UserModel.findById(userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found." });
-    }
-
-    // Check if contact exists in user's contacts
-    const contactIndex = user.contacts.findIndex(
-      (contact) => contact.user.toString() === contactId
-    );
-
-    if (contactIndex === -1) {
-      return res.status(404).json({ error: "Contact not found." });
-    }
-
-    // Remove contact from user's contacts array
-    user.contacts.splice(contactIndex, 1);
-
-    // Also remove from pinned contacts if it exists
-    if (user.pinnedContacts) {
-      user.pinnedContacts = user.pinnedContacts.filter(
-        (pinnedContactId) => pinnedContactId.toString() !== contactId
-      );
-    }
-
-    await user.save();
-
-    return res.status(200).json({
-      success: true,
-      message: "Contact deleted successfully.",
-    });
-  } catch (error) {
-    console.error("Error deleting contact:", error);
-    return res.status(500).json({ error: "Failed to delete contact." });
+    Logger.error("Error updating profile", error);
+    res.status(500).json({ error: "Internal server error." });
   }
 };

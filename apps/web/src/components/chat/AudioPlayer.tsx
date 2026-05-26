@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Play, Pause, Volume2 } from "lucide-react";
-
-const be_url = import.meta.env.VITE_BE_URL;
+import { VITE_BE_URL as be_url } from "../../constants/e";
 
 interface AudioPlayerProps {
   audioUrl: string;

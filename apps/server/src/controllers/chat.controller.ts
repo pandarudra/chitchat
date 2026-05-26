@@ -14,11 +14,11 @@ export const getChats = async (req: Request, res: Response): Promise<any> => {
       return res.status(400).json({ error: "Missing userId(s)" });
     }
 
-    // If otherUserId is a phone number, resolve to userId
+    // If otherUserId is an email, resolve to userId
     let otherUserObjId = otherUserId;
-    if (otherUserId.length < 24) {
-      // crude check for ObjectId
-      const user = await UserModel.findOne({ phoneNumber: otherUserId });
+    if (otherUserId.length < 24 || otherUserId.includes('@')) {
+      // crude check for ObjectId or email
+      const user = await UserModel.findOne({ email: otherUserId });
       if (!user) return res.status(404).json({ error: "User not found" });
       otherUserObjId = user._id;
     }

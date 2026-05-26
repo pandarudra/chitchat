@@ -1,60 +1,51 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Phone, Loader2 } from "lucide-react";
-import { COUNTRY_CODES } from "../../utils/constants";
+import { MessageSquareMore, Loader2, ArrowRight } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../lib/api";
 import toast from "react-hot-toast";
 
 interface LoginFormData {
-  countryCode: string;
-  phoneNumber: string;
+  email: string;
 }
 
 export function Login() {
   const [sending, setSending] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [otp, setOtp] = useState("");
-  const [phone, setPhone] = useState("");
-  const { login } = useAuth();
+  const [email, setEmail] = useState("");
+  const { login, requestOtp, verifyOtp } = useAuth();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-    watch,
   } = useForm<LoginFormData>({
     defaultValues: {
-      countryCode: "+1",
-      phoneNumber: "",
+      email: "",
     },
   });
 
-  const watchedDialCode = watch("countryCode");
-
   // Step 1: Send OTP
-  const onSendOtp = async ({ countryCode, phoneNumber }: LoginFormData) => {
-    const fullPhone = `${countryCode}${phoneNumber}`;
-    setPhone(fullPhone);
+  const onSendOtp = async (data: LoginFormData) => {
+    setEmail(data.email);
 
     try {
+      setSending(true);
       const res = await api.post("/api/user/is-user-exists", {
-        phoneNumber: fullPhone,
+        email: data.email,
       });
 
       if (res.data.exists) {
-        setSending(true);
-        await api.post("/api/otp/send", { phoneNumber: fullPhone });
+        await requestOtp(data.email);
+        setShowOtp(true);
+        toast.success("Verification code sent to your email.");
       } else {
-        // Handle user not found case
-        console.error("User does not exist.");
         toast.error("User does not exist. Please sign up first.");
-        return;
       }
-      setShowOtp(true);
     } catch (err) {
       console.error("Failed to send OTP:", err);
-      toast.error("Failed to send OTP. Please try again.");
+      toast.error("Failed to send verification code.");
     } finally {
       setSending(false);
     }
@@ -65,157 +56,129 @@ export function Login() {
     e.preventDefault();
     try {
       setSending(true);
-      const res = await api.post("/api/otp/verify", {
-        phoneNumber: phone,
-        otp,
-      });
-      if (res.data.message === "OTP verified") {
-        await login(phone); // Now call your login API
-        toast.success("Login successful!");
-      } else {
-        // Show error
-        toast.error("OTP verification failed. Please try again.");
-        return;
-      }
+      await verifyOtp(email, otp);
+      await login(email);
+      toast.success("Welcome back!");
     } catch (err) {
       console.error("OTP verification failed:", err);
-      toast.error("OTP verification failed. Please try again.");
     } finally {
       setSending(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <div className="mx-auto h-20 w-20 bg-green-500 rounded-full flex items-center justify-center">
-            <Phone className="h-10 w-10 text-white" />
-          </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
-            Welcome to ChitChat
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Enter your phone number to continue
-          </p>
-        </div>
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4 overflow-hidden relative">
+      {/* Background gradients */}
+      <div className="absolute top-0 -left-4 w-72 h-72 bg-primary/20 rounded-full mix-blend-multiply filter blur-3xl opacity-30 dark:opacity-20 animate-blob"></div>
+      <div className="absolute top-0 -right-4 w-72 h-72 bg-teal-400/20 rounded-full mix-blend-multiply filter blur-3xl opacity-30 dark:opacity-20 animate-blob animation-delay-2000"></div>
+      <div className="absolute -bottom-8 left-20 w-72 h-72 bg-emerald-400/20 rounded-full mix-blend-multiply filter blur-3xl opacity-30 dark:opacity-20 animate-blob animation-delay-4000"></div>
 
-        {!showOtp ? (
-          <form onSubmit={handleSubmit(onSendOtp)} className="mt-8 space-y-6">
-            <div>
-              <label
-                htmlFor="countryCode"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Country Code
-              </label>
-              <select
-                id="countryCode"
-                {...register("countryCode", {
-                  required: "Country code is required",
-                })}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
-              >
-                {COUNTRY_CODES.map((c, idx) => (
-                  <option key={`${c.code}-${idx}`} value={c.dial_code}>
-                    {c.dial_code} &nbsp; {c.code}
-                  </option>
-                ))}
-              </select>
-              {errors.countryCode && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.countryCode.message}
-                </p>
-              )}
+      <div className="max-w-md w-full relative z-10">
+        <div className="glass-panel p-8 sm:p-10 rounded-3xl border border-border">
+          <div className="text-center mb-10">
+            <div className="mx-auto h-16 w-16 bg-primary/10 dark:bg-primary/20 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-primary/20">
+              <MessageSquareMore className="h-8 w-8 text-primary" />
             </div>
+            <h2 className="text-3xl font-extrabold tracking-tight mb-2 uppercase">
+              Welcome back
+            </h2>
+            <p className="text-muted-foreground text-sm font-medium">
+              Enter your email to sign in to your account
+            </p>
+          </div>
 
-            <div>
-              <label
-                htmlFor="phoneNumber"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Phone Number
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <span className="text-gray-500 sm:text-sm">
-                    {watchedDialCode}
-                  </span>
+          {!showOtp ? (
+            <form onSubmit={handleSubmit(onSendOtp)} className="space-y-6">
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-xs font-semibold uppercase tracking-wider mb-2 text-muted-foreground"
+                >
+                  Email Address
+                </label>
+                <div className="relative">
+                  <input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    {...register("email", {
+                      required: "Email is required",
+                      pattern: {
+                        value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                        message: "Enter a valid email address",
+                      },
+                    })}
+                    className="block w-full px-4 py-3 bg-muted border border-border/80 rounded-xl focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-muted-foreground text-foreground"
+                  />
                 </div>
+                {errors.email && (
+                  <p className="mt-2 text-xs font-semibold text-red-500">
+                    {errors.email.message}
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={sending}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 text-sm font-semibold rounded-xl text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md active:scale-97 cursor-pointer"
+              >
+                {sending ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <>
+                    Continue with Email
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+
+              <p className="text-center text-sm text-muted-foreground pt-4">
+                Don't have an account?{" "}
+                <a
+                  href="/signup"
+                  className="font-bold text-primary hover:text-primary/80 transition-colors"
+                >
+                  Sign up
+                </a>
+              </p>
+            </form>
+          ) : (
+            <form onSubmit={onVerifyOtp} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div>
+                <label
+                  htmlFor="otp"
+                  className="block text-xs font-semibold uppercase tracking-wider mb-2 text-center text-muted-foreground"
+                >
+                  Enter Verification Code
+                </label>
+                <p className="text-center text-xs text-muted-foreground mb-4">
+                  We sent a code to <span className="font-semibold text-foreground">{email}</span>
+                </p>
                 <input
-                  id="phoneNumber"
-                  type="tel"
-                  placeholder="1234567890"
-                  {...register("phoneNumber", {
-                    required: "Phone number is required",
-                    pattern: {
-                      value: /^[0-9]{6,15}$/,
-                      message: "Enter a valid phone number",
-                    },
-                  })}
-                  className="block w-full pl-16 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                  id="otp"
+                  type="text"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  className="block w-full text-center tracking-[0.5em] text-2xl px-4 py-3 bg-muted border border-border/80 rounded-xl focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all text-foreground font-bold"
+                  placeholder="------"
+                  maxLength={6}
                 />
               </div>
-              {errors.phoneNumber && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.phoneNumber.message}
-                </p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={sending}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {sending ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                "Send OTP"
-              )}
-            </button>
-
-            <p className="text-center text-sm text-gray-600">
-              Don’t have an account?{" "}
-              <a
-                href="/signup"
-                className="font-medium text-green-600 hover:text-green-500"
+              <button
+                type="submit"
+                disabled={sending || otp.length < 6}
+                className="w-full flex items-center justify-center py-3 px-4 text-sm font-semibold rounded-xl text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md active:scale-97 cursor-pointer"
               >
-                Sign up
-              </a>
-            </p>
-          </form>
-        ) : (
-          <form onSubmit={onVerifyOtp} className="mt-8 space-y-6">
-            <div>
-              <label
-                htmlFor="otp"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Enter OTP
-              </label>
-              <input
-                id="otp"
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
-                placeholder="Enter OTP"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={sending}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {sending ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                "Verify OTP"
-              )}
-            </button>
-          </form>
-        )}
+                {sending ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  "Verify & Sign In"
+                )}
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );

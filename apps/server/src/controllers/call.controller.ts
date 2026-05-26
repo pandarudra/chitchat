@@ -8,7 +8,8 @@ export const getCallHistory = async (
   res: Response
 ): Promise<void> => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?._id?.toString();
+    if (!userId) { res.status(401).json({ error: "Unauthorized." }); return; }
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
@@ -17,8 +18,8 @@ export const getCallHistory = async (
     const callHistory = await CallHistoryModel.find({
       $or: [{ caller: userId }, { callee: userId }],
     })
-      .populate("caller", "displayName avatarUrl phoneNumber")
-      .populate("callee", "displayName avatarUrl phoneNumber")
+      .populate("caller", "displayName avatarUrl email")
+      .populate("callee", "displayName avatarUrl email")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -44,7 +45,7 @@ export const getCallHistory = async (
           id: otherUser._id,
           displayName: otherUser.displayName,
           avatarUrl: otherUser.avatarUrl,
-          phoneNumber: otherUser.phoneNumber,
+          email: otherUser.email,
         },
       };
     });
@@ -80,7 +81,8 @@ export const deleteCallHistory = async (
   res: Response
 ): Promise<void> => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?._id?.toString();
+    if (!userId) { res.status(401).json({ error: "Unauthorized." }); return; }
     const { callId } = req.params;
 
     // Find and delete call history entry
@@ -115,7 +117,8 @@ export const clearCallHistory = async (
   res: Response
 ): Promise<void> => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?._id?.toString();
+    if (!userId) { res.status(401).json({ error: "Unauthorized." }); return; }
 
     // Delete all call history for the user
     await CallHistoryModel.deleteMany({

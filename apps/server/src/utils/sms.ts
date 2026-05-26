@@ -1,14 +1,12 @@
 import twilio from "twilio";
+import { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER } from "../constants/e";
 
-const accountSid = process.env.TWILIO_ACCOUNT_SID!;
-const authToken = process.env.TWILIO_AUTH_TOKEN!;
-const twilioPhone = process.env.TWILIO_PHONE_NUMBER!;
-const client = twilio(accountSid, authToken);
+const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
 export const sendOtpSms = async (phoneNumber: string, otp: string) => {
   await client.messages.create({
     body: `Your ChitChat OTP is: ${otp}`,
-    from: twilioPhone,
+    from: TWILIO_PHONE_NUMBER,
     to: phoneNumber,
   });
 };

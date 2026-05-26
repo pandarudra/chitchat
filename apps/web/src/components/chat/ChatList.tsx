@@ -95,35 +95,35 @@ export function ChatList() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full bg-background">
       <div className="flex-1 overflow-y-auto">
         {sortedChats.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
-            <MessageCircle className="h-12 w-12 mb-4 opacity-50" />
-            <p className="text-sm">No chats found</p>
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-6 text-center">
+            <MessageCircle className="h-12 w-12 mb-4 opacity-30 text-primary-500" />
+            <p className="text-sm font-medium">No chats found</p>
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-1 p-2">
             {sortedChats.map((chat) => (
               <div
                 key={chat.id}
                 onClick={() => setActiveChat(chat)}
-                className={`flex items-center space-x-3 p-3 hover:bg-gray-50 cursor-pointer transition-colors ${
+                className={`flex items-center space-x-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 ${
                   activeChat?.id === chat.id
-                    ? "bg-green-50 border-r-4 border-[#588157]"
-                    : ""
+                    ? "bg-primary/10 text-foreground border-l-4 border-primary shadow-sm"
+                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <div className="relative">
                   {chat.isGroup ? (
-                    <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-                      <Users className="h-6 w-6 text-gray-600" />
+                    <div className="w-11 h-11 bg-muted rounded-xl flex items-center justify-center border border-border">
+                      <Users className="h-5 w-5 text-muted-foreground" />
                     </div>
                   ) : (
                     <img
                       src={getChatAvatar(chat) ?? undefined}
                       alt={getChatName(chat)}
-                      className="w-12 h-12 rounded-full object-cover"
+                      className="w-11 h-11 rounded-xl object-cover border border-border shadow-xs"
                     />
                   )}
                   {!chat.isGroup &&
@@ -132,15 +132,15 @@ export function ChatList() {
                         (p) => p.id !== user?.id
                       );
                       return otherUser && isUserOnline(otherUser) ? (
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-600 rounded-full border-2 border-white"></div>
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-background"></div>
                       ) : null;
                     })()}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <h3 className="font-medium text-gray-900 truncate">
+                    <div className="flex items-center space-x-1.5 min-w-0">
+                      <h3 className="font-bold text-foreground text-sm truncate tracking-tight">
                         {getChatName(chat)}
                       </h3>
                       {chat.isAI && (
@@ -148,14 +148,14 @@ export function ChatList() {
                           title="Susi - Your AI companion"
                           className="flex items-center"
                         >
-                          <span className="text-sm">🤖✨</span>
+                          <span className="text-xs">🤖✨</span>
                         </div>
                       )}
                       {chat.isPinned && (
-                        <Pin className="h-4 w-4 text-gray-500" />
+                        <Pin className="h-3 w-3 text-muted-foreground shrink-0" />
                       )}
                       {chat.isMuted && (
-                        <VolumeX className="h-4 w-4 text-gray-500" />
+                        <VolumeX className="h-3 w-3 text-muted-foreground shrink-0" />
                       )}
                     </div>
                     {(() => {
@@ -166,7 +166,7 @@ export function ChatList() {
                           : null);
                       return (
                         lastMsg && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-[10px] font-semibold text-muted-foreground shrink-0">
                             {formatMessageTime(lastMsg.timestamp)}
                           </span>
                         )
@@ -174,12 +174,12 @@ export function ChatList() {
                     })()}
                   </div>
 
-                  <div className="flex items-center justify-between mt-1">
-                    <p className="text-sm text-gray-600 truncate">
+                  <div className="flex items-center justify-between mt-1 min-w-0">
+                    <p className="text-xs text-muted-foreground truncate max-w-[85%]">
                       {getLastMessagePreview(chat)}
                     </p>
                     {chat.unreadCount > 0 && (
-                      <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-green-500 rounded-full">
+                      <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none text-white bg-primary rounded-full shrink-0">
                         {chat.unreadCount}
                       </span>
                     )}

@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import { X, User, Phone } from "lucide-react";
+import { X, Mail, UserPlus } from "lucide-react";
 import { useChat } from "../../context/ChatContext";
-import { COUNTRY_CODES } from "../../utils/constants";
 import toast from "react-hot-toast";
 
 interface AddContactProps {
@@ -10,35 +9,34 @@ interface AddContactProps {
 }
 
 export function AddContact({ isOpen, onClose }: AddContactProps) {
-  const [countryCode, setCountryCode] = useState("+91");
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { addContact } = useChat();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!phoneNumber.trim()) {
-      toast.error("Please enter a phone number");
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (!trimmedEmail) {
+      toast.error("Please enter an email address");
       return;
     }
 
-    if (!/^[0-9]{6,15}$/.test(phoneNumber)) {
-      toast.error("Please enter a valid phone number");
+    // Basic email validation regex
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      toast.error("Please enter a valid email address");
       return;
     }
-
-    const fullPhoneNumber = `${countryCode}${phoneNumber}`;
 
     try {
       setIsLoading(true);
-      await addContact(fullPhoneNumber);
+      await addContact(trimmedEmail);
       toast.success("Contact added successfully!");
       handleClose();
     } catch (error: unknown) {
       console.error("Failed to add contact:", error);
 
-      // Handle specific error messages from the API
       if (error && typeof error === "object" && "response" in error) {
         const apiError = error as { response?: { data?: { error?: string } } };
         if (apiError.response?.data?.error) {
@@ -57,21 +55,16 @@ export function AddContact({ isOpen, onClose }: AddContactProps) {
   };
 
   const handleClose = () => {
-    setPhoneNumber("");
-    setCountryCode("+91");
+    setEmail("");
     onClose();
   };
 
-  // Handle ESC key to close modal
   React.useEffect(() => {
     if (!isOpen) return;
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setPhoneNumber("");
-
-        setCountryCode("+91");
-        onClose();
+        handleClose();
       }
     };
 
@@ -83,103 +76,74 @@ export function AddContact({ isOpen, onClose }: AddContactProps) {
 
   return (
     <div
-      className="fixed inset-0 bg-transparent bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           handleClose();
         }
       }}
     >
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+      <div className="bg-card text-card-foreground rounded-2xl shadow-xl border border-border w-full max-w-md overflow-hidden transform scale-100 transition-all duration-300">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-5 border-b border-border bg-muted/20">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-              <User className="h-5 w-5 text-green-600" />
+            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
+              <UserPlus className="h-5 w-5 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-900">Add Contact</h2>
+            <div>
+              <h2 className="text-base font-bold tracking-tight">Add New Contact</h2>
+              <p className="text-xs text-muted-foreground">Start a secure chitchat session</p>
+            </div>
           </div>
           <button
             onClick={handleClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-all cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Contact Name (Optional) */}
-
-          {/* Country Code */}
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
             <label
-              htmlFor="countryCode"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              htmlFor="email"
+              className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2"
             >
-              Country Code
-            </label>
-            <select
-              id="countryCode"
-              value={countryCode}
-              onChange={(e) => setCountryCode(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            >
-              {COUNTRY_CODES.map((country, idx) => (
-                <option
-                  key={`${country.code}-${idx}`}
-                  value={country.dial_code}
-                >
-                  {country.flag} {country.dial_code} {country.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Phone Number */}
-          <div>
-            <label
-              htmlFor="phoneNumber"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Phone Number
+              Email Address
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Phone className="h-4 w-4 text-gray-400" />
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted-foreground">
+                <Mail className="h-4.5 w-4.5" />
               </div>
               <input
-                id="phoneNumber"
-                type="tel"
-                value={phoneNumber}
-                onChange={(e) =>
-                  setPhoneNumber(e.target.value.replace(/\D/g, ""))
-                }
-                placeholder="1234567890"
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="friend@domain.com"
+                className="w-full pl-10 pr-3.5 py-2.5 bg-muted border border-border/80 focus:border-primary rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all text-sm sm:text-base"
+                required
+                autoFocus
               />
             </div>
-            <p className="mt-1 text-xs text-gray-500">
-              Full number: {countryCode}
-              {phoneNumber}
-            </p>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex space-x-3 pt-4">
+          <div className="flex space-x-2.5 pt-2">
             <button
               type="button"
               onClick={handleClose}
-              className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              className="flex-1 px-4 py-2.5 text-sm font-semibold text-muted-foreground bg-muted hover:bg-muted/80 rounded-xl transition-all cursor-pointer active:scale-97 border border-transparent"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isLoading || !phoneNumber.trim()}
-              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+              disabled={isLoading || !email.trim()}
+              className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-md active:scale-97 cursor-pointer"
             >
-              {isLoading ? "Adding..." : "Add Contact"}
+              {isLoading ? "Searching..." : "Add Contact"}
             </button>
           </div>
         </form>

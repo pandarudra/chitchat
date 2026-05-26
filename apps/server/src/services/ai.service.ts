@@ -1,119 +1,90 @@
 import { AIModel } from "../models/Ai";
 import { UserModel } from "../models/User";
-import mongoose from "mongoose";
+import { Logger } from "../utils/logger";
+import {
+  AI_BOT_EMAIL,
+  AI_BOT_NAME,
+  AI_BOT_AVATAR,
+  AI_BOT_STATUS,
+  AI_SYSTEM_PROMPT,
+} from "../constants/ai";
 
 export class AIService {
-  // Create default AI bot as a User entry
+  /**
+   * Ensures the Susi AI bot exists as a User document.
+   * Called once at startup — idempotent; returns the existing document if found.
+   */
   static async createDefaultAIBot() {
-    try {
-      // Check if AI bot already exists as a user
-      const existingUser = await UserModel.findOne({
-        phoneNumber: "AI_ASSISTANT_SUSI",
-      });
-
-      if (!existingUser) {
-        // Create AI bot as a User
-        const aiUser = new UserModel({
-          phoneNumber: "AI_ASSISTANT_SUSI",
-          displayName: "Susi",
-          avatarUrl:
-            "https://res.cloudinary.com/chitchat99/image/upload/v1755927525/ai_whkw7p.png",
-          status: "Your friendly AI companion 🤖✨",
-          isOnline: true, // AI is always online
-          lastSeen: new Date(),
-        });
-
-        await aiUser.save();
-
-        // Also create entry in AI collection for metadata
-        const aiBot = new AIModel({
-          botId: (aiUser._id as any).toString(),
-          name: "Susi",
-          avatarUrl: "/uploads/avatars/ai.png",
-          status: "Your friendly AI companion 🤖✨",
-          provider: "gemini",
-          isActive: true,
-          systemPrompt:
-            "You are Susi, a friendly AI assistant integrated into ChitChat messaging app. Be cheerful, helpful, and conversational. Keep responses concise but informative. Use a warm and approachable tone.",
-        });
-
-        await aiBot.save();
-        console.log("✅ Default AI bot created successfully");
-        return aiUser;
-      }
-
+    const existingUser = await UserModel.findOne({ email: AI_BOT_EMAIL });
+    if (existingUser) {
       return existingUser;
+    }
+
+    try {
+      const aiUser = new UserModel({
+        email: AI_BOT_EMAIL,
+        displayName: AI_BOT_NAME,
+        avatarUrl: AI_BOT_AVATAR,
+        status: AI_BOT_STATUS,
+        isOnline: true,
+        lastSeen: new Date(),
+      });
+      await aiUser.save();
+
+      // Also persist metadata in the AI collection
+      const aiBot = new AIModel({
+        botId: (aiUser._id as any).toString(),
+        name: AI_BOT_NAME,
+        avatarUrl: AI_BOT_AVATAR,
+        status: AI_BOT_STATUS,
+        provider: "gemini",
+        isActive: true,
+        systemPrompt: AI_SYSTEM_PROMPT,
+      });
+      await aiBot.save();
+
+      Logger.success("Default AI bot (Susi) created.");
+      return aiUser;
     } catch (error) {
-      console.error("❌ Error creating default AI bot:", error);
+      Logger.error("Error creating default AI bot", error);
       throw error;
     }
   }
 
-  // Get default AI bot User
+  /**
+   * Returns the Susi AI bot User document, creating it if it doesn't exist yet.
+   * This is the primary accessor used by other parts of the codebase.
+   */
   static async getDefaultAIBot() {
     try {
-      let botUser = await UserModel.findOne({ phoneNumber: "AI_ASSISTANT" });
-
-      if (!botUser) {
-        botUser = await this.createDefaultAIBot();
-      } else {
-        // Update existing bot to Susi if needed
-        if (botUser.displayName !== "Susi") {
-          await this.updateAIBotToSusi(botUser);
-        }
+      // Bug fix: was querying "AI_ASSISTANT" but bot is stored as AI_BOT_EMAIL ("AI_ASSISTANT_SUSI")
+      const botUser = await UserModel.findOne({ email: AI_BOT_EMAIL });
+      if (botUser) {
+        return botUser;
       }
-
-      return botUser;
+      return this.createDefaultAIBot();
     } catch (error) {
-      console.error("❌ Error getting default AI bot:", error);
+      Logger.error("Error getting default AI bot", error);
       throw error;
     }
   }
 
-  // Update existing AI bot to Susi
-  static async updateAIBotToSusi(existingBot: any) {
-    try {
-      // Update User model
-      await UserModel.findByIdAndUpdate(existingBot._id, {
-        displayName: "Susi",
-        avatarUrl: "/uploads/avatars/ai.png",
-        status: "Your friendly AI companion 🤖✨",
-      });
-
-      // Update AI model
-      await AIModel.findOneAndUpdate(
-        { botId: existingBot._id.toString() },
-        {
-          name: "Susi",
-          avatarUrl: "/uploads/avatars/ai.png",
-          status: "Your friendly AI companion 🤖✨",
-          systemPrompt:
-            "You are Susi, a friendly AI assistant integrated into ChitChat messaging app. Be cheerful, helpful, and conversational. Keep responses concise but informative. Use a warm and approachable tone.",
-        }
-      );
-
-      console.log("✅ AI bot updated to Susi successfully");
-    } catch (error) {
-      console.error("❌ Error updating AI bot to Susi:", error);
-    }
-  }
-
-  // Get AI bot metadata
+  /** Returns the AI metadata document for a given bot User ID. */
   static async getAIBotMetadata(botUserId: string) {
     try {
       return await AIModel.findOne({ botId: botUserId });
     } catch (error) {
-      console.error("❌ Error getting AI bot metadata:", error);
+      Logger.error("Error getting AI bot metadata", error);
       return null;
     }
   }
 
-  // Get all active AI bots
+  /** Returns all active AI bots from the AI collection. */
   static async getActiveAIBots() {
     try {
       return await AIModel.find({ isActive: true });
     } catch (error) {
-      console.error("❌ Error getting active AI bots:", error);
+      Logger.error("Error getting active AI bots", error);
       throw error;
     }
   }

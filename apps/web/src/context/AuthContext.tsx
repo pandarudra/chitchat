@@ -1,4 +1,3 @@
-// AuthContext.tsx - Enhanced version
 import React, {
   createContext,
   useContext,
@@ -6,233 +5,155 @@ import React, {
   useReducer,
   useCallback,
 } from "react";
-import type { AuthState, User } from "../types";
+import type { AuthState, User } from "../types/user";
 import api, { addAuthEventListener, removeAuthEventListener } from "../lib/api";
+import {
+  authReducer,
+  authInitialState,
+  transformUser,
+} from "./auth/authReducer";
 
-interface UpdateProfileData {
-  _id?: string;
-  phoneNumber?: string;
-  displayName?: string;
-  avatarUrl?: string;
-  status?: string;
-  isOnline?: boolean;
-  lastSeen?: Date | string;
-  createdAt?: Date | string;
-  updatedAt?: Date | string;
-}
+// ---------------------------------------------------------------------------
+// Context type
+// ---------------------------------------------------------------------------
 
 interface AuthContextType extends AuthState {
-  login: (phone: string) => Promise<void>;
-  signup: (name: string, phone: string) => Promise<void>;
+  login: (email: string) => Promise<void>;
+  signup: (name: string, email: string) => Promise<void>;
+  requestOtp: (email: string) => Promise<void>;
+  verifyOtp: (email: string, otp: string) => Promise<void>;
   logout: () => Promise<void>;
-  updateProfile: (updates: Partial<User>) => Promise<void>;
+  updateProfile: (updates: Partial<User> | Record<string, unknown>) => Promise<void>;
   clearError: () => void;
   refreshAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-type AuthAction =
-  | { type: "AUTH_START" }
-  | { type: "AUTH_SUCCESS"; payload: User }
-  | { type: "AUTH_FAILURE"; payload: string }
-  | { type: "LOGOUT" }
-  | { type: "UPDATE_PROFILE"; payload: User }
-  | { type: "CLEAR_ERROR" }
-  | { type: "SET_LOADING"; payload: boolean };
-
-const authReducer = (state: AuthState, action: AuthAction): AuthState => {
-  switch (action.type) {
-    case "AUTH_START":
-      return {
-        ...state,
-        isLoading: true,
-        error: null,
-      };
-    case "AUTH_SUCCESS":
-      return {
-        ...state,
-        user: action.payload,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      };
-    case "AUTH_FAILURE":
-      return {
-        ...state,
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: action.payload,
-      };
-    case "LOGOUT":
-      return {
-        ...state,
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: null,
-      };
-    case "UPDATE_PROFILE":
-      return {
-        ...state,
-        user: action.payload,
-      };
-    case "CLEAR_ERROR":
-      return {
-        ...state,
-        error: null,
-      };
-    case "SET_LOADING":
-      return {
-        ...state,
-        isLoading: action.payload,
-      };
-    default:
-      return state;
-  }
-};
-
-const initialState: AuthState = {
-  user: null,
-  isAuthenticated: false,
-  isLoading: false,
-  error: null,
-};
+// ---------------------------------------------------------------------------
+// Provider
+// ---------------------------------------------------------------------------
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(authReducer, initialState);
+  const [state, dispatch] = useReducer(authReducer, authInitialState);
 
-  const transformUser = useCallback((userData: any): User => {
-    return {
-      id: userData._id || userData.id,
-      phoneNumber: userData.phoneNumber,
-      displayName: userData.displayName,
-      avatarUrl: userData.avatarUrl,
-      status: userData.status,
-      lastSeen: userData.lastSeen ? new Date(userData.lastSeen) : undefined,
-      isOnline: userData.isOnline || false, // Use the actual isOnline value from database
-      createdAt: userData.createdAt ? new Date(userData.createdAt) : undefined,
-      updatedAt: userData.updatedAt ? new Date(userData.updatedAt) : undefined,
-    };
-  }, []);
+  // ── Auth checks ────────────────────────────────────────────────────────────
 
   const checkAuthStatus = useCallback(async () => {
     dispatch({ type: "SET_LOADING", payload: true });
     try {
-      const res = await api.get(`/api/auth/me`);
-      const user = transformUser(res.data.user);
-      dispatch({ type: "AUTH_SUCCESS", payload: user });
-    } catch (error: any) {
+      const res = await api.get("/api/auth/me");
+      dispatch({ type: "AUTH_SUCCESS", payload: transformUser(res.data.user) });
+    } catch {
+      // Not logged in — silently reset loading flag
       dispatch({ type: "SET_LOADING", payload: false });
-      console.log("Auth check failed:", error?.response?.data?.message);
     }
-  }, [transformUser]);
-
-  const handleTokenRefresh = useCallback(() => {
-    console.log("Token was refreshed, updating auth state");
-    // Optionally refresh user data after token refresh
-    // checkAuthStatus();
   }, []);
 
-  const handleLogout = useCallback(async () => {
-    // await api.post(`/api/auth/logout`);
-    console.log("Logout triggered by token refresh failure");
+  // ── API interceptor event listeners ───────────────────────────────────────
+
+  const handleLogout = useCallback(() => {
     dispatch({ type: "LOGOUT" });
   }, []);
 
+  const handleTokenRefreshed = useCallback(() => {
+    // Axios interceptor already retried the request — nothing to do here
+  }, []);
+
   useEffect(() => {
-    // Initial auth check
     checkAuthStatus();
-
-    // Listen for auth events from the API interceptor
     addAuthEventListener("logout", handleLogout);
-    addAuthEventListener("tokenRefreshed", handleTokenRefresh);
-
-    // Cleanup listeners on unmount
+    addAuthEventListener("tokenRefreshed", handleTokenRefreshed);
     return () => {
       removeAuthEventListener("logout", handleLogout);
-      removeAuthEventListener("tokenRefreshed", handleTokenRefresh);
+      removeAuthEventListener("tokenRefreshed", handleTokenRefreshed);
     };
-  }, [checkAuthStatus, handleLogout, handleTokenRefresh]);
+  }, [checkAuthStatus, handleLogout, handleTokenRefreshed]);
 
-  const login = async (phoneNumber: string) => {
-    dispatch({ type: "AUTH_START" });
+  // ── Actions ───────────────────────────────────────────────────────────────
+
+  const requestOtp = async (email: string): Promise<void> => {
     try {
-      const res = await api.post(`/api/auth/login`, { phoneNumber });
-      console.log("Login successful:", res.data);
-
-      // Check auth status after login to get user data
-      await checkAuthStatus();
+      await api.post("/api/otp/send", { email });
     } catch (error: any) {
       dispatch({
         type: "AUTH_FAILURE",
-        payload: error?.response?.data?.message || "Login failed",
+        payload: error?.response?.data?.error ?? "Failed to send OTP.",
       });
       throw error;
     }
   };
 
-  const signup = async (displayName: string, phoneNumber: string) => {
-    dispatch({ type: "AUTH_START" });
+  const verifyOtp = async (email: string, otp: string): Promise<void> => {
     try {
-      const res = await api.post(`/api/auth/signup`, {
-        displayName,
-        phoneNumber,
-      });
-      console.log("Signup successful:", res.data);
-
-      // Check auth status after signup to get user data
-      await checkAuthStatus();
+      await api.post("/api/otp/verify", { email, otp });
     } catch (error: any) {
       dispatch({
         type: "AUTH_FAILURE",
-        payload: error?.response?.data?.message || "Signup failed",
+        payload: error?.response?.data?.error ?? "Invalid OTP.",
       });
       throw error;
     }
   };
 
-  const logout = async () => {
+  const login = async (email: string): Promise<void> => {
+    dispatch({ type: "AUTH_START" });
+    try {
+      await api.post("/api/auth/login", { email });
+      await checkAuthStatus();
+    } catch (error: any) {
+      dispatch({
+        type: "AUTH_FAILURE",
+        payload: error?.response?.data?.error ?? "Login failed.",
+      });
+      throw error;
+    }
+  };
+
+  const signup = async (displayName: string, email: string): Promise<void> => {
+    dispatch({ type: "AUTH_START" });
+    try {
+      await api.post("/api/auth/signup", { displayName, email });
+      await checkAuthStatus();
+    } catch (error: any) {
+      dispatch({
+        type: "AUTH_FAILURE",
+        payload: error?.response?.data?.error ?? "Signup failed.",
+      });
+      throw error;
+    }
+  };
+
+  const logout = async (): Promise<void> => {
     try {
       await api.post("/api/auth/logout");
-    } catch (error) {
-      console.error("Logout error:", error);
     } finally {
       dispatch({ type: "LOGOUT" });
     }
   };
 
-  const updateProfile = async (updates: Partial<User> | UpdateProfileData) => {
+  const updateProfile = async (
+    updates: Partial<User> | Record<string, unknown>
+  ): Promise<void> => {
     dispatch({ type: "SET_LOADING", payload: true });
     try {
-      // If the updates object has the user data from the server response
-      if ("_id" in updates || "phoneNumber" in updates) {
-        const user = transformUser(updates);
-        dispatch({ type: "UPDATE_PROFILE", payload: user });
+      // Payload already contains server-shaped user data — transform directly
+      if ("_id" in updates || "email" in updates) {
+        dispatch({
+          type: "UPDATE_PROFILE",
+          payload: transformUser(updates as Record<string, any>),
+        });
       } else {
-        // Legacy fallback for direct field updates
-        const res = await api.put(`/api/user/profile`, updates);
-        const user = transformUser(res.data.user);
-        dispatch({ type: "UPDATE_PROFILE", payload: user });
+        const res = await api.put("/api/user/profile", updates);
+        dispatch({
+          type: "UPDATE_PROFILE",
+          payload: transformUser(res.data.user),
+        });
       }
-    } catch (error: unknown) {
-      const errorMessage =
-        error &&
-        typeof error === "object" &&
-        "response" in error &&
-        error.response &&
-        typeof error.response === "object" &&
-        "data" in error.response &&
-        error.response.data &&
-        typeof error.response.data === "object" &&
-        "message" in error.response.data
-          ? (error.response.data as { message: string }).message
-          : "Failed to update profile";
-
+    } catch (error: any) {
       dispatch({
         type: "AUTH_FAILURE",
-        payload: errorMessage,
+        payload: error?.response?.data?.error ?? "Failed to update profile.",
       });
       throw error;
     } finally {
@@ -240,13 +161,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const refreshAuth = async () => {
+  const refreshAuth = async (): Promise<void> => {
     await checkAuthStatus();
   };
 
-  const clearError = () => {
+  const clearError = (): void => {
     dispatch({ type: "CLEAR_ERROR" });
   };
+
+  // ── Context value ─────────────────────────────────────────────────────────
 
   return (
     <AuthContext.Provider
@@ -254,6 +177,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ...state,
         login,
         signup,
+        requestOtp,
+        verifyOtp,
         logout,
         updateProfile,
         clearError,
@@ -265,11 +190,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Custom hook to use the auth context
-export function useAuth() {
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
+
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider.");
   }
   return context;
 }

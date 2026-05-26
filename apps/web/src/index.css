@@ -1,63 +1,222 @@
-@import url("https://fonts.googleapis.com/css2?family=Libertinus+Sans:ital,wght@0,400;0,700;1,400&family=Titillium+Web:ital,wght@0,200;0,300;0,400;0,600;0,700;0,900;1,200;1,300;1,400;1,600;1,700&display=swap");
+/* Load fonts ONLY from local public/fonts/ path */
+@font-face {
+  font-family: "Tosh";
+  font-weight: 300;
+  font-style: normal;
+  src: url("/fonts/Tosh Font Family/TRYToshA-Light-BF677df27a6a41e.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Tosh";
+  font-weight: 400;
+  font-style: normal;
+  src: url("/fonts/Tosh Font Family/TRYToshA-Regular-BF677df27a66806.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Tosh";
+  font-weight: 500;
+  font-style: normal;
+  src: url("/fonts/Tosh Font Family/TRYToshA-Medium-BF677df27a6785d.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Tosh";
+  font-weight: 700;
+  font-style: normal;
+  src: url("/fonts/Tosh Font Family/TRYToshA-Bold-BF677df27a68b37.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Tosh";
+  font-weight: 900;
+  font-style: normal;
+  src: url("/fonts/Tosh Font Family/TRYToshA-Black-BF677df27a667c8.ttf") format("truetype");
+}
 
 @import "tailwindcss";
 
-* {
-  font-family: "Libertinus Sans", "Titillium Web", sans-serif;
-}
+@custom-variant dark (&:is(.dark, .dark *));
+
 @theme {
-  /* Chocolate Cosmos */
-  --color-chocolate_cosmos-100: #0f0002;
-  --color-chocolate_cosmos-200: #1f0004;
-  --color-chocolate_cosmos-300: #2e0006;
-  --color-chocolate_cosmos-400: #3d0008;
-  --color-chocolate_cosmos-500: #4f000b;
-  --color-chocolate_cosmos-600: #a30016;
-  --color-chocolate_cosmos-700: #fa0021;
-  --color-chocolate_cosmos-800: #ff5269;
-  --color-chocolate_cosmos-900: #ffa8b4;
+  --font-sans: "Tosh", sans-serif;
+  --font-heading: "Tosh", sans-serif;
 
-  /* Claret */
-  --color-claret-100: #160007;
-  --color-claret-200: #2d000f;
-  --color-claret-300: #430016;
-  --color-claret-400: #5a001e;
-  --color-claret-500: #720026;
-  --color-claret-600: #c00040;
-  --color-claret-700: #ff1060;
-  --color-claret-800: #ff6095;
-  --color-claret-900: #ffafca;
+  /* Custom shadcn-like color system based on CSS variables */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 
-  /* Amaranth */
-  --color-amaranth-100: #2b0b10;
-  --color-amaranth-200: #561620;
-  --color-amaranth-300: #812130;
-  --color-amaranth-400: #ac2c3f;
-  --color-amaranth-500: #ce4257;
-  --color-amaranth-600: #d86778;
-  --color-amaranth-700: #e28d99;
-  --color-amaranth-800: #ebb3bb;
-  --color-amaranth-900: #f5d9dd;
+  /* Primary color palette shades for gradients */
+  --color-primary-50: #f0fdfa;
+  --color-primary-100: #ccfbf1;
+  --color-primary-200: #99f6e4;
+  --color-primary-300: #5eead4;
+  --color-primary-400: #2dd4bf;
+  --color-primary-500: #14b8a6;
+  --color-primary-600: #0d9488;
+  --color-primary-700: #0f766e;
+  --color-primary-800: #115e59;
+  --color-primary-900: #134e4a;
+}
 
-  /* Coral */
-  --color-coral-100: #431200;
-  --color-coral-200: #872400;
-  --color-coral-300: #ca3600;
-  --color-coral-400: #ff4e0e;
-  --color-coral-500: #ff7f51;
-  --color-coral-600: #ff9974;
-  --color-coral-700: #ffb397;
-  --color-coral-800: #ffccba;
-  --color-coral-900: #ffe6dc;
+:root {
+  --background: #f8fafc; /* Slate 50 - clean, bright but soft background */
+  --foreground: #0f172a; /* Slate 900 */
+  
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  
+  --primary: #0d9488; /* Beautiful, highly soothing Teal 600 */
+  --primary-foreground: #ffffff;
+  
+  --secondary: #f1f5f9; /* Slate 100 */
+  --secondary-foreground: #0f172a;
+  
+  --muted: #f1f5f9; /* Slate 100 */
+  --muted-foreground: #475569; /* Slate 600 - soft */
+  
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  
+  --border: #e2e8f0; /* Slate 200 */
+  --input: #e2e8f0;
+  --ring: #0d9488;
+}
 
-  /* Sandy Brown */
-  --color-sandy_brown-100: #431c00;
-  --color-sandy_brown-200: #873800;
-  --color-sandy_brown-300: #ca5400;
-  --color-sandy_brown-400: #ff730e;
-  --color-sandy_brown-500: #ff9b54;
-  --color-sandy_brown-600: #ffae74;
-  --color-sandy_brown-700: #ffc297;
-  --color-sandy_brown-800: #ffd7ba;
-  --color-sandy_brown-900: #ffebdc;
+.dark {
+  --background: #0f172a; /* Soothing dark slate */
+  --foreground: #f8fafc; /* Slate 50 */
+  
+  --card: #1e293b; /* Slate 800 */
+  --card-foreground: #f8fafc;
+  
+  --popover: #1e293b;
+  --popover-foreground: #f8fafc;
+  
+  --primary: #2dd4bf; /* Teal 400 - vibrant, calming under dark mode */
+  --primary-foreground: #0f172a;
+  
+  --secondary: #1e293b; /* Slate 800 */
+  --secondary-foreground: #f8fafc;
+  
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8; /* Slate 400 */
+  
+  --accent: #1e293b;
+  --accent-foreground: #f8fafc;
+  
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  
+  --border: #334155; /* Slate 700 */
+  --input: #334155;
+  --ring: #2dd4bf;
+}
+
+@layer base {
+  * {
+    font-family: var(--font-sans);
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  }
+}
+
+/* Glassmorphism utilities */
+.glass {
+  background-color: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+}
+
+.dark .glass {
+  background-color: rgba(30, 41, 59, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+.glass-panel {
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+}
+
+.dark .glass-panel {
+  background-color: rgba(30, 41, 59, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+}
+
+/* Animation delays and blobs */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite alternate;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
 }
