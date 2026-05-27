@@ -9,13 +9,27 @@
  */
 
 import dotenv from "dotenv";
-dotenv.config(); // Must be first — all other modules read process.env
-
-import express from "express";
+import fs from "fs";
 import http from "http";
 import cors from "cors";
 import path from "path";
 import cookieParser from "cookie-parser";
+
+const envCandidates = [
+  path.resolve(process.cwd(), ".env"),
+  path.resolve(process.cwd(), "../.env"),
+  path.resolve(process.cwd(), "../../.env"),
+];
+
+const envPath = envCandidates.find((candidate) => fs.existsSync(candidate));
+
+if (envPath) {
+  dotenv.config({ path: envPath });
+} else {
+  dotenv.config();
+}
+
+import express from "express";
 
 import { allowedOrigins } from "./config/cors";
 import { Logger } from "./utils/logger";
@@ -44,7 +58,7 @@ async function init(): Promise<void> {
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
-    })
+    }),
   );
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
@@ -64,7 +78,7 @@ async function init(): Promise<void> {
           res.setHeader("Cache-Control", "public, max-age=0");
         }
       },
-    })
+    }),
   );
 
   // ── External services ──────────────────────────────────────────────────────

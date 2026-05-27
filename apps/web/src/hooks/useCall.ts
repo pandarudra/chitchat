@@ -97,7 +97,7 @@ export function useCall({
       }
       iceCandidateQueueRef.current = [];
     },
-    []
+    [],
   );
 
   // ── Peer connection factory ────────────────────────────────────────────────
@@ -131,7 +131,10 @@ export function useCall({
     };
 
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
+      if (
+        pc.connectionState === "failed" ||
+        pc.connectionState === "disconnected"
+      ) {
         cleanupCall();
       }
     };
@@ -190,13 +193,13 @@ export function useCall({
 
         socketRef.current.emit("call-user", {
           to: callee.id,
-          toPhone: callee.phoneNumber,
+          toPhone: callee.email,
           callId,
           offer,
           callType,
           from: userRef.current.id,
           fromName: userRef.current.displayName,
-          fromPhone: userRef.current.phoneNumber,
+          fromPhone: userRef.current.email,
         });
 
         // Auto-timeout if callee doesn't answer in 30 s
@@ -211,7 +214,16 @@ export function useCall({
         cleanupCall();
       }
     },
-    [isConnected, createPeerConnection, cleanupCall, processQueuedIceCandidates, dispatch, socketRef, stateRef, userRef]
+    [
+      isConnected,
+      createPeerConnection,
+      cleanupCall,
+      processQueuedIceCandidates,
+      dispatch,
+      socketRef,
+      stateRef,
+      userRef,
+    ],
   );
 
   // ── Accept incoming call ───────────────────────────────────────────────────
@@ -221,7 +233,13 @@ export function useCall({
       const { call } = stateRef.current;
       const currentUser = userRef.current;
 
-      if (!socketRef.current || !call.peerConnection || !call.caller || !currentUser) return;
+      if (
+        !socketRef.current ||
+        !call.peerConnection ||
+        !call.caller ||
+        !currentUser
+      )
+        return;
 
       try {
         const pc = call.peerConnection;
@@ -232,10 +250,18 @@ export function useCall({
         }
 
         const stream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
           video:
             call.callType === "video"
-              ? { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } }
+              ? {
+                  width: { ideal: 640 },
+                  height: { ideal: 480 },
+                  frameRate: { ideal: 30 },
+                }
               : false,
         });
 
@@ -253,9 +279,9 @@ export function useCall({
           callId,
           answer,
           to: call.caller.id,
-          toPhone: call.caller.phoneNumber,
+          toPhone: call.caller.email,
           from: currentUser.id,
-          fromPhone: currentUser.phoneNumber,
+          fromPhone: currentUser.email,
         });
 
         dispatch({ type: "SET_CALL_STATUS", payload: "connected" });
@@ -263,7 +289,7 @@ export function useCall({
         cleanupCall();
       }
     },
-    [cleanupCall, dispatch, socketRef, stateRef, userRef]
+    [cleanupCall, dispatch, socketRef, stateRef, userRef],
   );
 
   // ── Decline call ──────────────────────────────────────────────────────────
@@ -277,14 +303,14 @@ export function useCall({
         socketRef.current.emit("decline-call", {
           callId,
           to: call.caller.id,
-          toPhone: call.caller.phoneNumber,
+          toPhone: call.caller.email,
           from: currentUser.id,
         });
         dispatch({ type: "SET_CALL_STATUS", payload: "declined" });
         setTimeout(() => cleanupCall(), 1_000);
       }
     },
-    [cleanupCall, dispatch, socketRef, stateRef, userRef]
+    [cleanupCall, dispatch, socketRef, stateRef, userRef],
   );
 
   // ── End call ──────────────────────────────────────────────────────────────
@@ -301,16 +327,16 @@ export function useCall({
 
       const recipientId =
         call.caller?.id === currentUser.id ? call.callee?.id : call.caller?.id;
-      const recipientPhone =
+      const recipientEmail =
         call.caller?.id === currentUser.id
-          ? call.callee?.phoneNumber
-          : call.caller?.phoneNumber;
+          ? call.callee?.email
+          : call.caller?.email;
 
       if (recipientId) {
         socketRef.current.emit("end-call", {
           callId,
           to: recipientId,
-          toPhone: recipientPhone,
+          toPhone: recipientEmail,
           from: currentUser.id,
         });
       }
@@ -318,7 +344,7 @@ export function useCall({
       dispatch({ type: "SET_CALL_STATUS", payload: "ended" });
       setTimeout(() => cleanupCall(), 2_000);
     },
-    [cleanupCall, dispatch, socketRef, stateRef, userRef]
+    [cleanupCall, dispatch, socketRef, stateRef, userRef],
   );
 
   // ── Send ICE candidate manually ───────────────────────────────────────────
@@ -341,7 +367,7 @@ export function useCall({
         });
       }
     },
-    [socketRef, stateRef, userRef]
+    [socketRef, stateRef, userRef],
   );
 
   // ── Incoming call socket events ───────────────────────────────────────────
@@ -355,7 +381,7 @@ export function useCall({
       const { callId, from, fromName, fromPhone, callType, offer } = data;
 
       const caller = stateRef.current.contacts.find(
-        (c) => c.id === from || c.phoneNumber === fromPhone
+        (c) => c.id === from || c.email === fromPhone,
       );
 
       try {
@@ -370,15 +396,22 @@ export function useCall({
           payload: caller ?? {
             id: from,
             displayName: fromName,
-            phoneNumber: fromPhone ?? from,
+            email: fromPhone ?? from,
             isOnline: false,
             lastSeen: new Date(),
           },
         });
 
-        dispatch({ type: "SET_CALL", payload: { callId, callType, status: "ringing" } });
+        dispatch({
+          type: "SET_CALL",
+          payload: { callId, callType, status: "ringing" },
+        });
       } catch {
-        socket.emit("call-error", { callId, to: from, message: "Failed to process incoming call." });
+        socket.emit("call-error", {
+          callId,
+          to: from,
+          message: "Failed to process incoming call.",
+        });
       }
     });
 
@@ -388,7 +421,9 @@ export function useCall({
 
       if (call.peerConnection && call.callId === callId) {
         try {
-          await call.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+          await call.peerConnection.setRemoteDescription(
+            new RTCSessionDescription(answer),
+          );
           await processQueuedIceCandidates(call.peerConnection);
           dispatch({ type: "SET_CALL_STATUS", payload: "connected" });
           if (callTimeoutRef.current) {

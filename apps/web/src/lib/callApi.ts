@@ -4,9 +4,10 @@
  */
 
 import api from "./axiosInstance";
+import type { CallHistory } from "../types/call";
 
 export interface CallHistoryResponse {
-  calls: any[];
+  calls: CallHistory[];
   pagination: {
     currentPage: number;
     totalPages: number;
@@ -17,7 +18,7 @@ export interface CallHistoryResponse {
 
 export async function getCallHistory(
   page = 1,
-  limit = 20
+  limit = 20,
 ): Promise<CallHistoryResponse> {
   const res = await api.get(`/api/calls/history?page=${page}&limit=${limit}`);
   return res.data;

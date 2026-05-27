@@ -35,7 +35,7 @@ interface ChatContextType {
   contactRequests: ContactRequest[];
   isTyping: Record<string, User[]>;
   searchQuery: string;
-  call: typeof initialState["call"];
+  call: (typeof initialState)["call"];
   isConnected: boolean;
 
   // Chat actions
@@ -90,17 +90,30 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   // Stable refs so socket handlers always see the latest values
   const stateRef = useRef(state);
   const userRef = useRef(user);
-  useEffect(() => { stateRef.current = state; }, [state]);
-  useEffect(() => { userRef.current = user; }, [user]);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   // ── WebRTC hook ────────────────────────────────────────────────────────────
   const { initiateCall, acceptCall, declineCall, endCall, sendIceCandidate } =
-    useCall({ socketRef, isConnected, stateRef, userRef, dispatch, isAuthenticated });
+    useCall({
+      socketRef,
+      isConnected,
+      stateRef,
+      userRef,
+      dispatch,
+      isAuthenticated,
+    });
 
   // ── Socket connection ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -131,9 +144,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setIsConnected(true);
     });
 
-    socket.on("connect_error", (err) => {
+    socket.on("connect_error", () => {
       setIsConnected(false);
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      if (reconnectTimeoutRef.current)
+        clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = setTimeout(() => socket.connect(), 3_000);
     });
 
@@ -149,16 +163,22 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     socket.on("one_to_one_message", handleReceiveMessage);
     socket.on("seen_message", handleSeenMessage);
     socket.on("user_typing", (data: any) =>
-      dispatch({ type: "SET_TYPING", payload: { chatId: data.chatId, users: [data.user] } })
+      dispatch({
+        type: "SET_TYPING",
+        payload: { chatId: data.chatId, users: [data.user] },
+      }),
     );
     socket.on("user_stopped_typing", (data: any) =>
-      dispatch({ type: "SET_TYPING", payload: { chatId: data.chatId, users: [] } })
+      dispatch({
+        type: "SET_TYPING",
+        payload: { chatId: data.chatId, users: [] },
+      }),
     );
     socket.on("user_status_change", (data: any) =>
       dispatch({
         type: "UPDATE_USER_STATUS",
         payload: { ...data, lastSeen: new Date(data.lastSeen) },
-      })
+      }),
     );
 
     // Heartbeat keeps Redis TTL and lastSeen refreshed
@@ -168,7 +188,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       clearInterval(heartbeat);
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      if (reconnectTimeoutRef.current)
+        clearTimeout(reconnectTimeoutRef.current);
       socket.disconnect();
       setIsConnected(false);
     };
@@ -187,8 +208,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     stateRef.current.chats.forEach((chat) => {
       chat.messages.forEach((msg) => {
-        if (msg.senderId === currentUser.id && msg.receiverId === data.from && msg.status !== "read") {
-          dispatch({ type: "UPDATE_MESSAGE_STATUS", payload: { messageId: msg.id, status: "read" } });
+        if (
+          msg.senderId === currentUser.id &&
+          msg.receiverId === data.from &&
+          msg.status !== "read"
+        ) {
+          dispatch({
+            type: "UPDATE_MESSAGE_STATUS",
+            payload: { messageId: msg.id, status: "read" },
+          });
         }
       });
     });
@@ -203,7 +231,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     // Silently drop messages from blocked contacts
     const isBlocked = currentState.contacts.some(
-      (c) => c.id === senderId && c.isBlocked
+      (c) => c.id === senderId && c.isBlocked,
     );
     if (isBlocked) return;
 
@@ -214,10 +242,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       typeof msgData.content === "string"
         ? msgData.content
         : typeof msgData.message === "string"
-        ? msgData.message
-        : msgData.content?.content ?? msgData.message?.content ?? "";
+          ? msgData.message
+          : (msgData.content?.content ?? msgData.message?.content ?? "");
 
-    const timestamp = msgData.timestamp ? new Date(msgData.timestamp) : new Date();
+    const timestamp = msgData.timestamp
+      ? new Date(msgData.timestamp)
+      : new Date();
     const receiverId = data.toId || msgData.to || currentUser.id;
 
     if (!senderId || !receiverId) return;
@@ -248,13 +278,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             {
               id: contactId,
               displayName: data.senderName || contactId,
-              phoneNumber: data.senderNumber || "",
+              email: data.senderEmail || data.senderNumber || "",
               isOnline: false,
             },
             {
               id: currentUser.id,
               displayName: currentUser.displayName,
-              phoneNumber: currentUser.phoneNumber,
+              email: currentUser.email,
               avatarUrl: currentUser.avatarUrl,
               isOnline: currentUser.isOnline,
             },
@@ -284,7 +314,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           {
             id: contact.user,
             displayName: contact.name,
-            phoneNumber: contact.phonenumber,
+            email: contact.email ?? contact.phonenumber ?? "",
             avatarUrl: contact.avatarUrl,
             isOnline: contact.isOnline ?? false,
             lastSeen: contact.lastSeen ? new Date(contact.lastSeen) : undefined,
@@ -292,14 +322,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             isAI: contact.isAI ?? false,
           },
           ...(userRef.current
-            ? [{
-                id: userRef.current.id,
-                displayName: userRef.current.displayName,
-                phoneNumber: userRef.current.phoneNumber,
-                avatarUrl: userRef.current.avatarUrl,
-                isOnline: userRef.current.isOnline,
-                isAI: false,
-              }]
+            ? [
+                {
+                  id: userRef.current.id,
+                  displayName: userRef.current.displayName,
+                  email: userRef.current.email,
+                  avatarUrl: userRef.current.avatarUrl,
+                  isOnline: userRef.current.isOnline,
+                  isAI: false,
+                },
+              ]
             : []),
         ],
         messages: [],
@@ -316,7 +348,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const hydrated = await Promise.all(
         chats.map(async (chat) => {
           try {
-            const other = chat.participants.find((p) => p.id !== userRef.current?.id);
+            const other = chat.participants.find(
+              (p) => p.id !== userRef.current?.id,
+            );
             if (!other) return chat;
             const r = await api.get(`/api/chats/${other.id}/messages`);
             const msgs: any[] = r.data.messages ?? [];
@@ -331,7 +365,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 content: last.content,
                 timestamp: new Date(last.timestamp),
                 type: last.type ?? "text",
-                status: (last.delivered ? "delivered" : "sent") as Message["status"],
+                status: (last.delivered
+                  ? "delivered"
+                  : "sent") as Message["status"],
                 mediaUrl: last.mediaUrl,
                 fileName: last.fileName,
                 fileSize: last.fileSize,
@@ -341,7 +377,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           } catch {
             return chat;
           }
-        })
+        }),
       );
 
       dispatch({ type: "SET_CHATS", payload: hydrated });
@@ -349,7 +385,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const contacts = res.data.contacts.map((c: any) => ({
         id: c.user.toString(),
         displayName: c.name,
-        phoneNumber: c.phonenumber,
+        email: c.email ?? c.phonenumber ?? "",
         avatarUrl: c.avatarUrl,
         isOnline: c.isOnline ?? false,
         lastSeen: c.lastSeen ? new Date(c.lastSeen) : undefined,
@@ -387,10 +423,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }));
 
       const updatedChats = stateRef.current.chats.map((c) =>
-        c.id === chat.id ? { ...c, messages } : c
+        c.id === chat.id ? { ...c, messages } : c,
       );
       dispatch({ type: "SET_CHATS", payload: updatedChats });
-      dispatch({ type: "SET_ACTIVE_CHAT", payload: updatedChats.find((c) => c.id === chat.id) ?? chat });
+      dispatch({
+        type: "SET_ACTIVE_CHAT",
+        payload: updatedChats.find((c) => c.id === chat.id) ?? chat,
+      });
     } catch {
       dispatch({ type: "SET_ACTIVE_CHAT", payload: chat });
     }
@@ -401,7 +440,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const currentState = stateRef.current;
       const currentUser = userRef.current;
 
-      if (!currentState.activeChat || !currentUser || !socketRef.current || !isConnected) return;
+      if (
+        !currentState.activeChat ||
+        !currentUser ||
+        !socketRef.current ||
+        !isConnected
+      )
+        return;
 
       const message: Message = {
         id: Date.now().toString(),
@@ -416,8 +461,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: "SEND_MESSAGE", payload: message });
 
       const recipientPhone = currentState.activeChat.participants.find(
-        (p) => p.id !== currentUser.id
-      )?.phoneNumber;
+        (p) => p.id !== currentUser.id,
+      )?.email;
 
       if (recipientPhone) {
         socketRef.current.emit("one_to_one_message", {
@@ -427,12 +472,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         });
 
         setTimeout(
-          () => dispatch({ type: "UPDATE_MESSAGE_STATUS", payload: { messageId: message.id, status: "delivered" } }),
-          1_000
+          () =>
+            dispatch({
+              type: "UPDATE_MESSAGE_STATUS",
+              payload: { messageId: message.id, status: "delivered" },
+            }),
+          1_000,
         );
       }
     },
-    [isConnected]
+    [isConnected],
   );
 
   const sendAIMessage = useCallback(async (content: string) => {
@@ -486,7 +535,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           id: (Date.now() + 1).toString(),
           senderId: currentState.activeChat.id,
           receiverId: currentUser.id,
-          content: "I'm sorry, I'm experiencing some technical difficulties. Please try again.",
+          content:
+            "I'm sorry, I'm experiencing some technical difficulties. Please try again.",
           timestamp: new Date(),
           type: "text",
           status: "delivered",
@@ -500,10 +550,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     async (audioBlob: Blob, duration: number) => {
       const currentState = stateRef.current;
       const currentUser = userRef.current;
-      if (!currentState.activeChat || !currentUser || !socketRef.current || !isConnected) return;
+      if (
+        !currentState.activeChat ||
+        !currentUser ||
+        !socketRef.current ||
+        !isConnected
+      )
+        return;
 
       const formData = new FormData();
-      formData.append("audio", new File([audioBlob], `audio_${Date.now()}.webm`, { type: audioBlob.type }));
+      formData.append(
+        "audio",
+        new File([audioBlob], `audio_${Date.now()}.webm`, {
+          type: audioBlob.type,
+        }),
+      );
       formData.append("duration", duration.toString());
       formData.append("receiverId", currentState.activeChat.id);
 
@@ -529,8 +590,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: "SEND_MESSAGE", payload: message });
 
       const recipientPhone = currentState.activeChat.participants.find(
-        (p) => p.id !== currentUser.id
-      )?.phoneNumber;
+        (p) => p.id !== currentUser.id,
+      )?.email;
 
       if (recipientPhone) {
         socketRef.current.emit("one_to_one_message", {
@@ -544,19 +605,29 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           duration,
         });
         setTimeout(
-          () => dispatch({ type: "UPDATE_MESSAGE_STATUS", payload: { messageId: message.id, status: "delivered" } }),
-          1_000
+          () =>
+            dispatch({
+              type: "UPDATE_MESSAGE_STATUS",
+              payload: { messageId: message.id, status: "delivered" },
+            }),
+          1_000,
         );
       }
     },
-    [isConnected]
+    [isConnected],
   );
 
   const sendMediaMessage = useCallback(
     async (file: File, mediaType: "image" | "video") => {
       const currentState = stateRef.current;
       const currentUser = userRef.current;
-      if (!currentState.activeChat || !currentUser || !socketRef.current || !isConnected) return;
+      if (
+        !currentState.activeChat ||
+        !currentUser ||
+        !socketRef.current ||
+        !isConnected
+      )
+        return;
 
       const formData = new FormData();
       formData.append(mediaType, file);
@@ -584,8 +655,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: "SEND_MESSAGE", payload: message });
 
       const recipientPhone = currentState.activeChat.participants.find(
-        (p) => p.id !== currentUser.id
-      )?.phoneNumber;
+        (p) => p.id !== currentUser.id,
+      )?.email;
 
       if (recipientPhone) {
         socketRef.current.emit("one_to_one_message", {
@@ -598,20 +669,27 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           fileSize,
         });
         setTimeout(
-          () => dispatch({ type: "UPDATE_MESSAGE_STATUS", payload: { messageId: message.id, status: "delivered" } }),
-          1_000
+          () =>
+            dispatch({
+              type: "UPDATE_MESSAGE_STATUS",
+              payload: { messageId: message.id, status: "delivered" },
+            }),
+          1_000,
         );
       }
     },
-    [isConnected]
+    [isConnected],
   );
 
   // ── Contact actions ────────────────────────────────────────────────────────
 
-  const addContact = useCallback(async (contactEmail: string) => {
-    await api.post("/api/user/add-contact", { contactEmail });
-    await fetchChats();
-  }, [fetchChats]);
+  const addContact = useCallback(
+    async (contactEmail: string) => {
+      await api.post("/api/user/add-contact", { contactEmail });
+      await fetchChats();
+    },
+    [fetchChats],
+  );
 
   const deleteContact = useCallback(async (contactId: string) => {
     await api.post("/api/user/delete-contact", { contactId });
@@ -655,9 +733,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Group / contact request placeholders (kept for API surface compatibility)
-  const createGroupChat = useCallback((_name: string, _participants: User[]) => {}, []);
+  const createGroupChat = useCallback(
+    (_name: string, _participants: User[]) => {},
+    [],
+  );
   const addUserToGroup = useCallback((_chatId: string, _user: User) => {}, []);
-  const removeUserFromGroup = useCallback((_chatId: string, _userId: string) => {}, []);
+  const removeUserFromGroup = useCallback(
+    (_chatId: string, _userId: string) => {},
+    [],
+  );
   const sendContactRequest = useCallback((_userId: string) => {}, []);
   const acceptContactRequest = useCallback((requestId: string) => {
     dispatch({ type: "ACCEPT_CONTACT_REQUEST", payload: requestId });

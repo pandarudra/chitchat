@@ -27,15 +27,6 @@ export function ContactInfo({
   const isOnline = isUserOnline(contact);
   const statusText = getUserOnlineStatusText(contact);
 
-  const formatPhoneNumber = (phone: string) => {
-    // Format phone number for display (e.g., +1 234 567 8900)
-    const cleaned = phone.replace(/\D/g, "");
-    if (cleaned.length === 10) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
-    }
-    return phone;
-  };
-
   const formatLastSeen = (lastSeen?: Date) => {
     if (!lastSeen) return "Unknown";
 
@@ -113,11 +104,9 @@ export function ContactInfo({
           <div className="space-y-4 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-500 mb-1">
-                Phone Number
+                Email Address
               </label>
-              <p className="text-gray-900">
-                {formatPhoneNumber(contact.phoneNumber)}
-              </p>
+              <p className="text-gray-900">{contact.email}</p>
             </div>
 
             <div>

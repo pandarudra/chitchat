@@ -38,6 +38,6 @@ export interface CallHistory {
     id: string;
     displayName: string;
     avatarUrl?: string;
-    phoneNumber: string;
+    email: string;
   };
 }

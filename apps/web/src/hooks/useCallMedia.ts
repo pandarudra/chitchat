@@ -4,8 +4,9 @@
  * a user gesture before playing audio.
  */
 
-import { useEffect, useState, useCallback, RefObject } from "react";
-import type { CallState } from "../../types/call";
+import { useEffect, useState, useCallback } from "react";
+import type { RefObject } from "react";
+import type { CallState } from "../types/call";
 
 interface UseCallMediaProps {
   call: Pick<CallState, "status" | "localStream" | "remoteStream" | "callType">;
@@ -94,7 +95,7 @@ export function useCallMedia({
     if (!call.localStream) return;
     const tracks = call.localStream.getVideoTracks();
     const next = !isVideoEnabled;
-    tracks.forEach((t) => (t.enabled = next));
+    tracks.forEach((track) => (track.enabled = next));
     setIsVideoEnabled(next);
   }, [call.localStream, isVideoEnabled]);
 
@@ -102,7 +103,7 @@ export function useCallMedia({
     if (!call.localStream) return;
     const tracks = call.localStream.getAudioTracks();
     const next = !isAudioEnabled;
-    tracks.forEach((t) => (t.enabled = next));
+    tracks.forEach((track) => (track.enabled = next));
     setIsAudioEnabled(next);
   }, [call.localStream, isAudioEnabled]);
 

@@ -1,0 +1,1114 @@
+─────────────────────────────────────────────────────────────────────────────────────────────────────
+Using gpt-4o model with API key from environment.
+Aider v0.86.2
+Main model: gpt-4o with diff edit format
+Weak model: gpt-4o-mini
+Git repo: .git with 163 files
+Repo-map: using 4096 tokens, auto refresh
+Here are summaries of some files present in my git repository.
+Do not propose changes to these files, treat them as *read-only*.
+If you need to edit any of these files, ask me to *add them to the chat* first.
+
+apps/server/src/config/cors.ts:
+⋮
+│function buildAllowedOrigins(): string[] {
+│  if (FE_URL && !STATIC_ORIGINS.includes(FE_URL)) {
+│    return [...STATIC_ORIGINS, FE_URL];
+│  }
+│  return STATIC_ORIGINS;
+⋮
+
+apps/server/src/middleware/auth.middleware.ts:
+⋮
+│declare global {
+│  namespace Express {
+│    interface Request {
+│      user?: IUser;
+│    }
+│  }
+⋮
+
+apps/server/src/models/Ai.ts:
+⋮
+│export interface IAI extends Document {
+│  botId: string;
+│  name: string;
+│  avatarUrl?: string;
+│  status: string;
+│  provider: "gemini";
+│  isActive: boolean;
+│  systemPrompt?: string;
+⋮
+
+apps/server/src/models/CallHistory.ts:
+⋮
+│export interface ICallHistory extends Document {
+│  callId: string;
+│  caller: string; // User ID
+│  callee: string; // User ID
+│  callType: "audio" | "video";
+│  status: "completed" | "missed" | "declined" | "failed";
+│  duration: number; // in seconds
+│  startTime: Date;
+│  endTime?: Date;
+│  createdAt: Date;
+⋮
+
+apps/server/src/models/Message.ts:
+⋮
+│export interface IMessage extends Document {
+│  from: Types.ObjectId;
+│  to: Types.ObjectId;
+│  content: string;
+│  delivered: boolean;
+│  seen: boolean;
+│  seenAt?: Date;
+│  timestamp: Date;
+│  blocked?: boolean;
+│  path?: string;
+⋮
+
+apps/server/src/models/User.ts:
+⋮
+│export interface IUser extends Document {
+│  email: string;
+│  displayName: string;
+│  avatarUrl?: string;
+│  status?: string;
+│  lastSeen?: Date;
+│  isOnline: boolean;
+│  contacts: {
+│    user: mongoose.Types.ObjectId;
+│    name: string;
+⋮
+
+apps/server/src/services/ai.service.ts:
+⋮
+│export class AIService {
+│  /**
+│   * Ensures the Susi AI bot exists as a User document.
+│   * Called once at startup — idempotent; returns the existing document if found.
+│   */
+│  static async createDefaultAIBot() {
+│    const existingUser = await UserModel.findOne({ email: AI_BOT_EMAIL });
+│    if (existingUser) {
+│      return existingUser;
+│    }
+│
+│    try {
+│      const aiUser = new UserModel({
+│        email: AI_BOT_EMAIL,
+│        displayName: AI_BOT_NAME,
+⋮
+│  static async getDefaultAIBot() {
+│    try {
+│      // Bug fix: was querying "AI_ASSISTANT" but bot is stored as AI_BOT_EMAIL ("AI_ASSISTANT_SUSI
+│      const botUser = await UserModel.findOne({ email: AI_BOT_EMAIL });
+│      if (botUser) {
+│        return botUser;
+│      }
+│      return this.createDefaultAIBot();
+│    } catch (error) {
+│      Logger.error("Error getting default AI bot", error);
+⋮
+│  static async getAIBotMetadata(botUserId: string) {
+│    try {
+│      return await AIModel.findOne({ botId: botUserId });
+│    } catch (error) {
+│      Logger.error("Error getting AI bot metadata", error);
+│      return null;
+│    }
+⋮
+│  static async getActiveAIBots() {
+│    try {
+│      return await AIModel.find({ isActive: true });
+│    } catch (error) {
+│      Logger.error("Error getting active AI bots", error);
+│      throw error;
+│    }
+⋮
+
+apps/server/src/services/gemini.service.ts:
+⋮
+│export class GeminiService {
+│  private static genAI: GoogleGenerativeAI;
+│
+│  /** Must be called once at startup (after dotenv.config()). */
+│  static initialize(): void {
+│    if (!GEMINI_API_KEY) {
+│      Logger.warn("GEMINI_API_KEY not set — AI responses will be unavailable.");
+│      return;
+│    }
+│    this.genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+│    Logger.success("Gemini AI service initialised.");
+⋮
+│  static async generateResponse(
+│    message: string,
+│    systemPrompt?: string,
+│    conversationHistory?: Array<{ role: string; content: string }>
+⋮
+│  static async generateContextualResponse(
+│    message: string,
+│    _botId: string,
+│    userId: string,
+│    previousMessages?: Array<{ content: string; senderId: string; timestamp: Date }>
+⋮
+
+apps/server/src/services/socket.service.ts:
+⋮
+│export class SocketService {
+│  private _io: SocketIOServer;
+│
+│  constructor(httpServer: HttpServer) {
+│    this._io = new SocketIOServer(httpServer, {
+│      cors: {
+│        origin: allowedOrigins,
+│        credentials: true,
+│      },
+│      transports: ["websocket", "polling"],
+│    });
+│
+│    // Authenticate every connection before it can emit/receive events
+⋮
+│  public initListeners(): void {
+│    const io = this._io;
+│
+│    // Start the Redis pub/sub consumer that delivers messages to recipients
+│    startMessageConsumer(io);
+│
+│    io.on("connection", async (socket) => {
+│      const userId = socket.data.userId as string | undefined;
+│
+│      if (!userId) {
+⋮
+│  public get io(): SocketIOServer {
+│    return this._io;
+⋮
+
+apps/server/src/socket/auth.ts:
+⋮
+│export function socketAuthMiddleware(
+│  socket: Socket,
+│  next: (err?: Error) => void
+⋮
+
+apps/server/src/socket/handlers/call.handler.ts:
+⋮
+│type CallStatus = (typeof CALL_STATES)[keyof typeof CALL_STATES];
+│
+│interface CallData {
+│  callId: string;
+│  caller: string;
+│  callee: string;
+│  callType: "audio" | "video";
+│  status: CallStatus;
+│  startTime: number;
+│  acceptedAt?: number;
+│  endTime?: number;
+⋮
+
+apps/server/src/socket/handlers/message.handler.ts:
+⋮
+│export function registerMessageHandlers(
+│  _io: SocketIOServer,
+│  socket: Socket,
+│  userId: string
+⋮
+│export function startMessageConsumer(io: SocketIOServer): void {
+│  sub.subscribe("CHITCHAT");
+│
+│  sub.on("message", async (_channel, raw) => {
+│    let data: any;
+│    try {
+│      data = JSON.parse(raw);
+│    } catch {
+│      Logger.error("Failed to parse CHITCHAT message from Redis");
+│      return;
+⋮
+
+apps/server/src/socket/handlers/presence.handler.ts:
+⋮
+│async function broadcastStatusChange(
+│  io: SocketIOServer,
+│  userId: string,
+│  isOnline: boolean
+⋮
+│export function registerPresenceHandlers(
+│  io: SocketIOServer,
+│  socket: Socket,
+│  userId: string
+⋮
+│export async function handleUserConnected(
+│  io: SocketIOServer,
+│  socket: Socket,
+│  userId: string
+⋮
+
+apps/server/src/utils/cloudinary.ts:
+⋮
+│export async function deleteCloudinaryAsset(imageUrl: string): Promise<void> {
+│  if (!imageUrl.includes("cloudinary.com")) {
+│    Logger.debug(`Skipping non-Cloudinary URL: ${imageUrl}`);
+│    return;
+│  }
+│
+│  const urlMatch = imageUrl.match(/\/upload\/(?:v\d+\/)?(.+)$/);
+│  if (!urlMatch) {
+│    Logger.error(`Could not extract public_id from Cloudinary URL: ${imageUrl}`);
+│    return;
+⋮
+│export async function uploadToCloudinary(
+│  localFilePath: string,
+│  options: {
+│    folder: string;
+│    publicId?: string;
+│  }
+⋮
+
+apps/server/src/utils/jwt.ts:
+⋮
+│export type TokenType = "access" | "refresh";
+│
+⋮
+
+apps/server/src/utils/logger.ts:
+⋮
+│function timestamp(): string {
+│  return new Date().toISOString();
+⋮
+│function colorize(color: string, text: string): string {
+│  return `${color}${text}${COLORS.reset}`;
+⋮
+│function format(level: string, message: string, color: string): string {
+│  return `${colorize(COLORS.gray, `[${timestamp()}]`)} ${colorize(
+│    color,
+│    `[${level}]`
+│  )} ${message}`;
+⋮
+│export const Logger = {
+│  info(message: string): void {
+│    console.log(format("INFO", message, COLORS.blue));
+│  },
+│
+│  success(message: string): void {
+│    console.log(format("OK", message, COLORS.green));
+│  },
+│
+│  warn(message: string): void {
+│    console.warn(format("WARN", message, COLORS.yellow));
+⋮
+│  error(message: string, error?: unknown): void {
+│    console.error(format("ERR", message, COLORS.red));
+│
+│    if (error !== undefined) {
+│      console.error(colorize(COLORS.red, String(error)));
+│    }
+⋮
+
+apps/server/src/utils/redisClient.ts:
+⋮
+│function createClient(name: string): Redis {
+│  const client = new Redis(redis_cred);
+│
+│  client.on("error", (err) => {
+│    Logger.error(`[Redis:${name}] Connection error`, err);
+│  });
+│
+│  client.on("connect", () => {
+│    Logger.info(`[Redis:${name}] Connected`);
+│  });
+│
+⋮
+
+apps/web/src/components/Layout/Sidebar.tsx:
+⋮
+│          <button
+│            onClick={() => setActiveTab("calls")}
+│            className={`p-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
+│              activeTab === "calls"
+│                ? "bg-primary text-primary-foreground shadow-sm"
+│                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+│            }`}
+│            title="Calls"
+⋮
+│          <button
+│            onClick={() => setIsAddContactOpen(true)}
+│            className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted 
+│            title="Add Contact"
+⋮
+│          <button
+│            onClick={() => setIsSettingsOpen(true)}
+│            className="p-2.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl 
+│            title="Settings"
+⋮
+│                <img
+│                  src={getAvatarUrl(user.avatarUrl)}
+│                  alt={user?.displayName}
+│                  className="w-9 h-9 rounded-xl object-cover shadow-xs border border-border"
+│                  onError={(e) => {
+│                    const target = e.target as HTMLImageElement;
+│                    target.style.display = "none";
+⋮
+│            <button
+│              onClick={() => setIsAddContactOpen(true)}
+│              className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted 
+│              title="Add Contact"
+⋮
+│            <button
+│              onClick={() => setIsSettingsOpen(true)}
+│              className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted 
+│              title="Settings"
+⋮
+│          <button
+│            onClick={() => setActiveTab("chats")}
+│            className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-xl tran
+│              activeTab === "chats"
+│                ? "bg-background text-foreground shadow-xs font-semibold border border-border"
+│                : "text-muted-foreground hover:text-foreground font-medium"
+│            }`}
+⋮
+│          <button
+│            onClick={() => setActiveTab("calls")}
+│            className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-xl tran
+│              activeTab === "calls"
+│                ? "bg-background text-foreground shadow-xs font-semibold border border-border"
+│                : "text-muted-foreground hover:text-foreground font-medium"
+│            }`}
+⋮
+
+apps/web/src/components/auth/Private.tsx:
+⋮
+│interface PrivateRouteProps {
+│  children: React.ReactNode;
+⋮
+
+apps/web/src/components/auth/Public.tsx:
+⋮
+│interface PublicRouteProps {
+│  children: React.ReactNode;
+│  restricted?: boolean; // If true, redirect authenticated users
+⋮
+
+apps/web/src/components/call/CallAvatar.tsx:
+⋮
+│interface CallAvatarProps {
+│  avatarUrl?: string;
+│  displayName?: string;
+│  size?: "sm" | "md" | "lg";
+│  pulsing?: boolean;
+⋮
+
+apps/web/src/components/call/CallControls.tsx:
+⋮
+│interface CallControlsProps {
+│  callId: string;
+│  callType: "audio" | "video" | null;
+│  isAudioEnabled: boolean;
+│  isVideoEnabled: boolean;
+│  isFullscreen: boolean;
+│  showControls: boolean;
+│  onToggleAudio: () => void;
+│  onToggleVideo: () => void;
+│  onEndCall: (callId: string) => void;
+⋮
+
+apps/web/src/components/call/CallModal.tsx:
+⋮
+│                  <button
+│                    onClick={() => setIsFullscreen((p) => !p)}
+│                    className="w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 flex items-center
+⋮
+│              <CallSettings
+│                callType={call.callType}
+│                isAudioEnabled={isAudioEnabled}
+│                isVideoEnabled={isVideoEnabled}
+│                isFullscreen={isFullscreen}
+│                videoLayout={videoLayout}
+│                callDuration={callDuration}
+│                onToggleAudio={toggleAudio}
+│                onToggleVideo={toggleVideo}
+│                onToggleLayout={toggleVideoLayout}
+│                onToggleFullscreen={() => setIsFullscreen((p) => !p)}
+⋮
+
+apps/web/src/components/call/CallNotification.tsx:
+⋮
+│          <button
+│            type="button"
+│            onClick={(e) => {
+│              e.preventDefault();
+│              e.stopPropagation();
+│              stopRingtone();
+│              setIsVisible(false);
+│              if (call.callId) declineCall(call.callId);
+│            }}
+⋮
+│          <button
+│            type="button"
+│            onClick={(e) => {
+│              e.preventDefault();
+│              e.stopPropagation();
+│              stopRingtone();
+│              setIsVisible(false);
+│              if (call.callId) acceptCall(call.callId);
+│            }}
+│            disabled={!call.callId}
+⋮
+
+apps/web/src/components/call/CallSettings.tsx:
+⋮
+│interface CallSettingsProps {
+│  callType: "audio" | "video" | null;
+│  isAudioEnabled: boolean;
+│  isVideoEnabled: boolean;
+│  isFullscreen: boolean;
+│  videoLayout: "remote-main" | "local-main";
+│  callDuration: string;
+│  onToggleAudio: () => void;
+│  onToggleVideo: () => void;
+│  onToggleLayout: () => void;
+⋮
+
+apps/web/src/components/chat/AddContact.tsx:
+⋮
+│interface AddContactProps {
+│  isOpen: boolean;
+│  onClose: () => void;
+⋮
+
+apps/web/src/components/chat/AudioPlayer.tsx:
+⋮
+│interface AudioPlayerProps {
+│  audioUrl: string;
+│  duration?: number;
+│  isOwn?: boolean;
+⋮
+
+apps/web/src/components/chat/ChatHeader.tsx:
+⋮
+│interface ChatHeaderProps {
+│  onOpenContactInfo: () => void;
+⋮
+
+apps/web/src/components/chat/ChatMessageList.tsx:
+⋮
+│interface ChatMessageListProps {
+│  activeChat: Chat;
+│  messagesEndRef: RefObject<HTMLDivElement | null>;
+⋮
+
+apps/web/src/components/chat/ChatOptions.tsx:
+⋮
+│interface ChatOptionsProps {
+│  chat: Chat;
+⋮
+
+apps/web/src/components/chat/ChatWindow.tsx:
+⋮
+│        <ContactInfo
+│          isOpen={isContactInfoOpen}
+│          onClose={() => setIsContactInfoOpen(false)}
+│          contact={getContactFromActiveChat()!}
+│          onCall={handleContactInfoCall}
+│          onBlock={handleBlockContact}
+⋮
+
+apps/web/src/components/chat/ContactInfo.tsx:
+⋮
+│interface ContactInfoProps {
+│  isOpen: boolean;
+│  onClose: () => void;
+│  contact: User;
+│  onCall?: (type: "audio" | "video") => void;
+│  onBlock?: () => void;
+│  onDeleteContact?: () => void;
+⋮
+
+apps/web/src/components/chat/DateSeparator.tsx:
+⋮
+│interface DateSeparatorProps {
+│  date: Date;
+⋮
+
+apps/web/src/components/chat/MessageBubble.tsx:
+⋮
+│interface MessageBubbleProps {
+│  message: Message;
+│  isOwn: boolean;
+│  showAvatar: boolean;
+│  senderName?: string;
+│  ifblocked?: boolean; // Optional prop to handle blocked contacts
+⋮
+
+apps/web/src/components/chat/MessageInput.tsx:
+⋮
+│            <input
+│              type="text"
+│              value={message}
+│              onChange={(e) => setMessage(e.target.value)}
+│              onKeyPress={handleKeyPress}
+│              placeholder={getPlaceholderText()}
+⋮
+
+apps/web/src/components/chat/VoiceRecorder.tsx:
+⋮
+│interface VoiceRecorderProps {
+│  isRecording: boolean;
+│  recordingTime: number;
+│  onStart: () => void;
+│  onStop: () => void;
+│  onCancel: () => void;
+│  onSend: () => void;
+│  hasRecording: boolean;
+│  error?: string | null;
+⋮
+
+apps/web/src/components/profile/EditProfile.tsx:
+⋮
+│interface EditProfileProps {
+│  isOpen: boolean;
+│  onClose: () => void;
+⋮
+
+apps/web/src/components/settings/Settings.tsx:
+⋮
+│interface SettingsProps {
+│  isOpen: boolean;
+│  onClose: () => void;
+⋮
+
+apps/web/src/components/ui/FloatingActionButton.tsx:
+⋮
+│interface FloatingActionButtonProps {
+│  onClick: () => void;
+│  icon?: React.ReactNode;
+│  className?: string;
+│  title?: string;
+│  position?: "bottom-right" | "bottom-left";
+⋮
+
+apps/web/src/components/ui/Input.tsx:
+⋮
+│export interface InputProps
+⋮
+
+apps/web/src/components/ui/SearchInput.tsx:
+⋮
+│interface SearchInputProps {
+│  value: string;
+│  onChange: (value: string) => void;
+│  placeholder?: string;
+│  className?: string;
+⋮
+│export function SearchInput({
+│  value,
+│  onChange,
+│  placeholder = "Search...",
+│  className = "",
+│}: SearchInputProps) {
+⋮
+│  return (
+│    <div className={`relative ${className}`}>
+│      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" 
+│      <input
+│        type="text"
+│        placeholder={placeholder}
+│        value={value}
+│        onChange={(e) => onChange(e.target.value)}
+│        className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none foc
+│      />
+│      {value && (
+│        <button
+│          onClick={() => onChange("")}
+│          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-g
+⋮
+
+apps/web/src/components/ui/ThemeToggle.tsx:
+⋮
+│export function ThemeToggle() {
+│  const { theme, setTheme } = useTheme();
+│
+│  const handleToggle = () => {
+│    if (theme === "system") {
+│      const isSystemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+│      setTheme(isSystemDark ? "light" : "dark");
+│    } else {
+│      setTheme(theme === "light" ? "dark" : "light");
+│    }
+⋮
+
+apps/web/src/context/AuthContext.tsx:
+⋮
+│interface AuthContextType extends AuthState {
+│  login: (email: string) => Promise<void>;
+│  signup: (name: string, email: string) => Promise<void>;
+│  requestOtp: (email: string) => Promise<void>;
+│  verifyOtp: (email: string, otp: string) => Promise<void>;
+│  logout: () => Promise<void>;
+│  updateProfile: (updates: Partial<User> | Record<string, unknown>) => Promise<void>;
+│  clearError: () => void;
+│  refreshAuth: () => Promise<void>;
+⋮
+│export function useAuth(): AuthContextType {
+│  const context = useContext(AuthContext);
+│  if (!context) {
+│    throw new Error("useAuth must be used within an AuthProvider.");
+│  }
+│  return context;
+⋮
+
+apps/web/src/context/ChatContext.tsx:
+⋮
+│interface ChatContextType {
+│  // State
+│  chats: Chat[];
+│  activeChat: Chat | null;
+│  contacts: User[];
+│  contactRequests: ContactRequest[];
+│  isTyping: Record<string, User[]>;
+│  searchQuery: string;
+│  call: (typeof initialState)["call"];
+│  isConnected: boolean;
+│
+⋮
+
+apps/web/src/context/ThemeProvider.tsx:
+⋮
+│type Theme = "dark" | "light" | "system";
+│
+│type ThemeProviderProps = {
+│  children: ReactNode;
+│  defaultTheme?: Theme;
+│  storageKey?: string;
+⋮
+│type ThemeProviderState = {
+│  theme: Theme;
+│  setTheme: (theme: Theme) => void;
+⋮
+
+apps/web/src/context/auth/authReducer.ts:
+⋮
+│export type AuthAction =
+│  | { type: "AUTH_START" }
+│  | { type: "AUTH_SUCCESS"; payload: User }
+│  | { type: "AUTH_FAILURE"; payload: string }
+│  | { type: "LOGOUT" }
+│  | { type: "UPDATE_PROFILE"; payload: User }
+│  | { type: "CLEAR_ERROR" }
+⋮
+
+apps/web/src/context/chat/chatReducer.ts:
+⋮
+│export type ChatAction =
+│  | { type: "SET_ACTIVE_CHAT"; payload: Chat | null }
+│  | { type: "SET_CHATS"; payload: Chat[] }
+│  | { type: "ADD_NEW_CHAT"; payload: Chat }
+│  | { type: "SEND_MESSAGE"; payload: Message }
+│  | { type: "RECEIVE_MESSAGE"; payload: Message }
+│  | { type: "UPDATE_MESSAGE_STATUS"; payload: { messageId: string; status: Message["status"] } }
+│  | { type: "MARK_AS_READ"; payload: string }
+│  | { type: "ADD_CONTACT"; payload: User }
+│  | { type: "SET_CONTACTS"; payload: User[] }
+⋮
+
+apps/web/src/hooks/useCall.ts:
+⋮
+│interface UseCallProps {
+│  socketRef: React.MutableRefObject<Socket | null>;
+│  isConnected: boolean;
+│  stateRef: React.MutableRefObject<ChatState>;
+│  userRef: React.MutableRefObject<User | null>;
+│  dispatch: React.Dispatch<ChatAction>;
+│  isAuthenticated: boolean;
+⋮
+
+apps/web/src/hooks/useCallMedia.ts:
+⋮
+│interface UseCallMediaProps {
+│  call: Pick<CallState, "status" | "localStream" | "remoteStream" | "callType">;
+│  localVideoRef: RefObject<HTMLVideoElement | null>;
+│  remoteVideoRef: RefObject<HTMLVideoElement | null>;
+│  localAudioRef: RefObject<HTMLAudioElement | null>;
+│  hiddenRemoteAudioRef: RefObject<HTMLAudioElement | null>;
+⋮
+
+apps/web/src/hooks/useCallPip.ts:
+⋮
+│interface Position { x: number; y: number }
+│interface Size { width: number; height: number }
+│
+⋮
+
+apps/web/src/hooks/useCallTimer.ts:
+⋮
+│export function useCallTimer(isConnected: boolean): string {
+│  const [seconds, setSeconds] = useState(0);
+│  const startRef = useRef<number | null>(null);
+│
+│  useEffect(() => {
+│    if (!isConnected) {
+│      startRef.current = null;
+│      setSeconds(0);
+│      return;
+│    }
+│
+⋮
+│function formatDuration(secs: number): string {
+│  const h = Math.floor(secs / 3600);
+│  const m = Math.floor((secs % 3600) / 60);
+│  const s = secs % 60;
+│
+│  const mm = String(m).padStart(2, "0");
+│  const ss = String(s).padStart(2, "0");
+│
+│  if (h > 0) return `${String(h).padStart(2, "0")}:${mm}:${ss}`;
+│  return `${mm}:${ss}`;
+⋮
+
+apps/web/src/hooks/useDebounce.ts:
+⋮
+│export function useDebounce<T>(value: T, delay: number): T {
+│  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+│
+│  useEffect(() => {
+│    const handler = setTimeout(() => {
+│      setDebouncedValue(value);
+│    }, delay);
+│
+│    return () => {
+│      clearTimeout(handler);
+⋮
+
+apps/web/src/hooks/useMediaQuery.ts:
+⋮
+│export function useMediaQuery(query: string): boolean {
+│  const [matches, setMatches] = useState(false);
+│
+│  useEffect(() => {
+│    const media = window.matchMedia(query);
+│    if (media.matches !== matches) {
+│      setMatches(media.matches);
+│    }
+│
+│    const listener = () => setMatches(media.matches);
+⋮
+
+apps/web/src/hooks/useRingtone.ts:
+⋮
+│export function useRingtone(isRinging: boolean) {
+│  const audioRef = useRef<HTMLAudioElement | null>(null);
+│
+│  // Initialize audio on first user interaction
+│  useEffect(() => {
+│    const initializeAudio = () => {
+│      const audio = audioRef.current;
+│      if (audio) {
+│        audio.load();
+│        audio.volume = 0;
+⋮
+
+apps/web/src/hooks/useVoiceRecording.ts:
+⋮
+│interface UseVoiceRecordingReturn {
+│  isRecording: boolean;
+│  recordingTime: number;
+│  audioBlob: Blob | null;
+│  startRecording: () => Promise<void>;
+│  stopRecording: () => void;
+│  cancelRecording: () => void;
+│  error: string | null;
+⋮
+
+apps/web/src/lib/authEvents.ts:
+⋮
+│type AuthEventListener = () => void;
+│
+⋮
+
+apps/web/src/lib/axiosInstance.ts:
+⋮
+│type RefreshSubscriber = (success: boolean) => void;
+⋮
+│async function refreshAccessToken(): Promise<void> {
+│  const response = await axios.post(
+│    `${BE_URL}/api/auth/refresh_my_token`,
+│    {},
+│    { withCredentials: true }
+│  );
+│
+│  if (response.status === 200) {
+│    notifyAuthListeners("tokenRefreshed");
+│  }
+⋮
+
+apps/web/src/lib/callApi.ts:
+⋮
+│export interface CallHistoryResponse {
+│  calls: CallHistory[];
+│  pagination: {
+│    currentPage: number;
+│    totalPages: number;
+│    totalCount: number;
+│    hasMore: boolean;
+│  };
+⋮
+│export async function getCallHistory(
+│  page = 1,
+│  limit = 20,
+⋮
+│export async function deleteCallHistoryEntry(callId: string): Promise<void> {
+│  await api.delete(`/api/calls/history/${callId}`);
+⋮
+│export async function clearCallHistory(): Promise<void> {
+│  await api.delete("/api/calls/history");
+⋮
+
+apps/web/src/lib/utils.ts:
+│export function cn(...classes: (string | false | null | undefined)[]) {
+⋮
+
+apps/web/src/pages/Auth/Login.tsx:
+⋮
+│interface LoginFormData {
+│  email: string;
+⋮
+
+apps/web/src/pages/Auth/Signup.tsx:
+⋮
+│interface SignupFormData {
+│  displayName: string;
+│  email: string;
+⋮
+│            <form onSubmit={handleSubmit(onSendOtp)} className="space-y-5">
+⋮
+
+apps/web/src/pages/Home/Landing.tsx:
+⋮
+│    <div className="min-h-screen bg-background text-foreground selection:bg-primary-500 selection:t
+│      {/* Header */}
+│      <header className="glass sticky top-0 z-50 border-b border-border transition-all duration-300
+│        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+│          <div className="flex justify-between items-center py-4">
+│            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => navigate("/"
+│              <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-f
+│                <MessageCircle className="h-6 w-6 text-white" />
+│              </div>
+│              <h1 className="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gra
+│                ChitChat
+│              </h1>
+│            </div>
+│            <div className="flex items-center space-x-4 sm:space-x-6">
+│              <button
+│                onClick={() => navigate("/login")}
+│                className="text-muted-foreground hover:text-foreground font-medium transition-color
+│              >
+│                Sign In
+│              </button>
+│              <Button
+│                onClick={() => navigate("/signup")}
+│                className="bg-primary-600 hover:bg-primary-700 text-white shadow-md hover:shadow-lg
+⋮
+│              <Button
+│                onClick={() => navigate("/signup")}
+│                className="bg-primary-600 hover:bg-primary-700 text-white px-8 py-6 text-lg rounded
+⋮
+
+apps/web/src/pages/Home/components/StatsSection.tsx:
+│export function StatsSection() {
+⋮
+
+apps/web/src/pages/chat/ChatBoard.tsx:
+⋮
+│export function ChatBoard() {
+│  const isMobile = useMediaQuery("(max-width: 1030px)");
+│  const { activeChat } = useChat();
+│
+│  if (isMobile) {
+│    return (
+│      <div className="h-screen bg-background relative overflow-hidden flex flex-col">
+│        <div className="flex-1 overflow-hidden flex relative">
+│          {activeChat ? <ChatWindow /> : <Sidebar />}
+│        </div>
+⋮
+
+apps/web/src/types/ai.ts:
+│export interface AIBot {
+⋮
+
+apps/web/src/types/call.ts:
+⋮
+│export type CallStatus =
+│  | "idle"
+│  | "calling"
+│  | "ringing"
+│  | "connected"
+│  | "ended"
+│  | "declined"
+│  | "missed"
+⋮
+│export type CallType = "audio" | "video";
+│
+│export interface CallState {
+│  callId: string | null;
+│  status: CallStatus;
+│  callType: CallType | null;
+│  peerConnection: RTCPeerConnection | null;
+│  localStream: MediaStream | null;
+│  remoteStream: MediaStream | null;
+│  caller: User | null;
+│  callee: User | null;
+⋮
+│export interface CallHistory {
+│  id: string;
+│  callId: string;
+│  type: CallType;
+│  status: "completed" | "missed" | "declined" | "failed";
+│  direction: "incoming" | "outgoing";
+│  /** Duration in seconds. */
+│  duration: number;
+│  timestamp: Date;
+│  startTime: Date;
+⋮
+
+apps/web/src/types/chat.ts:
+⋮
+│export interface Chat {
+│  id: string;
+│  participants: User[];
+│  lastMessage?: Message;
+│  messages: Message[];
+│  isGroup: boolean;
+│  groupName?: string;
+│  groupAdmin?: string;
+│  unreadCount: number;
+│  isPinned: boolean;
+⋮
+│export interface ChatState {
+│  chats: Chat[];
+│  activeChat: Chat | null;
+│  contacts: User[];
+│  contactRequests: ContactRequest[];
+│  isTyping: Record<string, User[]>;
+│  searchQuery: string;
+│  call: CallState;
+⋮
+│export interface ContactRequest {
+│  id: string;
+│  senderId: string;
+│  receiverId: string;
+│  senderInfo: User;
+│  status: "pending" | "accepted" | "rejected";
+│  timestamp: Date;
+⋮
+
+apps/web/src/types/message.ts:
+⋮
+│export interface Message {
+│  id: string;
+│  senderId: string;
+│  receiverId: string;
+│  content: string;
+│  timestamp: Date;
+│  type: "text" | "image" | "file" | "audio" | "video";
+│  status: "sent" | "delivered" | "read";
+│  replyTo?: string;
+│  fileName?: string;
+⋮
+
+apps/web/src/types/user.ts:
+⋮
+│export interface User {
+│  /** MongoDB _id converted to string. */
+│  id: string;
+│  email: string;
+│  displayName: string;
+│  avatarUrl?: string;
+│  status?: string;
+│  lastSeen?: Date;
+│  isOnline: boolean;
+│  createdAt?: Date;
+⋮
+│export interface AuthState {
+│  user: User | null;
+│  isAuthenticated: boolean;
+│  isLoading: boolean;
+│  error: string | null;
+⋮
+
+apps/web/src/utils/messageUtils.ts:
+⋮
+│export interface MessageGroup {
+│  date: Date;
+│  messages: Message[];
+⋮
+│export function groupMessagesByDate(messages: Message[]): MessageGroup[] {
+│  if (messages.length === 0) return [];
+│
+│  const groups: MessageGroup[] = [];
+│  let currentGroup: MessageGroup | null = null;
+│
+│  messages.forEach((message) => {
+│    const messageDate = new Date(message.timestamp);
+│
+│    // If this is the first message or the date is different from the current group
+⋮
+
+apps/web/vite.config.ts:
+⋮
+│export default defineConfig({
+│  plugins: [react(), tailwindcss()],
+│  base: "/",
+│  define: defineEnv,
+│  build: {
+│    rollupOptions: {
+│      output: {
+│        manualChunks(id) {
+│          if (!id.includes("node_modules")) {
+│            return undefined;
+│          }
+│
+│          if (id.includes("/react-dom/") || id.includes("react-dom@")) {
+│            return "react-dom";
+│          }
+│
+│          if (id.includes("/react/") || id.includes("react@")) {
+⋮
+
+packages/ui/src/button.tsx:
+⋮
+│interface ButtonProps {
+│  children: ReactNode;
+│  className?: string;
+│  appName: string;
+⋮
+
+packages/ui/src/card.tsx:
+⋮
+│export function Card({
+│  className,
+│  title,
+│  children,
+│  href,
+⋮
+
+packages/ui/src/code.tsx:
+⋮
+│export function Code({
+│  children,
+│  className,
+⋮
+
+packages/ui/turbo/generators/config.ts:
+⋮
+│export default function generator(plop: PlopTypes.NodePlopAPI): void {
+│  // A simple generator to add a new React component to the internal UI library
+│  plop.setGenerator("react-component", {
+│    description: "Adds a new react component",
+│    prompts: [
+│      {
+│        type: "input",
+│        name: "name",
+│        message: "What is the name of the component?",
+│      },
+⋮
+

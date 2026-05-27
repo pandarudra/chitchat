@@ -1,16 +1,19 @@
-import { RefObject } from "react";
+import type { RefObject } from "react";
 import { MessageBubble } from "./MessageBubble";
 import { DateSeparator } from "./DateSeparator";
 import { useAuth } from "../../context/AuthContext";
 import { groupMessagesByDate } from "../../utils/messageUtils";
-import { Chat } from "../../types/chat";
+import type { Chat } from "../../types/chat";
 
 interface ChatMessageListProps {
   activeChat: Chat;
   messagesEndRef: RefObject<HTMLDivElement | null>;
 }
 
-export function ChatMessageList({ activeChat, messagesEndRef }: ChatMessageListProps) {
+export function ChatMessageList({
+  activeChat,
+  messagesEndRef,
+}: ChatMessageListProps) {
   const { user } = useAuth();
 
   return (
@@ -53,7 +56,7 @@ export function ChatMessageList({ activeChat, messagesEndRef }: ChatMessageListP
                     senderName={
                       activeChat.isGroup
                         ? activeChat.participants.find(
-                            (p) => p.id === message.senderId
+                            (p) => p.id === message.senderId,
                           )?.displayName
                         : undefined
                     }

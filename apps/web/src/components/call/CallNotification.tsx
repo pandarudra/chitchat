@@ -38,7 +38,7 @@ function CallNotification() {
               : "/vite.svg",
             tag: "incoming-call",
             requireInteraction: true,
-          }
+          },
         );
 
         notification.onclick = () => {
@@ -62,7 +62,16 @@ function CallNotification() {
     } else {
       setIsVisible(false);
     }
-  }, [call.status, call.caller, call.callee, call.callType, call.callId, acceptCall, user?.id, stopRingtone]);
+  }, [
+    call.status,
+    call.caller,
+    call.callee,
+    call.callType,
+    call.callId,
+    acceptCall,
+    user?.id,
+    stopRingtone,
+  ]);
 
   const otherUser = call.caller?.id === user?.id ? call.callee : call.caller;
 
@@ -119,7 +128,7 @@ function CallNotification() {
               {otherUser?.displayName || "Unknown"}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-              {otherUser?.phoneNumber || "No number"}
+              {otherUser?.email || "No email"}
             </p>
           </div>
         </div>

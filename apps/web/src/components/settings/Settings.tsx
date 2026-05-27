@@ -97,7 +97,7 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
                 <h3 className="text-lg font-medium text-gray-900">
                   {user?.displayName}
                 </h3>
-                <p className="text-sm text-gray-500">{user?.phoneNumber}</p>
+                <p className="text-sm text-gray-500">{user?.email}</p>
                 <p className="text-sm text-gray-400 mt-1 line-clamp-2">
                   {user?.status || "Hey there! I am using ChitChat."}
                 </p>

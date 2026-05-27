@@ -25,16 +25,12 @@ export function CallHistory() {
       setLoading(true);
       const response = await getCallHistory(pageNum, 20);
 
-      if (response.success) {
-        const newCalls = response.data.calls;
-        setCallHistory((prev) =>
-          isLoadMore ? [...prev, ...newCalls] : newCalls
-        );
-        setHasMore(response.data.pagination.hasMore);
-        setPage(pageNum);
-      } else {
-        setError("Failed to fetch call history");
-      }
+      const newCalls = response.calls;
+      setCallHistory((prev) =>
+        isLoadMore ? [...prev, ...newCalls] : newCalls,
+      );
+      setHasMore(response.pagination.hasMore);
+      setPage(pageNum);
     } catch (err) {
       setError("Error loading call history");
       console.error("Call history error:", err);
@@ -49,10 +45,8 @@ export function CallHistory() {
 
   const handleDeleteCall = async (callId: string) => {
     try {
-      const response = await deleteCallHistoryEntry(callId);
-      if (response.success) {
-        setCallHistory((prev) => prev.filter((call) => call.id !== callId));
-      }
+      await deleteCallHistoryEntry(callId);
+      setCallHistory((prev) => prev.filter((call) => call.id !== callId));
     } catch (err) {
       console.error("Error deleting call:", err);
     }
@@ -236,9 +230,7 @@ export function CallHistory() {
                   )}
                 </div>
 
-                <p className="text-xs text-gray-400 mt-1">
-                  {call.user.phoneNumber}
-                </p>
+                <p className="text-xs text-gray-400 mt-1">{call.user.email}</p>
               </div>
             </div>
 

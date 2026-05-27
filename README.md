@@ -201,7 +201,9 @@ chitchat/
    npm install
    ```
 
-3. **Start Redis using Docker:**
+3. **Create a single root `.env` file** at the repository root. The server reads plain variables like `PORT`, `MONGO_URI`, and `JWT_SECRET`, while the web app reads only `VITE_`-prefixed variables such as `VITE_BE_URL`.
+
+4. **Start Redis using Docker:**
    ```bash
    docker run --name local-redis -d -p 6379:6379 redis
    docker start local-redis
@@ -216,7 +218,7 @@ chitchat/
    npm install
    ```
 
-2. **Create `.env` file in `apps/server/`:**
+2. **Keep all environment variables in the repository-root `.env` file:**
 
    ```env
    # Database Configuration
@@ -248,7 +250,10 @@ chitchat/
    # Server Configuration
    NODE_ENV=development
    PORT=8000
-   FRONTEND_URL=http://localhost:5173
+   FE_URL=http://localhost:5173
+
+   # Frontend Configuration
+   VITE_BE_URL=http://localhost:8000
    ```
 
 3. **Start the backend server:**
@@ -265,13 +270,7 @@ chitchat/
    npm install
    ```
 
-2. **Create `.env` file in `apps/web/`:**
-
-   ```env
-   VITE_BE_URL=http://localhost:8000
-   ```
-
-3. **Start the frontend development server:**
+2. **Start the frontend development server:**
    ```bash
    npm run dev
    ```

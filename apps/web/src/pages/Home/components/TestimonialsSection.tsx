@@ -5,23 +5,26 @@ export function TestimonialsSection() {
     {
       name: "Sarah Johnson",
       role: "Product Manager",
-      content:"lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quod. Quisquam, quod.",
+      content:
+        "lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quod. Quisquam, quod.",
       rating: 5,
-      avatar: "https://api.dicebear.com/9.x/notionists/svg?seed=Sarah"
+      avatar: "https://api.dicebear.com/9.x/notionists/svg?seed=Sarah",
     },
     {
       name: "Mike Chen",
       role: "Software Engineer",
       rating: 5,
-      content:"lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quod. Quisquam, quod.",rating: 5,
-      avatar: "https://api.dicebear.com/9.x/notionists/svg?seed=Mike"
+      content:
+        "lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quod. Quisquam, quod.",
+      avatar: "https://api.dicebear.com/9.x/notionists/svg?seed=Mike",
     },
     {
       name: "Emily Davis",
       role: "Designer",
       rating: 5,
       avatar: "https://api.dicebear.com/9.x/notionists/svg?seed=Emily",
-      content:"lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quod. Quisquam, quod.",
+      content:
+        "lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quod. Quisquam, quod.",
     },
   ];
 
@@ -49,7 +52,12 @@ export function TestimonialsSection() {
             >
               {/* Decorative accent */}
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
+                <svg
+                  width="40"
+                  height="40"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
                   <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
                 </svg>
               </div>
@@ -65,12 +73,12 @@ export function TestimonialsSection() {
               <p className="text-foreground leading-relaxed mb-8 font-light relative z-10 text-lg">
                 "{testimonial.content}"
               </p>
-              
+
               <div className="flex items-center gap-4 mt-auto">
-                <img 
-                  src={testimonial.avatar} 
+                <img
+                  src={testimonial.avatar}
                   alt={testimonial.name}
-                  className="w-12 h-12 rounded-full bg-primary-100 border-2 border-border" 
+                  className="w-12 h-12 rounded-full bg-primary-100 border-2 border-border"
                 />
                 <div>
                   <div className="font-bold tracking-tight">
