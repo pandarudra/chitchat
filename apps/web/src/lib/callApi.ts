@@ -21,7 +21,17 @@ export async function getCallHistory(
   limit = 20,
 ): Promise<CallHistoryResponse> {
   const res = await api.get(`/api/calls/history?page=${page}&limit=${limit}`);
-  return res.data;
+  const payload = res.data?.data ?? res.data;
+
+  return {
+    calls: payload?.calls ?? [],
+    pagination: payload?.pagination ?? {
+      currentPage: page,
+      totalPages: 0,
+      totalCount: 0,
+      hasMore: false,
+    },
+  };
 }
 
 export async function deleteCallHistoryEntry(callId: string): Promise<void> {

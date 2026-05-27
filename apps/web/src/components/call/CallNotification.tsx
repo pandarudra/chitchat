@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Phone, PhoneOff, Video, User } from "lucide-react";
+import { Phone, PhoneOff, Video, User, X, Check } from "lucide-react";
 import { useChat } from "../../context/ChatContext";
 import { useAuth } from "../../context/AuthContext";
 import { getAvatarUrl } from "../../utils/constants";
@@ -148,7 +148,7 @@ function CallNotification() {
           >
             <PhoneOff className="w-4 h-4" />
             <span className="sm:inline hidden">Decline</span>
-            <span className="sm:hidden inline">✕</span>
+            <span className="sm:hidden inline"><X className="w-4 h-4" /></span>
           </button>
           <button
             type="button"
@@ -164,7 +164,7 @@ function CallNotification() {
           >
             <Phone className="w-4 h-4" />
             <span className="sm:inline hidden">Accept</span>
-            <span className="sm:hidden inline">✓</span>
+            <span className="sm:hidden inline"><Check className="w-4 h-4" /></span>
           </button>
         </div>
       </div>

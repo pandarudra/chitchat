@@ -237,7 +237,7 @@ export function registerCallHandlers(
         io.to(otherSocketId).emit("call-ended", { callId });
       }
 
-      const status = callData.acceptedAt ? "completed" : "ended";
+      const status = callData.acceptedAt ? "completed" : "missed";
       await persistCallHistory(callData, status);
       await pub.del(`call:${callId}`);
 

@@ -60,41 +60,43 @@ export function ContactInfo({
   };
 
   return (
-    <div className="fixed inset-0 bg-transparent bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm">
+      <div className="bg-card text-card-foreground rounded-3xl shadow-2xl border border-border w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Contact Info</h2>
+        <div className="flex items-center justify-between p-5 border-b border-border sticky top-0 bg-card/95 backdrop-blur-sm">
+          <h2 className="text-lg font-semibold text-foreground">
+            Contact Info
+          </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
           >
-            <X className="h-5 w-5 text-gray-500" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Contact Details */}
-        <div className="p-6">
+        <div className="p-6 bg-gradient-to-b from-primary/5 to-transparent">
           {/* Avatar and Name */}
           <div className="flex flex-col items-center mb-6">
             <div className="relative mb-4">
               <img
                 src={contact.avatarUrl || "/api/placeholder/120/120"}
                 alt={contact.displayName}
-                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                className="w-24 h-24 rounded-3xl object-cover border border-border shadow-lg"
               />
               <div
-                className={`absolute bottom-2 right-2 w-4 h-4 rounded-full border-2 border-white ${
+                className={`absolute bottom-2 right-2 w-4 h-4 rounded-full border-2 border-card ${
                   isOnline ? "bg-green-500" : "bg-gray-400"
                 }`}
               />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-1">
+            <h3 className="text-xl font-semibold text-foreground mb-1">
               {contact.displayName}
             </h3>
-            <p className="text-sm text-gray-500">{statusText}</p>
+            <p className="text-sm text-muted-foreground">{statusText}</p>
             {contact.status && (
-              <p className="text-sm text-gray-600 mt-2 text-center italic">
+              <p className="text-sm text-muted-foreground mt-2 text-center italic">
                 "{contact.status}"
               </p>
             )}
@@ -103,14 +105,14 @@ export function ContactInfo({
           {/* Contact Information */}
           <div className="space-y-4 mb-6">
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
                 Email Address
               </label>
-              <p className="text-gray-900">{contact.email}</p>
+              <p className="text-foreground">{contact.email}</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
                 Status
               </label>
               <div className="flex items-center space-x-2">
@@ -119,7 +121,7 @@ export function ContactInfo({
                     isOnline ? "bg-green-500" : "bg-gray-400"
                   }`}
                 />
-                <p className="text-gray-900">
+                <p className="text-foreground">
                   {isOnline
                     ? "Online"
                     : `Last seen ${formatLastSeen(contact.lastSeen)}`}
@@ -129,10 +131,10 @@ export function ContactInfo({
 
             {contact.createdAt && (
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Member Since
                 </label>
-                <p className="text-gray-900">
+                <p className="text-foreground">
                   {new Date(contact.createdAt).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "long",
@@ -149,14 +151,14 @@ export function ContactInfo({
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => onCall?.("audio")}
-                className="flex items-center justify-center space-x-2 px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                className="flex items-center justify-center space-x-2 px-4 py-3 bg-primary text-primary-foreground rounded-2xl hover:bg-primary/90 transition-colors"
               >
                 <Phone className="h-4 w-4" />
                 <span>Call</span>
               </button>
               <button
                 onClick={() => onCall?.("video")}
-                className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                className="flex items-center justify-center space-x-2 px-4 py-3 bg-foreground text-background rounded-2xl hover:bg-foreground/90 transition-colors"
               >
                 <MessageSquare className="h-4 w-4" />
                 <span>Video</span>
@@ -164,17 +166,17 @@ export function ContactInfo({
             </div>
 
             {/* Additional Actions */}
-            <div className="pt-4 border-t border-gray-200 space-y-2">
+            <div className="pt-4 border-t border-border space-y-2">
               <button
                 onClick={onBlock}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-red-600 hover:bg-red-50 rounded-2xl transition-colors"
               >
                 <ShieldOff className="h-4 w-4" />
                 <span>Block Contact</span>
               </button>
               <button
                 onClick={handleDeleteClick}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-red-600 hover:bg-red-50 rounded-2xl transition-colors"
               >
                 <UserMinus className="h-4 w-4" />
                 <span>Delete Contact</span>
@@ -186,12 +188,12 @@ export function ContactInfo({
 
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirmation && (
-        <div className="fixed inset-0 bg-gray-800/5 bg-opacity-50 flex items-center justify-center z-60">
-          <div className="bg-white rounded-lg shadow-xl max-w-sm mx-4 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-card text-card-foreground rounded-3xl shadow-2xl border border-border max-w-sm mx-4 p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               Delete Contact
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-muted-foreground mb-6">
               Are you sure you want to delete {contact.displayName} from your
               contacts? This action cannot be undone and will also remove your
               chat history.
@@ -199,13 +201,13 @@ export function ContactInfo({
             <div className="flex space-x-3">
               <button
                 onClick={handleCancelDelete}
-                className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-2.5 text-muted-foreground border border-border rounded-2xl hover:bg-muted transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmDelete}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-2xl hover:bg-red-700 transition-colors"
               >
                 Delete
               </button>

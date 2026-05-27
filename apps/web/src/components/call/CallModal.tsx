@@ -13,7 +13,7 @@
  */
 
 import { useEffect, useState, useRef } from "react";
-import { Settings, Maximize2, Minimize2, User, VideoOff } from "lucide-react";
+import { Settings, Maximize2, Minimize2, User, VideoOff, PhoneOff, Phone } from "lucide-react";
 import { useChat } from "../../context/ChatContext";
 import { useAuth } from "../../context/AuthContext";
 import { CallAvatar } from "./CallAvatar";
@@ -168,7 +168,7 @@ function CallModal() {
 
   return (
     <div
-      className={`fixed inset-0 bg-transparent bg-opacity-95 flex items-center justify-center z-[60] ${isFullscreen ? "p-0" : "p-4"}`}
+      className={`fixed inset-0 bg-black/90 flex items-center justify-center z-[60] ${isFullscreen ? "p-0" : "p-0 sm:p-4"}`}
     >
       {/* Hidden audio element — ensures audio works in all cases */}
       <audio
@@ -179,7 +179,7 @@ function CallModal() {
       />
 
       <div
-        className={`bg-gray-900 text-white rounded-xl shadow-2xl overflow-hidden ${isFullscreen ? "w-full h-full rounded-none" : "w-full max-w-4xl"}`}
+        className={`bg-[#0b141a] text-white shadow-2xl overflow-hidden relative flex flex-col ${isFullscreen ? "w-full h-full" : "w-full h-full sm:h-[600px] sm:max-h-[90vh] sm:rounded-2xl sm:max-w-4xl"}`}
       >
         {/* Audio unlock banner */}
         {audioUnlockNeeded && (
@@ -190,54 +190,66 @@ function CallModal() {
 
         {/* ── Outgoing / Calling ───────────────────────────────────────── */}
         {call.status === "calling" && (
-          <div className="p-8 text-center">
-            <CallAvatar
-              avatarUrl={otherUser?.avatarUrl}
-              displayName={otherUser?.displayName}
-              size="md"
-            />
-            <h2 className="text-2xl font-semibold mt-4 mb-2">Calling...</h2>
-            <p className="text-xl text-gray-300">{otherUser?.displayName}</p>
-            <p className="text-sm text-gray-400 mt-1">{otherUser?.email}</p>
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center relative h-full min-h-[60vh]">
+            <div className="absolute inset-0 opacity-20 pointer-events-none blur-3xl scale-150 flex items-center justify-center">
+              <img src={otherUser?.avatarUrl ?? undefined} className="w-full h-full object-cover" />
+            </div>
+            <div className="relative z-10 flex flex-col items-center">
+              <CallAvatar
+                avatarUrl={otherUser?.avatarUrl}
+                displayName={otherUser?.displayName}
+                size="md"
+              />
+              <h2 className="text-2xl font-semibold mt-6 mb-1">{otherUser?.displayName}</h2>
+              <p className="text-gray-400 text-sm">{otherUser?.email}</p>
+              <p className="text-emerald-400 font-medium mt-4">Calling...</p>
+            </div>
             <button
               onClick={() => call.callId && endCall(call.callId)}
-              className="mt-8 w-16 h-16 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors mx-auto"
+              className="mt-16 w-16 h-16 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-transform hover:scale-105 mx-auto relative z-10 shadow-lg"
             >
-              <span className="text-2xl">📵</span>
+              <PhoneOff className="w-8 h-8 text-white" />
             </button>
           </div>
         )}
 
         {/* ── Incoming / Ringing ───────────────────────────────────────── */}
         {call.status === "ringing" && (
-          <div className="p-8 text-center">
-            <CallAvatar
-              avatarUrl={otherUser?.avatarUrl}
-              displayName={otherUser?.displayName}
-              size="md"
-              pulsing
-            />
-            <h2 className="text-2xl font-semibold mt-4 mb-2">
-              Incoming {call.callType} call
-            </h2>
-            <p className="text-xl text-gray-300">{otherUser?.displayName}</p>
-            <p className="text-sm text-gray-400 mt-1">{otherUser?.email}</p>
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center relative h-full min-h-[60vh]">
+            <div className="absolute inset-0 opacity-20 pointer-events-none blur-3xl scale-150 flex items-center justify-center">
+              <img src={otherUser?.avatarUrl ?? undefined} className="w-full h-full object-cover" />
+            </div>
+            <div className="relative z-10 flex flex-col items-center">
+              <CallAvatar
+                avatarUrl={otherUser?.avatarUrl}
+                displayName={otherUser?.displayName}
+                size="md"
+                pulsing
+              />
+              <h2 className="text-2xl font-semibold mt-6 mb-1">{otherUser?.displayName}</h2>
+              <p className="text-gray-400 text-sm">{otherUser?.email}</p>
+              <p className="text-emerald-400 font-medium mt-4">WhatsApp {call.callType === "video" ? "Video" : "Voice"} Call</p>
+            </div>
 
-            <div className="flex items-center justify-center space-x-12 mt-8">
-              <button
-                onClick={() => call.callId && declineCall(call.callId)}
-                className="w-16 h-16 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
-                title="Decline call"
-              >
-                <span className="text-2xl">📵</span>
-              </button>
-              <button
-                onClick={() => call.callId && acceptCall(call.callId)}
-                className="w-16 h-16 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center transition-colors animate-pulse"
-                title="Accept call"
-              >
-                <span className="text-2xl">📞</span>
-              </button>
+            <div className="flex items-center justify-center space-x-16 mt-16 relative z-10">
+              <div className="flex flex-col items-center space-y-2">
+                <button
+                  onClick={() => call.callId && declineCall(call.callId)}
+                  className="w-16 h-16 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-transform hover:scale-105 shadow-lg"
+                  title="Decline call"
+                >
+                  <PhoneOff className="w-7 h-7 text-white" />
+                </button>
+              </div>
+              <div className="flex flex-col items-center space-y-2">
+                <button
+                  onClick={() => call.callId && acceptCall(call.callId)}
+                  className="w-16 h-16 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center transition-transform hover:scale-105 animate-pulse shadow-lg"
+                  title="Accept call"
+                >
+                  <Phone className="w-7 h-7 text-white fill-white" />
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -245,46 +257,48 @@ function CallModal() {
         {/* ── Connected ────────────────────────────────────────────────── */}
         {call.status === "connected" && (
           <div
-            className={`relative ${isFullscreen ? "h-screen" : "h-96"} flex flex-col`}
+            className={`relative flex flex-col flex-1`}
           >
-            {/* Header */}
-            <div
-              className={`absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 to-transparent p-4 z-10 transition-opacity duration-300 ${isFullscreen && !showControls ? "opacity-0 pointer-events-none" : "opacity-100"}`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <CallAvatar
-                    avatarUrl={otherUser?.avatarUrl}
-                    displayName={otherUser?.displayName}
-                    size="sm"
-                  />
-                  <div>
-                    <p className="font-medium">{otherUser?.displayName}</p>
-                    <p className="text-sm text-gray-300">{callDuration}</p>
+            {/* Header (Only for Video Calls or when controls are shown) */}
+            {call.callType === "video" && (
+              <div
+                className={`absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 to-transparent p-4 z-10 transition-opacity duration-300 ${isFullscreen && !showControls ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <CallAvatar
+                      avatarUrl={otherUser?.avatarUrl}
+                      displayName={otherUser?.displayName}
+                      size="sm"
+                    />
+                    <div>
+                      <p className="font-medium">{otherUser?.displayName}</p>
+                      <p className="text-sm text-gray-300">{callDuration}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setIsFullscreen((p) => !p)}
+                      className="w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center transition-colors"
+                      title={`${isFullscreen ? "Exit fullscreen" : "Fullscreen"} (F)`}
+                    >
+                      {isFullscreen ? (
+                        <Minimize2 className="w-4 h-4" />
+                      ) : (
+                        <Maximize2 className="w-4 h-4" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setShowSettings((p) => !p)}
+                      className="w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center transition-colors"
+                      title="Settings (S)"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => setIsFullscreen((p) => !p)}
-                    className="w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center transition-colors"
-                    title={`${isFullscreen ? "Exit fullscreen" : "Fullscreen"} (F)`}
-                  >
-                    {isFullscreen ? (
-                      <Minimize2 className="w-4 h-4" />
-                    ) : (
-                      <Maximize2 className="w-4 h-4" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => setShowSettings((p) => !p)}
-                    className="w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center transition-colors"
-                    title="Settings (S)"
-                  >
-                    <Settings className="w-4 h-4" />
-                  </button>
-                </div>
               </div>
-            </div>
+            )}
 
             {/* Video / Audio content */}
             {call.callType === "video" ? (
@@ -371,17 +385,20 @@ function CallModal() {
               </div>
             ) : (
               /* Audio call */
-              <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
-                <div className="text-center">
+              <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden bg-[#0b141a]">
+                <div className="absolute inset-0 opacity-10 pointer-events-none blur-3xl scale-150 flex items-center justify-center">
+                  <img src={otherUser?.avatarUrl ?? undefined} className="w-full h-full object-cover" />
+                </div>
+                <div className="relative z-10 text-center flex flex-col items-center">
                   <CallAvatar
                     avatarUrl={otherUser?.avatarUrl}
                     displayName={otherUser?.displayName}
-                    size="md"
+                    size="lg"
                   />
-                  <h3 className="text-xl font-semibold mt-4 mb-2">
+                  <h3 className="text-2xl font-semibold mt-6 mb-1">
                     {otherUser?.displayName}
                   </h3>
-                  <p className="text-gray-300">Audio call in progress</p>
+                  <p className="text-gray-400">{callDuration || "Connecting..."}</p>
                 </div>
               </div>
             )}

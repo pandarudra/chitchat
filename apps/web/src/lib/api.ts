@@ -18,3 +18,13 @@ export {
   deleteCallHistoryEntry,
   clearCallHistory,
 } from "./callApi";
+export {
+  searchUserSuggestions,
+  sendContactRequest,
+  getContactRequests,
+  acceptContactRequest,
+  rejectContactRequest,
+  getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from "./notificationsApi";

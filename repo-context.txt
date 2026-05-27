@@ -3,7 +3,7 @@ Using gpt-4o model with API key from environment.
 Aider v0.86.2
 Main model: gpt-4o with diff edit format
 Weak model: gpt-4o-mini
-Git repo: .git with 163 files
+Git repo: .git with 165 files
 Repo-map: using 4096 tokens, auto refresh
 Here are summaries of some files present in my git repository.
 Do not propose changes to these files, treat them as *read-only*.
@@ -282,7 +282,7 @@ apps/server/src/utils/logger.ts:
 │function format(level: string, message: string, color: string): string {
 │  return `${colorize(COLORS.gray, `[${timestamp()}]`)} ${colorize(
 │    color,
-│    `[${level}]`
+│    `[${level}]`,
 │  )} ${message}`;
 ⋮
 │export const Logger = {
@@ -337,22 +337,24 @@ apps/web/src/components/Layout/Sidebar.tsx:
 │            title="Add Contact"
 ⋮
 │          <button
+│            onClick={() => setIsNotificationsOpen(true)}
+│            className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted 
+│            title="Notifications"
+⋮
+│          <button
 │            onClick={() => setIsSettingsOpen(true)}
 │            className="p-2.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl 
 │            title="Settings"
-⋮
-│                <img
-│                  src={getAvatarUrl(user.avatarUrl)}
-│                  alt={user?.displayName}
-│                  className="w-9 h-9 rounded-xl object-cover shadow-xs border border-border"
-│                  onError={(e) => {
-│                    const target = e.target as HTMLImageElement;
-│                    target.style.display = "none";
 ⋮
 │            <button
 │              onClick={() => setIsAddContactOpen(true)}
 │              className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted 
 │              title="Add Contact"
+⋮
+│            <button
+│              onClick={() => setIsNotificationsOpen(true)}
+│              className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted 
+│              title="Notifications"
 ⋮
 │            <button
 │              onClick={() => setIsSettingsOpen(true)}
@@ -575,6 +577,7 @@ apps/web/src/components/settings/Settings.tsx:
 │interface SettingsProps {
 │  isOpen: boolean;
 │  onClose: () => void;
+│  onOpenNotifications?: () => void;
 ⋮
 
 apps/web/src/components/ui/FloatingActionButton.tsx:
@@ -818,6 +821,17 @@ apps/web/src/hooks/useVoiceRecording.ts:
 │  cancelRecording: () => void;
 │  error: string | null;
 ⋮
+│export function useVoiceRecording(): UseVoiceRecordingReturn {
+│  const [isRecording, setIsRecording] = useState(false);
+│  const [recordingTime, setRecordingTime] = useState(0);
+│  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+│  const [error, setError] = useState<string | null>(null);
+│
+│  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+│  const timerRef = useRef<NodeJS.Timeout | null>(null);
+│  const chunksRef = useRef<Blob[]>([]);
+│
+⋮
 
 apps/web/src/lib/authEvents.ts:
 ⋮
@@ -872,14 +886,14 @@ apps/web/src/pages/Auth/Login.tsx:
 │interface LoginFormData {
 │  email: string;
 ⋮
+│            <form onSubmit={handleSubmit(onSendOtp)} className="space-y-6">
+⋮
 
 apps/web/src/pages/Auth/Signup.tsx:
 ⋮
 │interface SignupFormData {
 │  displayName: string;
 │  email: string;
-⋮
-│            <form onSubmit={handleSubmit(onSendOtp)} className="space-y-5">
 ⋮
 
 apps/web/src/pages/Home/Landing.tsx:

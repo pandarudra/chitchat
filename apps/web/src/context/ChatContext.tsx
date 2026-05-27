@@ -19,6 +19,11 @@ import { io, Socket } from "socket.io-client";
 import type { Chat, Message, User, ContactRequest } from "../types";
 import { useAuth } from "./AuthContext";
 import api from "../lib/api";
+import {
+  sendContactRequest as sendContactRequestApi,
+  acceptContactRequest as acceptContactRequestApi,
+  rejectContactRequest as rejectContactRequestApi,
+} from "../lib/api";
 import { chatReducer, initialState } from "./chat/chatReducer";
 import { useCall } from "../hooks/useCall";
 import { VITE_BE_URL } from "../constants/e";
@@ -62,9 +67,9 @@ interface ChatContextType {
   removeUserFromGroup: (chatId: string, userId: string) => void;
 
   // Contact requests
-  sendContactRequest: (userId: string) => void;
-  acceptContactRequest: (requestId: string) => void;
-  rejectContactRequest: (requestId: string) => void;
+  sendContactRequest: (userEmail: string) => Promise<void>;
+  acceptContactRequest: (requestId: string) => Promise<void>;
+  rejectContactRequest: (requestId: string) => Promise<void>;
 
   // Typing
   startTyping: (chatId: string) => void;
@@ -314,7 +319,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           {
             id: contact.user,
             displayName: contact.name,
-            email: contact.email ?? contact.phonenumber ?? "",
+            email: contact.email ?? "",
             avatarUrl: contact.avatarUrl,
             isOnline: contact.isOnline ?? false,
             lastSeen: contact.lastSeen ? new Date(contact.lastSeen) : undefined,
@@ -385,7 +390,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const contacts = res.data.contacts.map((c: any) => ({
         id: c.user.toString(),
         displayName: c.name,
-        email: c.email ?? c.phonenumber ?? "",
+        email: c.email ?? "",
         avatarUrl: c.avatarUrl,
         isOnline: c.isOnline ?? false,
         lastSeen: c.lastSeen ? new Date(c.lastSeen) : undefined,
@@ -685,7 +690,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const addContact = useCallback(
     async (contactEmail: string) => {
-      await api.post("/api/user/add-contact", { contactEmail });
+      await sendContactRequestApi(contactEmail);
       await fetchChats();
     },
     [fetchChats],
@@ -742,11 +747,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     (_chatId: string, _userId: string) => {},
     [],
   );
-  const sendContactRequest = useCallback((_userId: string) => {}, []);
-  const acceptContactRequest = useCallback((requestId: string) => {
-    dispatch({ type: "ACCEPT_CONTACT_REQUEST", payload: requestId });
+  const sendContactRequest = useCallback(async (userEmail: string) => {
+    await sendContactRequestApi(userEmail);
   }, []);
-  const rejectContactRequest = useCallback((requestId: string) => {
+  const acceptContactRequest = useCallback(
+    async (requestId: string) => {
+      await acceptContactRequestApi(requestId);
+      await fetchChats();
+      dispatch({ type: "ACCEPT_CONTACT_REQUEST", payload: requestId });
+    },
+    [fetchChats],
+  );
+  const rejectContactRequest = useCallback(async (requestId: string) => {
+    await rejectContactRequestApi(requestId);
     dispatch({ type: "REJECT_CONTACT_REQUEST", payload: requestId });
   }, []);
   const startTyping = useCallback((chatId: string) => {

@@ -29,7 +29,7 @@ function colorize(color: string, text: string): string {
 function format(level: string, message: string, color: string): string {
   return `${colorize(COLORS.gray, `[${timestamp()}]`)} ${colorize(
     color,
-    `[${level}]`
+    `[${level}]`,
   )} ${message}`;
 }
 
@@ -57,7 +57,7 @@ export const Logger = {
   /** Debug output is silenced in production. */
   debug(message: string): void {
     if (!IS_PRODUCTION) {
-      console.log(format("DBG ", message, COLORS.magenta));
+      console.log(format("DBG", message, COLORS.magenta));
     }
   },
 };

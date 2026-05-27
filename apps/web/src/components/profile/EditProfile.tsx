@@ -15,7 +15,7 @@ export function EditProfile({ isOpen, onClose }: EditProfileProps) {
   const [status, setStatus] = useState(user?.status || "");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState(
-    getAvatarUrl(user?.avatarUrl) || ""
+    getAvatarUrl(user?.avatarUrl) || "",
   );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +55,7 @@ export function EditProfile({ isOpen, onClose }: EditProfileProps) {
       formData.append("displayName", displayName.trim());
       formData.append(
         "status",
-        status.trim() || "Hey there! I am using ChitChat."
+        status.trim() || "Hey there! I am using ChitChat.",
       );
       if (avatarFile) {
         formData.append("avatar", avatarFile);
@@ -77,7 +77,7 @@ export function EditProfile({ isOpen, onClose }: EditProfileProps) {
         const apiError = error as { response?: { data?: { error?: string } } };
         setError(
           apiError.response?.data?.error ||
-            "Failed to update profile. Please try again."
+            "Failed to update profile. Please try again.",
         );
       } else {
         setError("Failed to update profile. Please try again.");
@@ -114,27 +114,27 @@ export function EditProfile({ isOpen, onClose }: EditProfileProps) {
 
   return (
     <div
-      className="fixed inset-0 bg-transparent bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/45 backdrop-blur-sm flex items-center justify-center p-4 z-50"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           handleClose();
         }
       }}
     >
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-card text-card-foreground rounded-3xl shadow-2xl border border-border w-full max-w-md max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white">
+        <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-card/95 backdrop-blur-sm">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-              <Edit3 className="h-5 w-5 text-green-600" />
+            <div className="w-11 h-11 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/15">
+              <Edit3 className="h-5 w-5 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold text-foreground">
               Edit Profile
             </h2>
           </div>
           <button
             onClick={handleClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -144,7 +144,7 @@ export function EditProfile({ isOpen, onClose }: EditProfileProps) {
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Error Message */}
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-2xl">
               <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
@@ -152,7 +152,7 @@ export function EditProfile({ isOpen, onClose }: EditProfileProps) {
           {/* Avatar Section */}
           <div className="flex flex-col items-center space-y-4">
             <div className="relative">
-              <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center border-4 border-white shadow-lg">
+              <div className="w-24 h-24 rounded-3xl overflow-hidden bg-muted flex items-center justify-center border border-border shadow-lg">
                 {avatarPreview ? (
                   <img
                     src={avatarPreview}
@@ -160,13 +160,13 @@ export function EditProfile({ isOpen, onClose }: EditProfileProps) {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <User className="h-12 w-12 text-gray-400" />
+                  <User className="h-12 w-12 text-muted-foreground" />
                 )}
               </div>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center hover:bg-green-700 transition-colors shadow-lg"
+                className="absolute -bottom-2 -right-2 w-9 h-9 bg-primary text-primary-foreground rounded-full flex items-center justify-center hover:bg-primary/90 transition-colors shadow-lg"
               >
                 <Camera className="h-4 w-4" />
               </button>
@@ -178,7 +178,7 @@ export function EditProfile({ isOpen, onClose }: EditProfileProps) {
               onChange={handleAvatarChange}
               className="hidden"
             />
-            <p className="text-sm text-gray-500 text-center">
+            <p className="text-sm text-muted-foreground text-center">
               Click the camera icon to change your profile picture
             </p>
           </div>
@@ -187,7 +187,7 @@ export function EditProfile({ isOpen, onClose }: EditProfileProps) {
           <div>
             <label
               htmlFor="displayName"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-foreground mb-2"
             >
               Display Name
             </label>
@@ -197,7 +197,7 @@ export function EditProfile({ isOpen, onClose }: EditProfileProps) {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Enter your display name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-border rounded-2xl bg-background focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary"
               maxLength={50}
               required
             />
@@ -207,7 +207,7 @@ export function EditProfile({ isOpen, onClose }: EditProfileProps) {
           <div>
             <label
               htmlFor="status"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-foreground mb-2"
             >
               Status
             </label>
@@ -217,10 +217,10 @@ export function EditProfile({ isOpen, onClose }: EditProfileProps) {
               onChange={(e) => setStatus(e.target.value)}
               placeholder="Enter your status message"
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-3 border border-border rounded-2xl bg-background focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary resize-none"
               maxLength={150}
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-muted-foreground">
               {status.length}/150 characters
             </p>
           </div>
@@ -230,14 +230,14 @@ export function EditProfile({ isOpen, onClose }: EditProfileProps) {
             <button
               type="button"
               onClick={handleClose}
-              className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              className="flex-1 px-4 py-2.5 text-sm font-semibold text-muted-foreground bg-muted hover:bg-muted/80 rounded-2xl transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading || !displayName.trim()}
-              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+              className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl transition-colors"
             >
               {isLoading ? "Updating..." : "Update Profile"}
             </button>

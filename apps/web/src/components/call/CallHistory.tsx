@@ -25,11 +25,11 @@ export function CallHistory() {
       setLoading(true);
       const response = await getCallHistory(pageNum, 20);
 
-      const newCalls = response.calls;
+      const newCalls = response?.calls ?? [];
       setCallHistory((prev) =>
         isLoadMore ? [...prev, ...newCalls] : newCalls,
       );
-      setHasMore(response.pagination.hasMore);
+      setHasMore(response?.pagination?.hasMore ?? false);
       setPage(pageNum);
     } catch (err) {
       setError("Error loading call history");

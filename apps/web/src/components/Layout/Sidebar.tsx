@@ -1,5 +1,13 @@
-import { useState } from "react";
-import { Settings, LogOut, MessageCircle, Phone, UserPlus } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import {
+  Settings,
+  LogOut,
+  MessageCircle,
+  Phone,
+  UserPlus,
+  Bell,
+  MoreVertical,
+} from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useChat } from "../../context/ChatContext";
 import { getAvatarUrl } from "../../utils/constants";
@@ -7,6 +15,7 @@ import { SearchInput } from "../ui/SearchInput";
 import { ChatList } from "../chat/ChatList";
 import { CallHistory } from "../call/CallHistory";
 import { Settings as SettingsModal } from "../settings/Settings";
+import { Notifications } from "../settings/Notifications";
 import { ThemeToggle } from "../ui/ThemeToggle";
 import { AddContact } from "../chat/AddContact";
 
@@ -14,6 +23,20 @@ export function Sidebar() {
   const [activeTab, setActiveTab] = useState<"chats" | "calls">("chats");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const { user, logout } = useAuth();
   const { searchQuery, setSearchQuery } = useChat();
 
@@ -23,10 +46,8 @@ export function Sidebar() {
 
   return (
     <div className="w-full sm:w-[360px] h-full bg-background flex flex-row border-r border-border shrink-0 transition-all duration-300 z-10 shadow-xs relative overflow-hidden">
-      
       {/* 1. DESKTOP LEFT RAIL - Hidden on mobile, visible on desktop */}
       <div className="hidden sm:flex flex-col w-16 h-full border-r border-border bg-muted/15 items-center justify-between py-5 shrink-0">
-        
         {/* Top Part */}
         <div className="flex flex-col items-center space-y-5 w-full">
           {/* User Profile Avatar */}
@@ -86,6 +107,14 @@ export function Sidebar() {
           >
             <UserPlus className="h-5 w-5" />
           </button>
+
+          <button
+            onClick={() => setIsNotificationsOpen(true)}
+            className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 cursor-pointer"
+            title="Notifications"
+          >
+            <Bell className="h-5 w-5" />
+          </button>
         </div>
 
         {/* Bottom Part */}
@@ -112,14 +141,16 @@ export function Sidebar() {
 
       {/* 2. CHAT/CALL LIST PANE - Takes remaining space */}
       <div className="flex-1 flex flex-col h-full bg-background overflow-hidden">
-        
         {/* DESKTOP HEADER PANE */}
         <div className="hidden sm:flex flex-col px-5 pt-5 pb-3 bg-background">
           <h1 className="text-2xl font-black text-foreground tracking-tight uppercase mb-1">
             {activeTab === "chats" ? "Chats" : "Calls"}
           </h1>
           <p className="text-xs text-muted-foreground font-medium">
-            Logged in as <span className="text-foreground font-semibold">{user?.displayName}</span>
+            Logged in as{" "}
+            <span className="text-foreground font-semibold">
+              {user?.displayName}
+            </span>
           </p>
         </div>
 
@@ -146,36 +177,59 @@ export function Sidebar() {
               </div>
               <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border border-background rounded-full"></div>
             </div>
-            
+
             <h1 className="text-lg font-bold text-foreground truncate tracking-tight">
               {activeTab === "chats" ? "Chats" : "Calls"}
             </h1>
           </div>
 
           {/* Unified Action Items Row on Mobile */}
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-1" ref={mobileMenuRef}>
             <button
-              onClick={() => setIsAddContactOpen(true)}
-              className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors cursor-pointer"
-              title="Add Contact"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors cursor-pointer"
+              title="Menu"
             >
-              <UserPlus className="h-4.5 w-4.5" />
+              <MoreVertical className="h-5 w-5" />
             </button>
-            <ThemeToggle />
-            <button
-              onClick={() => setIsSettingsOpen(true)}
-              className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors cursor-pointer"
-              title="Settings"
-            >
-              <Settings className="h-4.5 w-4.5" />
-            </button>
-            <button
-              onClick={handleLogout}
-              className="p-2 text-muted-foreground hover:text-red-500 rounded-lg hover:bg-muted transition-colors cursor-pointer"
-              title="Logout"
-            >
-              <LogOut className="h-4.5 w-4.5" />
-            </button>
+
+            {isMobileMenuOpen && (
+              <div className="absolute top-16 right-4 w-56 bg-card border border-border rounded-xl shadow-lg z-50 py-2 flex flex-col animate-in fade-in zoom-in-95">
+                <button
+                  onClick={() => { setIsAddContactOpen(true); setIsMobileMenuOpen(false); }}
+                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-muted text-foreground transition-colors"
+                >
+                  <UserPlus className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm font-medium">Add Contact</span>
+                </button>
+                <button
+                  onClick={() => { setIsNotificationsOpen(true); setIsMobileMenuOpen(false); }}
+                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-muted text-foreground transition-colors"
+                >
+                  <Bell className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm font-medium">Notifications</span>
+                </button>
+                <button
+                  onClick={() => { setIsSettingsOpen(true); setIsMobileMenuOpen(false); }}
+                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-muted text-foreground transition-colors"
+                >
+                  <Settings className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm font-medium">Settings</span>
+                </button>
+                <div className="px-4 py-3 flex items-center justify-between hover:bg-muted transition-colors">
+                  <span className="text-sm font-medium text-foreground">Theme</span>
+                  <ThemeToggle />
+                </div>
+                <hr className="my-1 border-border" />
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-500 transition-colors"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span className="text-sm font-medium">Logout</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -225,6 +279,12 @@ export function Sidebar() {
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
+        onOpenNotifications={() => setIsNotificationsOpen(true)}
+      />
+
+      <Notifications
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
       />
 
       {/* Add Contact Modal */}

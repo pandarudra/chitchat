@@ -6,4 +6,10 @@ export type { User, AuthState } from "./user";
 export type { Message } from "./message";
 export type { Chat, ChatState, ContactRequest, TypingIndicator } from "./chat";
 export type { CallState, CallHistory, CallStatus, CallType } from "./call";
+export type {
+  NotificationItem,
+  NotificationPayload,
+  ContactRequestItem,
+  UserSuggestion,
+} from "./notification";
 export type { AIBot } from "./ai";

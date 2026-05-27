@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { format, isValid } from "date-fns";
-import { Check, CheckCheck, Play, Pause } from "lucide-react";
+import { Check, CheckCheck, Play, Pause, FileText } from "lucide-react";
 import type { Message } from "../../types";
 import { AudioPlayer } from "./AudioPlayer";
 
@@ -168,8 +168,8 @@ export function MessageBubble({
               )}
               {message.type === "file" && (
                 <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-gray-300 rounded flex items-center justify-center">
-                    <span className="text-xs">📄</span>
+                  <div className="w-8 h-8 bg-gray-300 rounded flex items-center justify-center text-gray-600">
+                    <FileText className="w-4 h-4" />
                   </div>
                   <div>
                     <p className="text-sm font-medium">{message.fileName}</p>

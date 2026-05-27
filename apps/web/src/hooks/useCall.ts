@@ -64,6 +64,8 @@ export function useCall({
 }: UseCallProps) {
   const iceCandidateQueueRef = useRef<RTCIceCandidate[]>([]);
   const callTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeCallRef = useRef<{ callId: string; recipientId: string }>({ callId: "", recipientId: "" });
+  const activePcRef = useRef<RTCPeerConnection | null>(null);
 
   // ── Resource cleanup ───────────────────────────────────────────────────────
 
@@ -74,6 +76,8 @@ export function useCall({
     }
 
     iceCandidateQueueRef.current = [];
+    activeCallRef.current = { callId: "", recipientId: "" };
+    activePcRef.current = null;
 
     const { call } = stateRef.current;
 
@@ -109,17 +113,13 @@ export function useCall({
     pc.onicecandidate = (event) => {
       if (!event.candidate || !socketRef.current) return;
 
-      const { call } = stateRef.current;
-      const recipientId =
-        call.caller?.id === userRef.current?.id
-          ? call.callee?.id
-          : call.caller?.id;
+      const { callId, recipientId } = activeCallRef.current;
 
       if (recipientId) {
         socketRef.current.emit("ice-candidate", {
           to: recipientId,
           candidate: event.candidate,
-          callId: call.callId,
+          callId,
         });
       }
     };
@@ -152,6 +152,7 @@ export function useCall({
       }
     };
 
+    activePcRef.current = pc;
     return pc;
   }, [cleanupCall, dispatch, socketRef, stateRef, userRef]);
 
@@ -171,6 +172,9 @@ export function useCall({
         const pc = createPeerConnection();
         dispatch({ type: "SET_PEER_CONNECTION", payload: pc });
 
+        const callId = `call_${Date.now()}_${userRef.current.id}_${callee.id}`;
+        activeCallRef.current = { callId, recipientId: callee.id };
+
         // Audio tracks first, then video
         stream.getAudioTracks().forEach((t) => pc.addTrack(t, stream));
         if (callType === "video") {
@@ -183,8 +187,6 @@ export function useCall({
         });
         await pc.setLocalDescription(offer);
         await processQueuedIceCandidates(pc);
-
-        const callId = `call_${Date.now()}_${userRef.current.id}_${callee.id}`;
 
         dispatch({
           type: "INITIATE_CALL",
@@ -373,7 +375,7 @@ export function useCall({
   // ── Incoming call socket events ───────────────────────────────────────────
 
   useEffect(() => {
-    if (!socketRef.current || !isAuthenticated) return;
+    if (!socketRef.current || !isAuthenticated || !isConnected) return;
 
     const socket = socketRef.current;
 
@@ -385,6 +387,7 @@ export function useCall({
       );
 
       try {
+        activeCallRef.current = { callId, recipientId: from };
         const pc = createPeerConnection();
         dispatch({ type: "SET_PEER_CONNECTION", payload: pc });
 
@@ -459,12 +462,10 @@ export function useCall({
 
     socket.on("ice-candidate", ({ candidate }) => {
       if (!candidate) return;
-      const { call } = stateRef.current;
+      const pc = activePcRef.current;
 
-      if (call.peerConnection?.remoteDescription?.type) {
-        call.peerConnection
-          .addIceCandidate(new RTCIceCandidate(candidate))
-          .catch(() => {});
+      if (pc?.remoteDescription?.type) {
+        pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
       } else {
         iceCandidateQueueRef.current.push(new RTCIceCandidate(candidate));
       }
@@ -483,6 +484,7 @@ export function useCall({
     };
   }, [
     isAuthenticated,
+    isConnected,
     socketRef,
     stateRef,
     createPeerConnection,
