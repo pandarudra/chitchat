@@ -17,10 +17,10 @@ export function ChatMessageList({
   const { user } = useAuth();
 
   return (
-    <div className="flex-1 overflow-y-auto p-5 space-y-3.5 bg-background">
+    <div className="flex-1 overflow-y-auto p-5 space-y-3.5 bg-canvas">
       {activeChat.messages.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted text-sm">
             No messages yet. Start the conversation!
           </p>
         </div>

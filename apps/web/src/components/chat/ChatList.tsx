@@ -16,7 +16,7 @@ export function ChatList() {
     return (
       chat.groupName?.toLowerCase().includes(searchLower) ||
       chat.participants?.some((p) =>
-        p.displayName?.toLowerCase().includes(searchLower)
+        p.displayName?.toLowerCase().includes(searchLower),
       ) ||
       chat.lastMessage?.content.toLowerCase().includes(searchLower)
     );
@@ -95,7 +95,7 @@ export function ChatList() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-canvas">
       <div className="flex-1 overflow-y-auto">
         {sortedChats.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-6 text-center">
@@ -129,7 +129,7 @@ export function ChatList() {
                   {!chat.isGroup &&
                     (() => {
                       const otherUser = chat.participants?.find(
-                        (p) => p.id !== user?.id
+                        (p) => p.id !== user?.id,
                       );
                       return otherUser && isUserOnline(otherUser) ? (
                         <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-background"></div>

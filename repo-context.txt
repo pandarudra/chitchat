@@ -3,7 +3,7 @@ Using gpt-4o model with API key from environment.
 Aider v0.86.2
 Main model: gpt-4o with diff edit format
 Weak model: gpt-4o-mini
-Git repo: .git with 165 files
+Git repo: .git with 170 files
 Repo-map: using 4096 tokens, auto refresh
 Here are summaries of some files present in my git repository.
 Do not propose changes to these files, treat them as *read-only*.
@@ -54,6 +54,17 @@ apps/server/src/models/CallHistory.ts:
 │  createdAt: Date;
 ⋮
 
+apps/server/src/models/ContactRequest.ts:
+⋮
+│export interface IContactRequest extends Document {
+│  sender: mongoose.Types.ObjectId;
+│  receiver: mongoose.Types.ObjectId;
+│  status: "pending" | "accepted" | "rejected";
+│  respondedAt?: Date;
+│  createdAt: Date;
+│  updatedAt: Date;
+⋮
+
 apps/server/src/models/Message.ts:
 ⋮
 │export interface IMessage extends Document {
@@ -66,6 +77,14 @@ apps/server/src/models/Message.ts:
 │  timestamp: Date;
 │  blocked?: boolean;
 │  path?: string;
+⋮
+
+apps/server/src/models/Notification.ts:
+⋮
+│export type NotificationType =
+│  | "contact_request"
+│  | "contact_request_accepted"
+│  | "contact_request_rejected"
 ⋮
 
 apps/server/src/models/User.ts:
@@ -295,7 +314,6 @@ apps/server/src/utils/logger.ts:
 │  },
 │
 │  warn(message: string): void {
-│    console.warn(format("WARN", message, COLORS.yellow));
 ⋮
 │  error(message: string, error?: unknown): void {
 │    console.error(format("ERR", message, COLORS.red));
@@ -322,6 +340,14 @@ apps/server/src/utils/redisClient.ts:
 
 apps/web/src/components/Layout/Sidebar.tsx:
 ⋮
+│              <img
+│                src={getAvatarUrl(user.avatarUrl)}
+│                alt={user?.displayName}
+│                className="w-10 h-10 rounded-xl object-cover shadow-xs border border-border bg-card
+│                onError={(e) => {
+│                  const target = e.target as HTMLImageElement;
+│                  target.style.display = "none";
+⋮
 │          <button
 │            onClick={() => setActiveTab("calls")}
 │            className={`p-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
@@ -346,20 +372,30 @@ apps/web/src/components/Layout/Sidebar.tsx:
 │            className="p-2.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl 
 │            title="Settings"
 ⋮
-│            <button
-│              onClick={() => setIsAddContactOpen(true)}
-│              className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted 
-│              title="Add Contact"
+│                <img
+│                  src={getAvatarUrl(user.avatarUrl)}
+│                  alt={user?.displayName}
+│                  className="w-9 h-9 rounded-xl object-cover shadow-xs border border-border"
+│                  onError={(e) => {
+│                    const target = e.target as HTMLImageElement;
+│                    target.style.display = "none";
 ⋮
 │            <button
-│              onClick={() => setIsNotificationsOpen(true)}
-│              className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted 
-│              title="Notifications"
+│              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+│              className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl 
+│              title="Menu"
 ⋮
-│            <button
-│              onClick={() => setIsSettingsOpen(true)}
-│              className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted 
-│              title="Settings"
+│                <button
+│                  onClick={() => { setIsAddContactOpen(true); setIsMobileMenuOpen(false); }}
+│                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-muted text-foreg
+⋮
+│                <button
+│                  onClick={() => { setIsNotificationsOpen(true); setIsMobileMenuOpen(false); }}
+│                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-muted text-foreg
+⋮
+│                <button
+│                  onClick={() => { setIsSettingsOpen(true); setIsMobileMenuOpen(false); }}
+│                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-muted text-foreg
 ⋮
 │          <button
 │            onClick={() => setActiveTab("chats")}
@@ -414,11 +450,17 @@ apps/web/src/components/call/CallControls.tsx:
 │  onEndCall: (callId: string) => void;
 ⋮
 
+apps/web/src/components/call/CallHistory.tsx:
+⋮
+│                  <img
+│                    src={getAvatarUrl(call.user.avatarUrl)}
+⋮
+
 apps/web/src/components/call/CallModal.tsx:
 ⋮
-│                  <button
-│                    onClick={() => setIsFullscreen((p) => !p)}
-│                    className="w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 flex items-center
+│                    <button
+│                      onClick={() => setIsFullscreen((p) => !p)}
+│                      className="w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 flex items-cent
 ⋮
 │              <CallSettings
 │                callType={call.callType}
@@ -434,6 +476,9 @@ apps/web/src/components/call/CallModal.tsx:
 ⋮
 
 apps/web/src/components/call/CallNotification.tsx:
+⋮
+│              <img
+│                src={getAvatarUrl(otherUser.avatarUrl)}
 ⋮
 │          <button
 │            type="button"
@@ -542,16 +587,6 @@ apps/web/src/components/chat/MessageBubble.tsx:
 │  ifblocked?: boolean; // Optional prop to handle blocked contacts
 ⋮
 
-apps/web/src/components/chat/MessageInput.tsx:
-⋮
-│            <input
-│              type="text"
-│              value={message}
-│              onChange={(e) => setMessage(e.target.value)}
-│              onKeyPress={handleKeyPress}
-│              placeholder={getPlaceholderText()}
-⋮
-
 apps/web/src/components/chat/VoiceRecorder.tsx:
 ⋮
 │interface VoiceRecorderProps {
@@ -568,6 +603,13 @@ apps/web/src/components/chat/VoiceRecorder.tsx:
 apps/web/src/components/profile/EditProfile.tsx:
 ⋮
 │interface EditProfileProps {
+│  isOpen: boolean;
+│  onClose: () => void;
+⋮
+
+apps/web/src/components/settings/Notifications.tsx:
+⋮
+│interface NotificationsProps {
 │  isOpen: boolean;
 │  onClose: () => void;
 ⋮
@@ -602,28 +644,6 @@ apps/web/src/components/ui/SearchInput.tsx:
 │  onChange: (value: string) => void;
 │  placeholder?: string;
 │  className?: string;
-⋮
-│export function SearchInput({
-│  value,
-│  onChange,
-│  placeholder = "Search...",
-│  className = "",
-│}: SearchInputProps) {
-⋮
-│  return (
-│    <div className={`relative ${className}`}>
-│      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" 
-│      <input
-│        type="text"
-│        placeholder={placeholder}
-│        value={value}
-│        onChange={(e) => onChange(e.target.value)}
-│        className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none foc
-│      />
-│      {value && (
-│        <button
-│          onClick={() => onChange("")}
-│          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-g
 ⋮
 
 apps/web/src/components/ui/ThemeToggle.tsx:
@@ -687,31 +707,6 @@ apps/web/src/context/ThemeProvider.tsx:
 │type ThemeProviderState = {
 │  theme: Theme;
 │  setTheme: (theme: Theme) => void;
-⋮
-
-apps/web/src/context/auth/authReducer.ts:
-⋮
-│export type AuthAction =
-│  | { type: "AUTH_START" }
-│  | { type: "AUTH_SUCCESS"; payload: User }
-│  | { type: "AUTH_FAILURE"; payload: string }
-│  | { type: "LOGOUT" }
-│  | { type: "UPDATE_PROFILE"; payload: User }
-│  | { type: "CLEAR_ERROR" }
-⋮
-
-apps/web/src/context/chat/chatReducer.ts:
-⋮
-│export type ChatAction =
-│  | { type: "SET_ACTIVE_CHAT"; payload: Chat | null }
-│  | { type: "SET_CHATS"; payload: Chat[] }
-│  | { type: "ADD_NEW_CHAT"; payload: Chat }
-│  | { type: "SEND_MESSAGE"; payload: Message }
-│  | { type: "RECEIVE_MESSAGE"; payload: Message }
-│  | { type: "UPDATE_MESSAGE_STATUS"; payload: { messageId: string; status: Message["status"] } }
-│  | { type: "MARK_AS_READ"; payload: string }
-│  | { type: "ADD_CONTACT"; payload: User }
-│  | { type: "SET_CONTACTS"; payload: User[] }
 ⋮
 
 apps/web/src/hooks/useCall.ts:
@@ -821,17 +816,6 @@ apps/web/src/hooks/useVoiceRecording.ts:
 │  cancelRecording: () => void;
 │  error: string | null;
 ⋮
-│export function useVoiceRecording(): UseVoiceRecordingReturn {
-│  const [isRecording, setIsRecording] = useState(false);
-│  const [recordingTime, setRecordingTime] = useState(0);
-│  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-│  const [error, setError] = useState<string | null>(null);
-│
-│  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-│  const timerRef = useRef<NodeJS.Timeout | null>(null);
-│  const chunksRef = useRef<Blob[]>([]);
-│
-⋮
 
 apps/web/src/lib/authEvents.ts:
 ⋮
@@ -877,6 +861,49 @@ apps/web/src/lib/callApi.ts:
 │  await api.delete("/api/calls/history");
 ⋮
 
+apps/web/src/lib/notificationsApi.ts:
+⋮
+│export async function searchUserSuggestions(
+│  query: string,
+⋮
+│export async function sendContactRequest(email: string): Promise<void> {
+│  await api.post("/api/user/add-contact", { contactEmail: email });
+⋮
+│export async function getContactRequests(): Promise<ContactRequestItem[]> {
+│  const res = await api.get("/api/user/requests");
+│  return (res.data.requests ?? []).map((request: any) => ({
+│    id: request.id,
+│    senderId: request.senderId,
+│    receiverId: request.receiverId,
+│    senderInfo: request.senderInfo
+│      ? {
+│          id: request.senderInfo.id,
+│          email: request.senderInfo.email,
+⋮
+│export async function acceptContactRequest(requestId: string): Promise<void> {
+│  await api.post(`/api/user/requests/${requestId}/accept`);
+⋮
+│export async function rejectContactRequest(requestId: string): Promise<void> {
+│  await api.post(`/api/user/requests/${requestId}/reject`);
+⋮
+│export async function getNotifications(): Promise<NotificationItem[]> {
+│  const res = await api.get("/api/user/notifications");
+│
+│  return (res.data.notifications ?? []).map((notification: any) => ({
+│    id: notification.id,
+│    type: notification.type,
+│    title: notification.title,
+│    message: notification.message,
+│    isRead: notification.isRead,
+│    payload: notification.payload ?? {},
+⋮
+│export async function markNotificationRead(
+│  notificationId: string,
+⋮
+│export async function markAllNotificationsRead(): Promise<void> {
+│  await api.post("/api/user/notifications/read-all");
+⋮
+
 apps/web/src/lib/utils.ts:
 │export function cn(...classes: (string | false | null | undefined)[]) {
 ⋮
@@ -885,8 +912,6 @@ apps/web/src/pages/Auth/Login.tsx:
 ⋮
 │interface LoginFormData {
 │  email: string;
-⋮
-│            <form onSubmit={handleSubmit(onSendOtp)} className="space-y-6">
 ⋮
 
 apps/web/src/pages/Auth/Signup.tsx:
@@ -997,23 +1022,6 @@ apps/web/src/types/chat.ts:
 │  unreadCount: number;
 │  isPinned: boolean;
 ⋮
-│export interface ChatState {
-│  chats: Chat[];
-│  activeChat: Chat | null;
-│  contacts: User[];
-│  contactRequests: ContactRequest[];
-│  isTyping: Record<string, User[]>;
-│  searchQuery: string;
-│  call: CallState;
-⋮
-│export interface ContactRequest {
-│  id: string;
-│  senderId: string;
-│  receiverId: string;
-│  senderInfo: User;
-│  status: "pending" | "accepted" | "rejected";
-│  timestamp: Date;
-⋮
 
 apps/web/src/types/message.ts:
 ⋮
@@ -1027,6 +1035,21 @@ apps/web/src/types/message.ts:
 │  status: "sent" | "delivered" | "read";
 │  replyTo?: string;
 │  fileName?: string;
+⋮
+
+apps/web/src/types/notification.ts:
+│export interface NotificationPayload {
+⋮
+│export interface NotificationItem {
+│  id: string;
+│  type:
+│    | "contact_request"
+│    | "contact_request_accepted"
+│    | "contact_request_rejected"
+│    | "system";
+│  title: string;
+│  message: string;
+│  isRead: boolean;
 ⋮
 
 apps/web/src/types/user.ts:

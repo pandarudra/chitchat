@@ -6,7 +6,9 @@ export function ThemeToggle() {
 
   const handleToggle = () => {
     if (theme === "system") {
-      const isSystemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const isSystemDark = window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      ).matches;
       setTheme(isSystemDark ? "light" : "dark");
     } else {
       setTheme(theme === "light" ? "dark" : "light");
@@ -16,7 +18,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={handleToggle}
-      className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 cursor-pointer shadow-sm active:scale-95"
+      className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-hairline bg-surface-card text-muted hover:text-ink hover:bg-surface-soft transition-all duration-200 cursor-pointer shadow-sm active:scale-95"
       aria-label="Toggle theme"
     >
       <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
@@ -24,4 +26,3 @@ export function ThemeToggle() {
     </button>
   );
 }
-

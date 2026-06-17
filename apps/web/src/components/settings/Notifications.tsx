@@ -109,16 +109,16 @@ export function Notifications({ isOpen, onClose }: NotificationsProps) {
       }}
     >
       <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-border bg-card text-card-foreground shadow-2xl">
-        <div className="flex items-center justify-between border-b border-border bg-muted/30 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-hairline bg-surface-soft/30 px-5 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/15 bg-primary/10">
+            <div className="flex h-11 w-11 items-center justify-center rounded-md border border-primary/15 bg-primary/10">
               <Bell className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-lg font-bold tracking-tight">
+              <h2 className="text-lg font-semibold tracking-tight text-ink">
                 Notifications
               </h2>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-caption text-muted">
                 Requests, acceptances, and other updates
               </p>
             </div>
@@ -129,7 +129,7 @@ export function Notifications({ isOpen, onClose }: NotificationsProps) {
               <button
                 type="button"
                 onClick={handleMarkAllRead}
-                className="inline-flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+                className="inline-flex items-center gap-2 rounded-md border border-hairline bg-canvas px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-surface-soft"
               >
                 <CheckCheck className="h-4 w-4" />
                 Mark all read
@@ -138,7 +138,7 @@ export function Notifications({ isOpen, onClose }: NotificationsProps) {
             <button
               type="button"
               onClick={onClose}
-              className="rounded-2xl p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="rounded-md p-2 text-muted transition-colors hover:bg-surface-soft hover:text-ink"
             >
               <X className="h-5 w-5" />
             </button>
@@ -147,11 +147,11 @@ export function Notifications({ isOpen, onClose }: NotificationsProps) {
 
         <div className="max-h-[70vh] space-y-3 overflow-y-auto p-5">
           {isLoading ? (
-            <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">
+            <div className="rounded-md border border-dashed border-hairline bg-surface-soft/20 px-4 py-10 text-center text-sm text-muted">
               Loading notifications...
             </div>
           ) : notifications.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">
+            <div className="rounded-md border border-dashed border-hairline bg-surface-soft/20 px-4 py-10 text-center text-sm text-muted">
               <Bell className="mx-auto mb-2 h-5 w-5 opacity-70" />
               No notifications yet.
             </div>

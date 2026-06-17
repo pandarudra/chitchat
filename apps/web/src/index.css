@@ -1,37 +1,67 @@
-/* Load fonts ONLY from local public/fonts/ path */
+/* Load fonts from local public/fonts/ path */
+/* Slab-Serif Display Fonts */
+@font-face {
+  font-family: "Tiempos Headline";
+  font-weight: 400;
+  font-style: normal;
+  src: url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&display=swap");
+}
+
+/* Humanist Sans Fonts for Body */
+@font-face {
+  font-family: "Inter";
+  font-weight: 300;
+  font-style: normal;
+  src: url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap");
+}
+
+/* Monospace Font for Code */
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 400;
+  font-style: normal;
+  src: url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap");
+}
+
+/* Keep Tosh as backup */
 @font-face {
   font-family: "Tosh";
   font-weight: 300;
   font-style: normal;
-  src: url("/fonts/Tosh Font Family/TRYToshA-Light-BF677df27a6a41e.ttf") format("truetype");
+  src: url("/fonts/Tosh Font Family/TRYToshA-Light-BF677df27a6a41e.ttf")
+    format("truetype");
 }
 
 @font-face {
   font-family: "Tosh";
   font-weight: 400;
   font-style: normal;
-  src: url("/fonts/Tosh Font Family/TRYToshA-Regular-BF677df27a66806.ttf") format("truetype");
+  src: url("/fonts/Tosh Font Family/TRYToshA-Regular-BF677df27a66806.ttf")
+    format("truetype");
 }
 
 @font-face {
   font-family: "Tosh";
   font-weight: 500;
   font-style: normal;
-  src: url("/fonts/Tosh Font Family/TRYToshA-Medium-BF677df27a6785d.ttf") format("truetype");
+  src: url("/fonts/Tosh Font Family/TRYToshA-Medium-BF677df27a6785d.ttf")
+    format("truetype");
 }
 
 @font-face {
   font-family: "Tosh";
   font-weight: 700;
   font-style: normal;
-  src: url("/fonts/Tosh Font Family/TRYToshA-Bold-BF677df27a68b37.ttf") format("truetype");
+  src: url("/fonts/Tosh Font Family/TRYToshA-Bold-BF677df27a68b37.ttf")
+    format("truetype");
 }
 
 @font-face {
   font-family: "Tosh";
   font-weight: 900;
   font-style: normal;
-  src: url("/fonts/Tosh Font Family/TRYToshA-Black-BF677df27a667c8.ttf") format("truetype");
+  src: url("/fonts/Tosh Font Family/TRYToshA-Black-BF677df27a667c8.ttf")
+    format("truetype");
 }
 
 @import "tailwindcss";
@@ -39,124 +69,210 @@
 @custom-variant dark (&:is(.dark, .dark *));
 
 @theme {
-  --font-sans: "Tosh", sans-serif;
-  --font-heading: "Tosh", sans-serif;
+  /* Typography - Anthropic Design System */
+  --font-display:
+    "Cormorant Garamond", "Tiempos Headline", "EB Garamond", serif;
+  --font-sans:
+    "Inter", "Söhne", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", monospace;
+  --font-heading: "Cormorant Garamond", "Tiempos Headline", serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
 
-  /* Custom shadcn-like color system based on CSS variables */
+  /* Core Colors - Anthropic Warm Canvas Theme */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
 
-  /* Primary color palette shades for gradients */
-  --color-primary-50: #f0fdfa;
-  --color-primary-100: #ccfbf1;
-  --color-primary-200: #99f6e4;
-  --color-primary-300: #5eead4;
-  --color-primary-400: #2dd4bf;
-  --color-primary-500: #14b8a6;
-  --color-primary-600: #0d9488;
-  --color-primary-700: #0f766e;
-  --color-primary-800: #115e59;
-  --color-primary-900: #134e4a;
+  --color-canvas: var(--canvas);
+  --color-surface-soft: var(--surface-soft);
+  --color-surface-card: var(--surface-card);
+  --color-surface-dark: var(--surface-dark);
+  --color-surface-dark-elevated: var(--surface-dark-elevated);
+
+  --color-ink: var(--ink);
+  --color-body: var(--body);
+  --color-body-strong: var(--body-strong);
+  --color-muted: var(--muted);
+  --color-muted-soft: var(--muted-soft);
+
+  --color-primary: var(--primary);
+  --color-primary-active: var(--primary-active);
+  --color-primary-disabled: var(--primary-disabled);
+  --color-primary-foreground: var(--on-primary);
+
+  --color-secondary: var(--surface-card);
+  --color-secondary-foreground: var(--ink);
+
+  --color-accent: var(--accent-teal);
+  --color-accent-foreground: var(--on-dark);
+
+  --color-accent-amber: var(--accent-amber);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+
+  --color-border: var(--hairline);
+  --color-border-soft: var(--hairline-soft);
+  --color-input: var(--canvas);
+  --color-ring: var(--primary);
+
+  --color-on-primary: var(--on-primary);
+  --color-on-dark: var(--on-dark);
+  --color-on-dark-soft: var(--on-dark-soft);
+
+  /* Coral/Primary color palette variations */
+  --color-primary-50: #faf7f3;
+  --color-primary-100: #f3e8e0;
+  --color-primary-200: #e6d1c2;
+  --color-primary-300: #d9baa4;
+  --color-primary-400: #cc9c86;
+  --color-primary-500: #cc785c;
+  --color-primary-600: #b86344;
+  --color-primary-700: #a9583e;
+  --color-primary-800: #8c4630;
+  --color-primary-900: #6f3424;
 }
 
 :root {
-  --background: #f8fafc; /* Slate 50 - clean, bright but soft background */
-  --foreground: #0f172a; /* Slate 900 */
-  
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  
-  --primary: #0d9488; /* Beautiful, highly soothing Teal 600 */
-  --primary-foreground: #ffffff;
-  
-  --secondary: #f1f5f9; /* Slate 100 */
-  --secondary-foreground: #0f172a;
-  
-  --muted: #f1f5f9; /* Slate 100 */
-  --muted-foreground: #475569; /* Slate 600 - soft */
-  
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
-  
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  
-  --border: #e2e8f0; /* Slate 200 */
-  --input: #e2e8f0;
-  --ring: #0d9488;
+  /* Anthropic Warm Canvas Theme - Light Mode */
+  --background: #faf9f5;
+  --foreground: #141413;
+
+  --canvas: #faf9f5;
+  --surface-soft: #f5f0e8;
+  --surface-card: #efe9de;
+  --surface-cream-strong: #e8e0d2;
+
+  --surface-dark: #181715;
+  --surface-dark-elevated: #252320;
+  --surface-dark-soft: #1f1e1b;
+
+  --ink: #141413;
+  --body-strong: #252523;
+  --body: #3d3d3a;
+  --muted: #6c6a64;
+  --muted-soft: #8e8b82;
+
+  --primary: #cc785c;
+  --primary-active: #a9583e;
+  --primary-disabled: #e6dfd8;
+  --on-primary: #ffffff;
+
+  --accent-teal: #5db8a6;
+  --accent-amber: #e8a55a;
+  --success: #5db872;
+  --warning: #d4a017;
+  --error: #c64545;
+
+  --hairline: #e6dfd8;
+  --hairline-soft: #ebe6df;
+
+  --on-dark: #faf9f5;
+  --on-dark-soft: #a09d96;
 }
 
 .dark {
-  --background: #0f172a; /* Soothing dark slate */
-  --foreground: #f8fafc; /* Slate 50 */
-  
-  --card: #1e293b; /* Slate 800 */
-  --card-foreground: #f8fafc;
-  
-  --popover: #1e293b;
-  --popover-foreground: #f8fafc;
-  
-  --primary: #2dd4bf; /* Teal 400 - vibrant, calming under dark mode */
-  --primary-foreground: #0f172a;
-  
-  --secondary: #1e293b; /* Slate 800 */
-  --secondary-foreground: #f8fafc;
-  
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8; /* Slate 400 */
-  
-  --accent: #1e293b;
-  --accent-foreground: #f8fafc;
-  
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  
-  --border: #334155; /* Slate 700 */
-  --input: #334155;
-  --ring: #2dd4bf;
+  /* Anthropic Warm Canvas Theme - Dark Mode */
+  --background: #181715;
+  --foreground: #faf9f5;
+
+  --canvas: #1f1e1b;
+  --surface-soft: #252320;
+  --surface-card: #2a2724;
+  --surface-cream-strong: #3d3a34;
+
+  --surface-dark: #0f0e0c;
+  --surface-dark-elevated: #1a1915;
+  --surface-dark-soft: #141310;
+
+  --ink: #faf9f5;
+  --body-strong: #ebe6df;
+  --body: #c4bfb5;
+  --muted: #8e8b82;
+  --muted-soft: #6c6a64;
+
+  --primary: #e8a55a;
+  --primary-active: #d4964d;
+  --primary-disabled: #5a5550;
+  --on-primary: #141413;
+
+  --accent-teal: #5db8a6;
+  --accent-amber: #f0b570;
+  --success: #5db872;
+  --warning: #d4a017;
+  --error: #c64545;
+
+  --hairline: #3d3a34;
+  --hairline-soft: #2a2724;
+
+  --on-dark: #faf9f5;
+  --on-dark-soft: #a09d96;
 }
 
 @layer base {
   * {
-    font-family: var(--font-sans);
+    font-family: var(--font-body);
   }
-  
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading);
+
+  /* Display Headings - Slab Serif */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+
+  h1 {
+    font-size: 2.25rem;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-size: 1.875rem;
+    line-height: 1.1;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+    line-height: 1.15;
+  }
+
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-sans);
+    font-weight: 500;
+    color: var(--ink);
   }
 
   body {
     background-color: var(--background);
     color: var(--foreground);
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease;
+  }
+
+  /* Code blocks */
+  code,
+  pre {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+  }
+
+  /* Links */
+  a {
+    color: var(--primary);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  a:hover {
+    color: var(--primary-active);
+    text-decoration: underline;
   }
 }
 

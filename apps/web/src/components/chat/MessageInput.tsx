@@ -123,7 +123,7 @@ export function MessageInput() {
         await startRecording();
       } catch {
         toast.error(
-          "Failed to start recording. Please check microphone permissions."
+          "Failed to start recording. Please check microphone permissions.",
         );
       }
     }
@@ -154,10 +154,12 @@ export function MessageInput() {
 
   if (isBlocked) {
     return (
-      <div className="border-t border-border p-4 bg-muted/30 rounded-2xl">
-        <div className="text-center text-muted-foreground">
-          <p className="text-sm font-semibold">You cannot send messages to this contact.</p>
-          <p className="text-xs">This contact has been blocked.</p>
+      <div className="border-t border-hairline p-4 bg-surface-soft/30 rounded-md">
+        <div className="text-center text-muted">
+          <p className="text-sm font-medium">
+            You cannot send messages to this contact.
+          </p>
+          <p className="text-caption">This contact has been blocked.</p>
         </div>
       </div>
     );
@@ -167,11 +169,11 @@ export function MessageInput() {
     <div className="bg-transparent">
       <form onSubmit={handleSubmit} className="flex items-end space-x-2">
         <div className="flex-1 relative min-w-0">
-          <div className="flex items-center space-x-2 bg-muted border border-border/50 rounded-2xl px-3 sm:px-4 py-2.5 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+          <div className="flex items-center space-x-2 bg-surface-soft border border-hairline/50 rounded-md px-3 sm:px-4 py-2.5 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
             <button
               type="button"
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 cursor-pointer"
+              className="text-muted hover:text-ink transition-colors flex-shrink-0 cursor-pointer"
             >
               <Smile className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
@@ -182,13 +184,13 @@ export function MessageInput() {
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder={getPlaceholderText()}
-              className="flex-1 bg-transparent border-none outline-none placeholder-muted-foreground text-foreground text-sm sm:text-base min-w-0"
+              className="flex-1 bg-transparent border-none outline-none placeholder-muted text-ink text-sm sm:text-base min-w-0"
             />
 
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 cursor-pointer"
+              className="text-muted hover:text-ink transition-colors flex-shrink-0 cursor-pointer"
             >
               <Paperclip className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>

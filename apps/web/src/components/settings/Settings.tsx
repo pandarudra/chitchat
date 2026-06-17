@@ -64,22 +64,20 @@ export function Settings({
               <div className="w-11 h-11 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/15">
                 <SettingsIcon className="h-5 w-5 text-primary" />
               </div>
-              <h2 className="text-lg font-semibold text-foreground">
-                Settings
-              </h2>
+              <h2 className="text-lg font-semibold text-ink">Settings</h2>
             </div>
             <button
               onClick={handleClose}
-              className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors"
+              className="p-2 text-muted hover:text-ink hover:bg-surface-soft rounded-full transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
 
           {/* User Profile Section */}
-          <div className="p-6 border-b border-border bg-muted/10">
+          <div className="p-6 border-b border-hairline bg-surface-soft/30">
             <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden bg-muted flex items-center justify-center border border-border shadow-sm">
+              <div className="w-16 h-16 rounded-md overflow-hidden bg-surface-soft flex items-center justify-center border border-hairline shadow-sm">
                 {user?.avatarUrl ? (
                   <img
                     src={getAvatarUrl(user.avatarUrl)}
@@ -97,7 +95,7 @@ export function Settings({
                 <div
                   className={`fallback-avatar w-full h-full flex items-center justify-center ${user?.avatarUrl ? "hidden" : ""}`}
                 >
-                  <User className="h-8 w-8 text-muted-foreground" />
+                  <User className="h-8 w-8 text-muted" />
                 </div>
               </div>
               <div className="flex-1">

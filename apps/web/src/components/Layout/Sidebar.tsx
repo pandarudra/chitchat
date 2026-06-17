@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useChat } from "../../context/ChatContext";
-import { getAvatarUrl } from "../../utils/constants";
+import { Avatar } from "../ui/Avatar";
 import { SearchInput } from "../ui/SearchInput";
 import { ChatList } from "../chat/ChatList";
 import { CallHistory } from "../call/CallHistory";
@@ -45,43 +45,28 @@ export function Sidebar() {
   };
 
   return (
-    <div className="w-full sm:w-[360px] h-full bg-background flex flex-row border-r border-border shrink-0 transition-all duration-300 z-10 shadow-xs relative overflow-hidden">
+    <div className="w-full sm:w-[360px] h-full bg-canvas flex flex-row border-r border-hairline shrink-0 transition-all duration-300 z-10 shadow-xs relative overflow-hidden">
       {/* 1. DESKTOP LEFT RAIL - Hidden on mobile, visible on desktop */}
-      <div className="hidden sm:flex flex-col w-16 h-full border-r border-border bg-muted/15 items-center justify-between py-5 shrink-0">
+      <div className="hidden sm:flex flex-col w-16 h-full border-r border-hairline bg-surface-soft/40 items-center justify-between py-5 shrink-0">
         {/* Top Part */}
         <div className="flex flex-col items-center space-y-5 w-full">
           {/* User Profile Avatar */}
-          <div className="relative cursor-pointer hover:opacity-90 active:scale-95 transition-all">
-            {user?.avatarUrl ? (
-              <img
-                src={getAvatarUrl(user.avatarUrl)}
-                alt={user?.displayName}
-                className="w-10 h-10 rounded-xl object-cover shadow-xs border border-border bg-card"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = "none";
-                  target.nextElementSibling?.classList.remove("hidden");
-                }}
-              />
-            ) : null}
-            <div
-              className={`w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center text-white font-bold text-base shadow-xs ${user?.avatarUrl ? "hidden" : ""}`}
-            >
-              {user?.displayName?.charAt(0)?.toUpperCase() || "U"}
-            </div>
-            {/* Online badge indicator */}
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-background rounded-full"></div>
-          </div>
+          <Avatar
+            user={user}
+            size="md"
+            showOnlineBadge
+            className="cursor-pointer hover:opacity-90 active:scale-95 transition-all"
+          />
 
-          <div className="h-[1px] w-8 bg-border"></div>
+          <div className="h-[1px] w-8 bg-hairline"></div>
 
           {/* Navigation Rails */}
           <button
             onClick={() => setActiveTab("chats")}
-            className={`p-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
+            className={`p-2.5 rounded-md transition-all duration-200 cursor-pointer ${
               activeTab === "chats"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                ? "bg-primary text-on-primary shadow-sm"
+                : "text-muted hover:text-ink hover:bg-surface-soft"
             }`}
             title="Chats"
           >
@@ -90,10 +75,10 @@ export function Sidebar() {
 
           <button
             onClick={() => setActiveTab("calls")}
-            className={`p-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
+            className={`p-2.5 rounded-md transition-all duration-200 cursor-pointer ${
               activeTab === "calls"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                ? "bg-primary text-on-primary shadow-sm"
+                : "text-muted hover:text-ink hover:bg-surface-soft"
             }`}
             title="Calls"
           >
@@ -102,7 +87,7 @@ export function Sidebar() {
 
           <button
             onClick={() => setIsAddContactOpen(true)}
-            className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 cursor-pointer"
+            className="p-2.5 rounded-md text-muted hover:text-ink hover:bg-surface-soft transition-all duration-200 cursor-pointer"
             title="Add Contact"
           >
             <UserPlus className="h-5 w-5" />
@@ -110,7 +95,7 @@ export function Sidebar() {
 
           <button
             onClick={() => setIsNotificationsOpen(true)}
-            className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 cursor-pointer"
+            className="p-2.5 rounded-md text-muted hover:text-ink hover:bg-surface-soft transition-all duration-200 cursor-pointer"
             title="Notifications"
           >
             <Bell className="h-5 w-5" />
@@ -123,7 +108,7 @@ export function Sidebar() {
 
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="p-2.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors cursor-pointer"
+            className="p-2.5 text-muted hover:text-ink hover:bg-surface-soft rounded-md transition-colors cursor-pointer"
             title="Settings"
           >
             <Settings className="h-5 w-5" />
@@ -131,7 +116,7 @@ export function Sidebar() {
 
           <button
             onClick={handleLogout}
-            className="p-2.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-colors cursor-pointer"
+            className="p-2.5 text-muted hover:text-error hover:bg-error/10 rounded-md transition-colors cursor-pointer"
             title="Logout"
           >
             <LogOut className="h-5 w-5" />
@@ -140,14 +125,14 @@ export function Sidebar() {
       </div>
 
       {/* 2. CHAT/CALL LIST PANE - Takes remaining space */}
-      <div className="flex-1 flex flex-col h-full bg-background overflow-hidden">
+      <div className="flex-1 flex flex-col h-full bg-canvas overflow-hidden">
         {/* DESKTOP HEADER PANE */}
-        <div className="hidden sm:flex flex-col px-5 pt-5 pb-3 bg-background">
-          <h1 className="text-2xl font-black text-foreground tracking-tight uppercase mb-1">
+        <div className="hidden sm:flex flex-col px-5 pt-5 pb-3 bg-canvas">
+          <h1 className="text-title-lg font-sans font-500 text-ink tracking-tight mb-1">
             {activeTab === "chats" ? "Chats" : "Calls"}
           </h1>
-          <p className="text-xs text-muted-foreground font-medium">
-            Logged in as{" "}
+          <p className="text-caption text-muted">
+
             <span className="text-foreground font-semibold">
               {user?.displayName}
             </span>
@@ -155,30 +140,11 @@ export function Sidebar() {
         </div>
 
         {/* MOBILE HEADER - Visible on mobile, hidden on desktop */}
-        <div className="sm:hidden flex items-center justify-between p-4 border-b border-border bg-card">
+        <div className="sm:hidden flex items-center justify-between p-4 border-b border-hairline bg-surface-card">
           <div className="flex items-center space-x-3 overflow-hidden">
-            <div className="relative shrink-0">
-              {user?.avatarUrl ? (
-                <img
-                  src={getAvatarUrl(user.avatarUrl)}
-                  alt={user?.displayName}
-                  className="w-9 h-9 rounded-xl object-cover shadow-xs border border-border"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = "none";
-                    target.nextElementSibling?.classList.remove("hidden");
-                  }}
-                />
-              ) : null}
-              <div
-                className={`w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center text-white font-bold text-sm shadow-xs ${user?.avatarUrl ? "hidden" : ""}`}
-              >
-                {user?.displayName?.charAt(0)?.toUpperCase() || "U"}
-              </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border border-background rounded-full"></div>
-            </div>
+            <Avatar user={user} size="sm" showOnlineBadge />
 
-            <h1 className="text-lg font-bold text-foreground truncate tracking-tight">
+            <h1 className="text-title-lg font-sans font-bold text-ink truncate tracking-tight">
               {activeTab === "chats" ? "Chats" : "Calls"}
             </h1>
           </div>
@@ -187,43 +153,43 @@ export function Sidebar() {
           <div className="flex items-center space-x-1" ref={mobileMenuRef}>
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors cursor-pointer"
+              className="p-2 text-muted hover:text-ink hover:bg-surface-soft rounded-md transition-colors cursor-pointer"
               title="Menu"
             >
               <MoreVertical className="h-5 w-5" />
             </button>
 
             {isMobileMenuOpen && (
-              <div className="absolute top-16 right-4 w-56 bg-card border border-border rounded-xl shadow-lg z-50 py-2 flex flex-col animate-in fade-in zoom-in-95">
+              <div className="absolute top-16 right-4 w-56 bg-surface-card border border-hairline rounded-lg shadow-lg z-50 py-2 flex flex-col animate-in fade-in zoom-in-95">
                 <button
                   onClick={() => { setIsAddContactOpen(true); setIsMobileMenuOpen(false); }}
-                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-muted text-foreground transition-colors"
+                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-surface-soft text-ink transition-colors cursor-pointer"
                 >
-                  <UserPlus className="h-5 w-5 text-muted-foreground" />
+                  <UserPlus className="h-5 w-5 text-muted" />
                   <span className="text-sm font-medium">Add Contact</span>
                 </button>
                 <button
                   onClick={() => { setIsNotificationsOpen(true); setIsMobileMenuOpen(false); }}
-                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-muted text-foreground transition-colors"
+                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-surface-soft text-ink transition-colors cursor-pointer"
                 >
-                  <Bell className="h-5 w-5 text-muted-foreground" />
+                  <Bell className="h-5 w-5 text-muted" />
                   <span className="text-sm font-medium">Notifications</span>
                 </button>
                 <button
                   onClick={() => { setIsSettingsOpen(true); setIsMobileMenuOpen(false); }}
-                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-muted text-foreground transition-colors"
+                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-surface-soft text-ink transition-colors cursor-pointer"
                 >
-                  <Settings className="h-5 w-5 text-muted-foreground" />
+                  <Settings className="h-5 w-5 text-muted" />
                   <span className="text-sm font-medium">Settings</span>
                 </button>
-                <div className="px-4 py-3 flex items-center justify-between hover:bg-muted transition-colors">
-                  <span className="text-sm font-medium text-foreground">Theme</span>
+                <div className="px-4 py-3 flex items-center justify-between hover:bg-surface-soft transition-colors">
+                  <span className="text-sm font-medium text-ink">Theme</span>
                   <ThemeToggle />
                 </div>
-                <hr className="my-1 border-border" />
+                <div className="h-[1px] w-full bg-hairline my-1" />
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-500 transition-colors"
+                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-error/10 text-error transition-colors cursor-pointer"
                 >
                   <LogOut className="h-5 w-5" />
                   <span className="text-sm font-medium">Logout</span>
@@ -234,13 +200,13 @@ export function Sidebar() {
         </div>
 
         {/* MOBILE ONLY TAB SELECTOR BAR */}
-        <div className="sm:hidden flex p-2 gap-1 border-b border-border bg-muted/20">
+        <div className="sm:hidden flex p-2 gap-1 border-b border-hairline bg-surface-soft/40">
           <button
             onClick={() => setActiveTab("chats")}
-            className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-xl transition-all duration-200 cursor-pointer ${
+            className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-md transition-all duration-200 cursor-pointer ${
               activeTab === "chats"
-                ? "bg-background text-foreground shadow-xs font-semibold border border-border"
-                : "text-muted-foreground hover:text-foreground font-medium"
+                ? "bg-canvas text-ink shadow-xs font-semibold border border-hairline"
+                : "text-muted hover:text-ink font-medium"
             }`}
           >
             <MessageCircle className="h-4 w-4" />
@@ -248,10 +214,10 @@ export function Sidebar() {
           </button>
           <button
             onClick={() => setActiveTab("calls")}
-            className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-xl transition-all duration-200 cursor-pointer ${
+            className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-md transition-all duration-200 cursor-pointer ${
               activeTab === "calls"
-                ? "bg-background text-foreground shadow-xs font-semibold border border-border"
-                : "text-muted-foreground hover:text-foreground font-medium"
+                ? "bg-canvas text-ink shadow-xs font-semibold border border-hairline"
+                : "text-muted hover:text-ink font-medium"
             }`}
           >
             <Phone className="h-4 w-4" />
@@ -260,17 +226,17 @@ export function Sidebar() {
         </div>
 
         {/* Search */}
-        <div className="p-4 border-b border-border bg-background">
+        <div className="p-4 border-b border-hairline bg-canvas">
           <SearchInput
             value={searchQuery}
             onChange={setSearchQuery}
             placeholder={`Search ${activeTab}...`}
-            className="bg-muted border-transparent focus:bg-background focus:border-primary-500 rounded-xl"
+            className="bg-surface-soft border-transparent focus:bg-canvas focus:border-primary rounded-md"
           />
         </div>
 
         {/* List Content */}
-        <div className="flex-1 overflow-hidden bg-background">
+        <div className="flex-1 overflow-hidden bg-canvas">
           {activeTab === "calls" ? <CallHistory /> : <ChatList />}
         </div>
       </div>

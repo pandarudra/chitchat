@@ -11,7 +11,7 @@ export function ChatBoard() {
 
   if (isMobile) {
     return (
-      <div className="h-screen bg-background relative overflow-hidden flex flex-col">
+      <div className="h-screen bg-canvas relative overflow-hidden flex flex-col">
         <div className="flex-1 overflow-hidden flex relative">
           {activeChat ? <ChatWindow /> : <Sidebar />}
         </div>
@@ -23,10 +23,10 @@ export function ChatBoard() {
   }
 
   return (
-    <div className="h-screen bg-background flex relative overflow-hidden">
+    <div className="h-screen bg-canvas flex relative overflow-hidden">
       <Sidebar />
       <ChatWindow />
-      
+
       {/* Global Call Notification & Modals */}
       <CallNotification />
       <CallModal />

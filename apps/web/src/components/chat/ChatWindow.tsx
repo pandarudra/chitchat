@@ -54,9 +54,9 @@ export function ChatWindow() {
 
   if (!activeChat) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-background/30 backdrop-blur-xs">
+      <div className="flex-1 flex items-center justify-center bg-canvas/30 backdrop-blur-xs">
         <div className="text-center p-8 max-w-sm">
-          <div className="w-20 h-20 bg-primary/10 dark:bg-primary/20 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-primary/20 shadow-xs">
+          <div className="w-20 h-20 bg-primary/10 dark:bg-primary/20 rounded-lg flex items-center justify-center mx-auto mb-6 border border-primary/20 shadow-xs">
             <svg
               className="w-10 h-10 text-primary"
               fill="none"
@@ -71,11 +71,12 @@ export function ChatWindow() {
               />
             </svg>
           </div>
-          <h3 className="text-xl font-bold text-foreground mb-2 tracking-tight">
+          <h3 className="text-xl font-bold text-ink mb-2 tracking-tight">
             Welcome to ChitChat
           </h3>
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            Select a contact or add a secure email profile to start a conversation.
+          <p className="text-muted text-sm leading-relaxed">
+            Select a contact or add a secure email profile to start a
+            conversation.
           </p>
         </div>
       </div>
@@ -83,15 +84,18 @@ export function ChatWindow() {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-background relative overflow-hidden h-full">
+    <div className="flex-1 flex flex-col bg-canvas relative overflow-hidden h-full">
       {/* Header (Top) */}
       <ChatHeader onOpenContactInfo={() => setIsContactInfoOpen(true)} />
 
       {/* Message List (Middle) */}
-      <ChatMessageList activeChat={activeChat} messagesEndRef={messagesEndRef} />
+      <ChatMessageList
+        activeChat={activeChat}
+        messagesEndRef={messagesEndRef}
+      />
 
       {/* Input container (Bottom) */}
-      <div className="p-4 border-t border-border bg-card/60 backdrop-blur-md shrink-0">
+      <div className="p-4 border-t border-hairline bg-surface-card/60 backdrop-blur-md shrink-0">
         <MessageInput />
       </div>
 

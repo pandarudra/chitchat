@@ -48,7 +48,7 @@ export function ChatHeader({ onOpenContactInfo }: ChatHeaderProps) {
   const getOnlineStatus = () => {
     if (activeChat.isGroup) {
       const onlineCount = activeChat.participants.filter((p) =>
-        isUserOnline(p)
+        isUserOnline(p),
       ).length;
       return `${onlineCount} online`;
     }
@@ -59,12 +59,12 @@ export function ChatHeader({ onOpenContactInfo }: ChatHeaderProps) {
   };
 
   return (
-    <div className="w-full flex items-center justify-between p-4 border-b border-border bg-card shrink-0 z-10 shadow-xs">
+    <div className="w-full flex items-center justify-between p-4 border-b border-hairline bg-surface-card shrink-0 z-10 shadow-xs">
       <div className="flex items-center space-x-3">
         {showBackButton && (
           <button
             onClick={handleBackClick}
-            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors cursor-pointer"
+            className="p-2 text-muted hover:text-ink hover:bg-surface-soft rounded-md transition-colors cursor-pointer"
             title="Back to chats"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -72,8 +72,8 @@ export function ChatHeader({ onOpenContactInfo }: ChatHeaderProps) {
         )}
         <div className="relative">
           {activeChat.isGroup ? (
-            <div className="w-10 h-10 bg-muted rounded-xl flex items-center justify-center border border-border">
-              <span className="text-muted-foreground font-medium">
+            <div className="w-10 h-10 bg-surface-soft rounded-md flex items-center justify-center border border-hairline">
+              <span className="text-muted font-medium">
                 {getChatName().charAt(0).toUpperCase()}
               </span>
             </div>
@@ -82,23 +82,27 @@ export function ChatHeader({ onOpenContactInfo }: ChatHeaderProps) {
               <img
                 src={getChatAvatar() ?? undefined}
                 alt={getChatName()}
-                className="w-10 h-10 rounded-xl object-cover border border-border"
+                className="w-10 h-10 rounded-md object-cover border border-hairline"
               />
               {/* Online status indicator */}
               {(() => {
                 const otherUser = activeChat.participants.find(
-                  (p) => p.id !== user?.id
+                  (p) => p.id !== user?.id,
                 );
                 return otherUser && isUserOnline(otherUser) ? (
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-background rounded-full"></div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-success border-2 border-canvas rounded-full"></div>
                 ) : null;
               })()}
             </>
           )}
         </div>
         <div>
-          <h3 className="font-bold text-foreground text-base tracking-tight leading-none mb-1">{getChatName()}</h3>
-          <p className="text-xs text-muted-foreground leading-none">{getOnlineStatus()}</p>
+          <h3 className="font-bold text-ink text-base tracking-tight leading-none mb-1">
+            {getChatName()}
+          </h3>
+          <p className="text-xs text-muted-foreground leading-none">
+            {getOnlineStatus()}
+          </p>
         </div>
       </div>
 

@@ -60,9 +60,9 @@ export function ChatOptions({ chat }: ChatOptionsProps) {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        className="p-2 hover:bg-surface-soft rounded-md transition-colors"
       >
-        <MoreVertical className="h-5 w-5 text-gray-600" />
+        <MoreVertical className="h-5 w-5 text-muted" />
       </button>
 
       {isOpen && (
@@ -74,27 +74,27 @@ export function ChatOptions({ chat }: ChatOptionsProps) {
           />
 
           {/* Menu */}
-          <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+          <div className="absolute right-0 top-full mt-1 w-48 bg-canvas border border-hairline rounded-md shadow-lg z-20">
             <button
               onClick={handlePinChat}
-              className="flex items-center space-x-3 w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors"
+              className="flex items-center space-x-3 w-full px-4 py-2 text-left hover:bg-surface-soft transition-colors"
             >
-              <Pin className="h-4 w-4 text-gray-600" />
-              <span className="text-sm">
+              <Pin className="h-4 w-4 text-muted" />
+              <span className="text-sm text-ink">
                 {chat.isPinned ? "Unpin Chat" : "Pin Chat"}
               </span>
             </button>
 
             <button
               onClick={handleMuteChat}
-              className="flex items-center space-x-3 w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors"
+              className="flex items-center space-x-3 w-full px-4 py-2 text-left hover:bg-surface-soft transition-colors"
             >
               {chat.isMuted ? (
-                <Volume2 className="h-4 w-4 text-gray-600" />
+                <Volume2 className="h-4 w-4 text-muted" />
               ) : (
-                <VolumeX className="h-4 w-4 text-gray-600" />
+                <VolumeX className="h-4 w-4 text-muted" />
               )}
-              <span className="text-sm">
+              <span className="text-sm text-ink">
                 {chat.isMuted ? "Unmute Chat" : "Mute Chat"}
               </span>
             </button>

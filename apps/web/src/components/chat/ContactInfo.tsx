@@ -61,15 +61,13 @@ export function ContactInfo({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm">
-      <div className="bg-card text-card-foreground rounded-3xl shadow-2xl border border-border w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-surface-card text-ink rounded-lg shadow-2xl border border-hairline w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-border sticky top-0 bg-card/95 backdrop-blur-sm">
-          <h2 className="text-lg font-semibold text-foreground">
-            Contact Info
-          </h2>
+        <div className="flex items-center justify-between p-5 border-b border-hairline sticky top-0 bg-surface-card/95 backdrop-blur-sm">
+          <h2 className="text-lg font-semibold text-ink">Contact Info</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
+            className="p-2 hover:bg-surface-soft rounded-full transition-colors text-muted hover:text-ink"
           >
             <X className="h-5 w-5" />
           </button>
@@ -83,20 +81,20 @@ export function ContactInfo({
               <img
                 src={contact.avatarUrl || "/api/placeholder/120/120"}
                 alt={contact.displayName}
-                className="w-24 h-24 rounded-3xl object-cover border border-border shadow-lg"
+                className="w-24 h-24 rounded-lg object-cover border border-hairline shadow-lg"
               />
               <div
-                className={`absolute bottom-2 right-2 w-4 h-4 rounded-full border-2 border-card ${
-                  isOnline ? "bg-green-500" : "bg-gray-400"
+                className={`absolute bottom-2 right-2 w-4 h-4 rounded-full border-2 border-surface-card ${
+                  isOnline ? "bg-success" : "bg-muted"
                 }`}
               />
             </div>
-            <h3 className="text-xl font-semibold text-foreground mb-1">
+            <h3 className="text-xl font-semibold text-ink mb-1">
               {contact.displayName}
             </h3>
-            <p className="text-sm text-muted-foreground">{statusText}</p>
+            <p className="text-sm text-muted">{statusText}</p>
             {contact.status && (
-              <p className="text-sm text-muted-foreground mt-2 text-center italic">
+              <p className="text-sm text-muted mt-2 text-center italic">
                 "{contact.status}"
               </p>
             )}
@@ -105,23 +103,23 @@ export function ContactInfo({
           {/* Contact Information */}
           <div className="space-y-4 mb-6">
             <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-1">
+              <label className="block text-sm font-medium text-muted mb-1">
                 Email Address
               </label>
-              <p className="text-foreground">{contact.email}</p>
+              <p className="text-ink">{contact.email}</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-1">
+              <label className="block text-sm font-medium text-muted mb-1">
                 Status
               </label>
               <div className="flex items-center space-x-2">
                 <div
                   className={`w-2 h-2 rounded-full ${
-                    isOnline ? "bg-green-500" : "bg-gray-400"
+                    isOnline ? "bg-success" : "bg-muted"
                   }`}
                 />
-                <p className="text-foreground">
+                <p className="text-ink">
                   {isOnline
                     ? "Online"
                     : `Last seen ${formatLastSeen(contact.lastSeen)}`}
@@ -131,10 +129,10 @@ export function ContactInfo({
 
             {contact.createdAt && (
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">
+                <label className="block text-sm font-medium text-muted mb-1">
                   Member Since
                 </label>
-                <p className="text-foreground">
+                <p className="text-ink">
                   {new Date(contact.createdAt).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "long",

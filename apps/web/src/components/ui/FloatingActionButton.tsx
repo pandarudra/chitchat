@@ -28,8 +28,8 @@ export function FloatingActionButton({
       className={`
         fixed ${positionClasses[position]}
         w-14 h-14 
-        bg-green-500 hover:bg-green-600 
-        text-white 
+        bg-primary hover:bg-primary-active 
+        text-on-primary 
         rounded-full 
         shadow-lg hover:shadow-xl 
         flex items-center justify-center 

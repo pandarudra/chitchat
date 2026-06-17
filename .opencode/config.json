@@ -1,0 +1,12 @@
+{
+  "provider": {
+    "nvidia": {
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "https://integrate.api.nvidia.com/v1",
+        "apiKey": "${NVIDIA_API_KEY}"
+      }
+    }
+  },
+  "model": "nvidia/nvidia/nemotron-3-ultra-550b-a55b"
+}

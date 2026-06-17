@@ -94,25 +94,25 @@ function CallNotification() {
       </audio>
 
       {/* Notification Card */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 min-w-72 sm:min-w-80 max-w-sm">
+      <div className="bg-canvas dark:bg-surface-dark rounded-md shadow-2xl border border-hairline p-4 min-w-72 sm:min-w-80 max-w-sm">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-2">
             {call.callType === "video" ? (
-              <Video className="w-5 h-5 text-green-500" />
+              <Video className="w-5 h-5 text-success" />
             ) : (
-              <Phone className="w-5 h-5 text-green-500" />
+              <Phone className="w-5 h-5 text-success" />
             )}
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+            <span className="text-sm font-medium text-ink">
               Incoming {call.callType} call
             </span>
           </div>
-          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+          <div className="w-3 h-3 bg-success rounded-full animate-pulse"></div>
         </div>
 
         {/* Caller Info */}
         <div className="flex items-center space-x-3 mb-4">
-          <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full overflow-hidden bg-surface-soft dark:bg-surface-dark-soft flex items-center justify-center">
             {otherUser?.avatarUrl ? (
               <img
                 src={getAvatarUrl(otherUser.avatarUrl)}
@@ -120,14 +120,14 @@ function CallNotification() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <User className="w-6 h-6 text-gray-400" />
+              <User className="w-6 h-6 text-muted" />
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-900 dark:text-white text-lg truncate">
+            <p className="font-semibold text-ink text-lg truncate">
               {otherUser?.displayName || "Unknown"}
             </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+            <p className="text-sm text-muted truncate">
               {otherUser?.email || "No email"}
             </p>
           </div>
@@ -144,11 +144,13 @@ function CallNotification() {
               setIsVisible(false);
               if (call.callId) declineCall(call.callId);
             }}
-            className="flex-1 flex items-center justify-center space-x-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
+            className="flex-1 flex items-center justify-center space-x-2 bg-error hover:bg-error/90 text-white px-4 py-2 rounded-md transition-colors"
           >
             <PhoneOff className="w-4 h-4" />
             <span className="sm:inline hidden">Decline</span>
-            <span className="sm:hidden inline"><X className="w-4 h-4" /></span>
+            <span className="sm:hidden inline">
+              <X className="w-4 h-4" />
+            </span>
           </button>
           <button
             type="button"
@@ -164,7 +166,9 @@ function CallNotification() {
           >
             <Phone className="w-4 h-4" />
             <span className="sm:inline hidden">Accept</span>
-            <span className="sm:hidden inline"><Check className="w-4 h-4" /></span>
+            <span className="sm:hidden inline">
+              <Check className="w-4 h-4" />
+            </span>
           </button>
         </div>
       </div>

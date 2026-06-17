@@ -25,7 +25,7 @@ export function DateSeparator({ date }: DateSeparatorProps) {
 
   return (
     <div className="flex items-center justify-center my-6">
-      <div className="bg-white text-gray-600 text-xs font-medium px-4 py-2 rounded-full shadow-sm border border-gray-200">
+      <div className="bg-canvas text-muted text-caption font-medium px-4 py-2 rounded-full shadow-sm border border-hairline-soft">
         {getDateLabel(date)}
       </div>
     </div>
